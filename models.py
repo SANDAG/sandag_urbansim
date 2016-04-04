@@ -110,7 +110,8 @@ def hlcm_luz_simulate(households, buildings, aggregations):
         if len(movers_luz) > vacant_units.sum():
             print "WARNING: Not enough locations for movers"
             print "    reducing locations to size of movers for performance gain"
-            movers_luz = movers_luz.head(vacant_units.sum())
+            # movers_luz = movers_luz.head(vacant_units.sum())
+            movers_luz = movers_luz.head(int(vacant_units.sum())) # convert to int
 
         new_units, _ = utils.yaml_to_class(cfg).predict_from_cfg(movers_luz, units, cfg)
         
