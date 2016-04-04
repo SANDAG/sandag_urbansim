@@ -1,0 +1,21 @@
+in_db:
+    sql_alchemy_driver: mssql+pyodbc
+    #MAKE sure to pick the right driver
+    driver: SQL+Server+Native+Client+11.0
+    host: sql2014a8
+    database: spacecore
+    #IF using default, you do not need to specify
+    port:
+    #WITH Native Client, you may not need username
+    user:
+    #WITH Native Client, you may not need password
+    password:
+out_db:
+    sql_alchemy_driver: postgresql
+    #Not always needed
+    driver:
+    host: socioeca8
+    database: urbansim
+    port: 5432
+    user: urbansim_user
+    password: urbansim
