@@ -59,3 +59,5 @@ runs
 .ipynb_checkpoints
 
 scripts/dbconfig.yml
+
+data/
