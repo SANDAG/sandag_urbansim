@@ -19,9 +19,8 @@ import pandas.io.sql as sql
 
 @sim.model('build_networks')
 def build_networks(parcels):
-    #st = pd.HDFStore(os.path.join(misc.data_dir(), "osm_sandag.h5"), "r")
-	st = pd.HDFStore(os.path.join(misc.data_dir(), "sandag.h5"), "r")
-
+    # st = pd.HDFStore(os.path.join(misc.data_dir(), "osm_sandag.h5"), "r")
+    st = pd.HDFStore(os.path.join(misc.data_dir(), "sandag.h5"), "r")
     nodes, edges = st.nodes, st.edges
     net = pdna.Network(nodes["x"], nodes["y"], edges["from"], edges["to"],
                        edges[["weight"]])
@@ -259,8 +258,8 @@ def feasibility(parcels, settings,
                 feasibility['current_units'] = parcels.total_job_spaces
                 feasibility["parcel_size"] = parcels.parcel_size
                 feasibility = feasibility[feasibility.parcel_size < 200000]
-                #feasibility['job_spaces'] = np.round(feasibility.non_residential_sqft / 400.0)
-				feasibility['job_spaces'] = (feasibility['non_residential_sqft'] / 400.0).round()
+                # feasibility['job_spaces'] = np.round(feasibility.non_residential_sqft / 400.0)
+                feasibility['job_spaces'] = (feasibility['non_residential_sqft'] / 400.0).round()
 
                 feasibility['net_units'] = feasibility.job_spaces - feasibility.current_units
                 feasibility.net_units = feasibility.net_units.fillna(0)
@@ -710,8 +709,8 @@ def buildings_to_uc(buildings):
     
     # Export newly predicted buildings (from proforma or Sitespec) to Urban Canvas
     b = buildings.to_frame(buildings.local_columns)
-	b.residential_units = b.residential_units.fillna(0)
-	sim.add_table("buildings", b)
+    b.residential_units = b.residential_units.fillna(0)
+    sim.add_table("buildings", b)
     b.to_csv("buildings_%s.csv"%year)
 
     new_buildings =  b[(b.note=='simulated') | (b.note.str.startswith('Sitespec'))]
@@ -729,7 +728,7 @@ def buildings_to_uc(buildings):
     new_buildings.residential_sqft = new_buildings.residential_sqft.astype('int32')
     new_buildings.building_sqft = new_buildings.building_sqft.fillna(0).astype('int32')
     new_buildings.sqft_per_unit = new_buildings.sqft_per_unit.fillna(0).astype('int32')
-	new_buildings.to_csv("new_building_test_%s.csv"%year)
+    new_buildings.to_csv("new_building_test_%s.csv"%year)
 
     # # Urban Canvas database connection
     # conn_string = "host='urbancanvas.cp2xwchuariu.us-west-2.rds.amazonaws.com' dbname='sandag_testing' user='sandag' password='parcel22building' port=5432"
