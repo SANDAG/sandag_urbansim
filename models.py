@@ -19,7 +19,9 @@ import pandas.io.sql as sql
 
 @sim.model('build_networks')
 def build_networks(parcels):
-    st = pd.HDFStore(os.path.join(misc.data_dir(), "osm_sandag.h5"), "r")
+    #st = pd.HDFStore(os.path.join(misc.data_dir(), "osm_sandag.h5"), "r")
+	st = pd.HDFStore(os.path.join(misc.data_dir(), "sandag.h5"), "r")
+
     nodes, edges = st.nodes, st.edges
     net = pdna.Network(nodes["x"], nodes["y"], edges["from"], edges["to"],
                        edges[["weight"]])
