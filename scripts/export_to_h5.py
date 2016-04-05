@@ -7,7 +7,8 @@ loader = TableLoader()
 def db_to_df(query):
     """Executes SQL query and returns DataFrame."""
     conn = loader.database._connection
-    return sql.read_frame(query, conn)
+    #return sql.read_frame(query, conn)
+	return sql.read_sql(query, conn)
 
 # Read from database (public schema)
 parcels = db_to_df('select * from parcels').set_index('parcel_id')
