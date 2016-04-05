@@ -61,3 +61,5 @@ runs
 scripts/dbconfig.yml
 
 data/
+
+dbconfig.yml
