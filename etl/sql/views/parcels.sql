@@ -32,8 +32,6 @@ SELECT
     ,CASE max(NULLIF(taxstat, 'N')) WHEN 'N' THEN 1 ELSE 0 END as tax_exempt_status
 FROM
     GIS.parcels
-WHERE 
-    APN IS NOT NULL
 GROUP BY 
     parcelid
 
