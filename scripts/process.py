@@ -10,7 +10,8 @@ loader = TableLoader()
 def db_to_df(query):
     """Executes SQL query and returns DataFrame."""
     conn = loader.database._connection
-    return sql.read_frame(query, conn)
+    # return sql.read_frame(query, conn)
+	return sql.read_sql(query, conn)
 
 
 ##There are some duplicate parcel_id's in local_effect_distances, delete one record from each duplicate pair
