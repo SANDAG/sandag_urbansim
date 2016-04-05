@@ -71,7 +71,8 @@ def parcels(store):
     
     #Delete duplicate index (parcel_id)
     df['rownum'] = df.index
-    df = df.drop_duplicates(cols='rownum', take_last=True)
+    #df = df.drop_duplicates(cols='rownum', take_last=True)
+	df = df.drop_duplicates(['rownum'], take_last=True)
     del df['rownum']
     
     return df
