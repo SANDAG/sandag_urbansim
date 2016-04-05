@@ -259,7 +259,9 @@ def feasibility(parcels, settings,
                 feasibility['current_units'] = parcels.total_job_spaces
                 feasibility["parcel_size"] = parcels.parcel_size
                 feasibility = feasibility[feasibility.parcel_size < 200000]
-                feasibility['job_spaces'] = np.round(feasibility.non_residential_sqft / 400.0)
+                #feasibility['job_spaces'] = np.round(feasibility.non_residential_sqft / 400.0)
+				feasibility['job_spaces'] = (feasibility['non_residential_sqft'] / 400.0).round()
+
                 feasibility['net_units'] = feasibility.job_spaces - feasibility.current_units
                 feasibility.net_units = feasibility.net_units.fillna(0)
                 profitable_units = int(feasibility.net_units.sum())
