@@ -1,8 +1,8 @@
 USE spacecore
 
-IF OBJECT_ID('urbansim.parcels') IS NOT NULL
-    DROP TABLE urbansim.parcels
-GO
+--IF OBJECT_ID('urbansim.parcels') IS NOT NULL
+--    DROP TABLE urbansim.parcels
+--GO
 
 CREATE TABLE urbansim.parcels (
     objectid int not null --PLACEHOLDER FOR OPERATIONS BELOW. DROP AT END OF LOAD
