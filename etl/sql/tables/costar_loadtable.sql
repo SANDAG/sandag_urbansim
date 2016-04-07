@@ -740,63 +740,25 @@ FROM
 JOIN spacecore.core.landcore usl ON c.centroid.STIntersects(usl.shape) = 1
 
 
-//** FIND RECORDS WHERE PARCEL_ID IS NULL, LAT LONG NOT MAPPING TO PARCEL, RUN GEOCODER, UPDATE GEOMETRY**//
---PARCEL_ID IS NULL, LAT LONG NOT MAPPING TO PARCEL
-SELECT [property_id]
-      ,[building_address]
-      ,[building_name]
-      ,[building_status]
-      ,[city]
-	  ,[zip]
-      ,[parcel_id]
-      ,[subparcel_id]
-FROM input.costar
-WHERE parcel_id IS NULL
-ORDER BY property_id
+//** FIND RECORDS WHERE PARCEL_ID IS NULL, LAT LONG NOT MAPPING TO PARCEL, ASSIGN TO NEAREST PARCEL**//
 
--->>RUN PYTHON GEOCODER
-
---ADD FIELD FOR GEOMETRY SOURCE
-ALTER TABLE input.costar 
-ADD geom_source nvarchar(max)
-UPDATE input.costar 
-SET geom_source = 'costar'
-
---UPDATE GEOMETRY FOR GEOCODED RECORDS
-UPDATE c
-SET c.centroid = g.centroid
-	,c.geom_source = 'geocoded'
-FROM input.costar c
-LEFT JOIN input.costar_geocode_results g ON c.property_id = g.property_id
-WHERE parcel_id IS NULL
-
-//** RERUN SPATIAL INDEX AND PARCELID SUBPARCELID **//
---RERUN
---CREATE SPATIAL INDEX
-CREATE SPATIAL INDEX [ix_spatial_input_costar_centroid] ON input.costar
-(
-	centroid
-) USING  GEOMETRY_GRID
-	WITH (BOUNDING_BOX =(6152300, 1775400, 6613100, 2129400), GRIDS =(LEVEL_1 = MEDIUM,LEVEL_2 = MEDIUM,LEVEL_3 = MEDIUM,LEVEL_4 = MEDIUM), 
-	CELLS_PER_OBJECT = 16, PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
-
---RERUN
-----GET PARCEL_ID BY SPATIAL JOIN
 UPDATE
 	c
 SET
-	c.subparcel_id = usl.subparcel
+	c.parcel_id = p.parcel_id
 FROM
-    input.costar c
-JOIN spacecore.core.landcore usl ON c.centroid.STIntersects(usl.shape) = 1
-
---RERUN
-----GET SUBPARCEL_ID BY SPATIAL JOIN
-UPDATE
-	c
-SET
-	c.subparcel_id = usl.subparcel
-FROM
-    input.costar c
-JOIN spacecore.core.landcore usl ON c.centroid.STIntersects(usl.shape) = 1
+	input.costar c
+JOIN (
+	SELECT row_id, property_id, parcel_id, dist 
+	FROM (
+		SELECT
+			ROW_NUMBER() OVER (PARTITION BY c.property_id ORDER BY c.property_id, c.centroid.STDistance(p.shape)) row_id
+			,c.property_id
+			,p.parcel_id
+			,c.centroid.STDistance(p.shape) AS dist
+		FROM urbansim.parcels p
+			INNER JOIN (SELECT * FROM input.costar WHERE parcel_id IS NULL) c ON c.centroid.STBuffer(1000).STIntersects(p.shape) = 1) x
+	WHERE row_id = 1) p
+ON c.property_id = p.property_id
+WHERE c.parcel_id IS NULL
 
