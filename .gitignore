@@ -62,4 +62,4 @@ scripts/dbconfig.yml
 
 data/
 
-etl/postgresql/dbconfig.yml
+dbconfig.yml
