@@ -1,7 +1,10 @@
 USE spacecore
 GO
 
-//** START DATA LOAD **//
+IF OBJECT_ID('input.costar') IS NOT NULL
+TRUNCATE TABLE input.costar
+
+/** START DATA LOAD **/
 INSERT INTO input.costar WITH (TABLOCK) (
 	[property_id]
 	,[amenities]
@@ -706,8 +709,10 @@ SELECT
 	,[centroid]
 FROM
     input.costar_staging
+WHERE 
+	[building status] = 'Existing'				--LOAD ONLY FOR EXISTING
 GO
-//** END DATA LOAD **//
+/** END DATA LOAD **/
 
 --CREATE SPATIAL INDEX
 CREATE SPATIAL INDEX [ix_spatial_input_costar_centroid] ON input.costar
@@ -719,6 +724,7 @@ CREATE SPATIAL INDEX [ix_spatial_input_costar_centroid] ON input.costar
 
 --ADD PARCEL_ID FIELD 
 ALTER TABLE input.costar ADD parcel_id int NULL
+GO
 --GET PARCEL_ID BY SPATIAL JOIN
 UPDATE
 	c
@@ -728,19 +734,17 @@ FROM
     input.costar c
 JOIN spacecore.urbansim.parcels usp ON c.centroid.STIntersects(usp.shape) = 1
 
---ADD SUBPARCEL_ID FIELD
-ALTER TABLE input.costar ADD subparcel_id int NULL
---GET SUBPARCEL_ID BY SPATIAL JOIN
-UPDATE
-	c
-SET
-	c.subparcel_id = usl.subparcel
-FROM
-    input.costar c
-JOIN spacecore.core.landcore usl ON c.centroid.STIntersects(usl.shape) = 1
+--ADD LOCATE FIELD TO IDENTIFY LOCATED RECORDS
+ALTER TABLE input.costar ADD location varchar(10)
+GO
+UPDATE input.costar
+SET location =
+	(CASE WHEN parcel_id IS NOT NULL
+		THEN 'costar'
+		ELSE 'nearest'
+	END)
 
-
-//** FIND RECORDS WHERE PARCEL_ID IS NULL, LAT LONG NOT MAPPING TO PARCEL, ASSIGN TO NEAREST PARCEL**//
+/** FIND RECORDS WHERE PARCEL_ID IS NULL, LAT LONG NOT MAPPING TO PARCEL, ASSIGN TO NEAREST PARCEL**/
 
 UPDATE
 	c
@@ -761,4 +765,3 @@ JOIN (
 	WHERE row_id = 1) p
 ON c.property_id = p.property_id
 WHERE c.parcel_id IS NULL
-
