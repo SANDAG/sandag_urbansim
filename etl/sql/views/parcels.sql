@@ -67,6 +67,10 @@ LEFT JOIN (
 		  ) dev
 ON usp.parcel_id = dev.parcelID
 
+--EXCLUDE ROAD RIGHT OF WAY RECORDS
+DELETE FROM urbansim.parcels
+WHERE development_type_id = 24 --Transportation Right of Way
+
 --CREATE A PRIMARY KEY SO WE CAN CREATE A SPATIAL INDEX
 ALTER TABLE urbansim.parcels ADD CONSTRAINT pk_urbansim_parcels_parcel_id PRIMARY KEY CLUSTERED (parcel_id) 
 
