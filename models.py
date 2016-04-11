@@ -711,7 +711,8 @@ def buildings_to_uc(buildings):
     b = buildings.to_frame(buildings.local_columns)
     b.residential_units = b.residential_units.fillna(0)
     sim.add_table("buildings", b)
-    b.to_csv("buildings_%s.csv"%year)
+    results = os.getcwd() + "\\results\\"
+    b.to_csv(results + "buildings_%s.csv"%year)
 
     new_buildings =  b[(b.note=='simulated') | (b.note.str.startswith('Sitespec'))]
     new_buildings = new_buildings[new_buildings.year_built == year]
@@ -728,7 +729,7 @@ def buildings_to_uc(buildings):
     new_buildings.residential_sqft = new_buildings.residential_sqft.astype('int32')
     new_buildings.building_sqft = new_buildings.building_sqft.fillna(0).astype('int32')
     new_buildings.sqft_per_unit = new_buildings.sqft_per_unit.fillna(0).astype('int32')
-    new_buildings.to_csv("new_building_test_%s.csv"%year)
+    new_buildings.to_csv(results + "new_building_test_%s.csv"%year)
 
     # # Urban Canvas database connection
     # conn_string = "host='urbancanvas.cp2xwchuariu.us-west-2.rds.amazonaws.com' dbname='sandag_testing' user='sandag' password='parcel22building' port=5432"
