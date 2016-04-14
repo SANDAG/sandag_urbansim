@@ -5,27 +5,15 @@ GO
 CREATE TABLE urbansim.edges (
   from_node int NOT NULL
   ,to_node int NOT NULL
-  ,travel_time_min float NOT NULL
+  ,distance float NOT NULL
 )
 GO
 
-INSERT INTO urbansim.edges (from_node, to_node, travel_time_min)
+INSERT INTO urbansim.edges (from_node, to_node, distance)
 SELECT 
   FNODE as [from]
   ,TNODE as [to]
-  ,MIN((length * 60) / (
-      CASE SPEED
-        WHEN 0 THEN
-          CASE SEGCLASS
-            WHEN '2' THEN 55 --Highway
-            WHEN '5' THEN 25 --Local Street
-            WHEN '6' THEN 10 --Unpaved Road
-            WHEN 'A' THEN 10 --Alley
-            WHEN 'W' THEN 3  --Walkway
-            WHEN 'Z' THEN 25 --Private Street
-          END
-        ELSE SPEED
-    END  * 5280)) as [weight]
+  ,min([length]) as distance
 FROM 
   GIS.roads 
 WHERE SEGCLASS NOT IN ('P')
