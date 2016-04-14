@@ -80,7 +80,7 @@ FROM
 UPDATE
 	usb
 SET
-	usb.residential_units = (a.units/b.bldgs)
+	usb.residential_units = (ROUND((CAST (a.units AS float) / CAST (b.bldgs AS int)),0))
 	,usb.improvement_value = (a.imps/b.bldgs)
 FROM
 	urbansim.buildings usb
