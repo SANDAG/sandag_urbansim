@@ -145,4 +145,4 @@ SET
 FROM
     urbansim.buildings usb
     INNER JOIN urbansim.parcels p ON usb.parcel_id = p.parcel_id
-    INNER JOIN input.sqft_per_job_by_devtype sq ON usb.development_type_id = sq.development_type_id AND p.luz_id = sq.luz_id
+    INNER JOIN urbansim.building_sqft_per_job sq ON usb.development_type_id = sq.development_type_id AND p.luz_id = sq.luz_id
