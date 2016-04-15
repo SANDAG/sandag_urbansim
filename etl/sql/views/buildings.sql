@@ -12,6 +12,7 @@ CREATE TABLE urbansim.buildings (
 	,residential_sqft int
 	,non_residential_sqft int
     ,job_spaces smallint
+    ,non_residential_rent_per_sqft float
 	,price_per_sqft float
 	,stories int
 	,year_built smallint
@@ -142,6 +143,7 @@ UPDATE
 SET
     --If the data is ***BAD(???)*** replace with 40 as the minimum
     usb.job_spaces = CEILING(usb.non_residential_sqft / CAST(CASE WHEN ISNULL(sq.sqft_per_emp,0) < 40 THEN 40 ELSE sq.sqft_per_emp END as FLOAT))
+    ,usb.non_residential_rent_per_sqft = 0
 FROM
     urbansim.buildings usb
     INNER JOIN urbansim.parcels p ON usb.parcel_id = p.parcel_id
