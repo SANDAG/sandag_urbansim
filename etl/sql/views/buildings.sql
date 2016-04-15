@@ -11,6 +11,7 @@ CREATE TABLE urbansim.buildings (
 	,residential_units int
 	,residential_sqft int
 	,non_residential_sqft int
+    ,job_spaces smallint
 	,price_per_sqft float
 	,stories int
 	,year_built smallint
@@ -129,3 +130,19 @@ FROM
 		FROM input.costar
 		GROUP BY parcel_id) c
 	ON usb.parcel_id = c.parcel_id
+
+/** Use the COSTAR data to set the values for job_spaces **/
+/**
+TODO: There are missing records on both inner joins. 
+      parcel and sqft_per_job_by_devtype both need to
+      be updated.
+**/
+UPDATE
+    usb
+SET
+    --If the data is ***BAD(???)*** replace with 40 as the minimum
+    usb.job_spaces = CEILING(usb.non_residential_sqft / CAST(CASE WHEN ISNULL(sq.sqft_per_emp,0) < 40 THEN 40 ELSE sq.sqft_per_emp END as FLOAT))
+FROM
+    urbansim.buildings usb
+    INNER JOIN urbansim.parcels p ON usb.parcel_id = p.parcel_id
+    INNER JOIN input.sqft_per_job_by_devtype sq ON usb.development_type_id = sq.development_type_id AND p.luz_id = sq.luz_id
