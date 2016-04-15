@@ -7,6 +7,7 @@ USE spacecore
 CREATE TABLE urbansim.parcels (
     objectid int not null --PLACEHOLDER FOR OPERATIONS BELOW. DROP AT END OF LOAD
     ,parcel_id int NOT NULL
+	,block_id nvarchar(15) --NOT NULL
 	,development_type_id int
     ,land_value float
     ,parcel_acres float
@@ -75,8 +76,8 @@ WHERE development_type_id = 24 --Transportation Right of Way
 ALTER TABLE urbansim.parcels ADD CONSTRAINT pk_urbansim_parcels_parcel_id PRIMARY KEY CLUSTERED (parcel_id) 
 
 --SET THE SHAPES TO BE NOT NULL SO WE CAN CREATE A SPATIAL INDEX
-    ALTER TABLE urbansim.parcels ALTER COLUMN shape geometry NOT NULL
-    ALTER TABLE urbansim.parcels ALTER COLUMN centroid geometry NOT NULL
+ALTER TABLE urbansim.parcels ALTER COLUMN shape geometry NOT NULL
+ALTER TABLE urbansim.parcels ALTER COLUMN centroid geometry NOT NULL
 
 --SELECT max(x_coord), min(x_coord), max(y_coord), min(y_coord) from gis.parcels
 
@@ -93,6 +94,16 @@ CREATE SPATIAL INDEX [ix_spatial_urbansim_parcels_shape] ON [urbansim].[parcels]
 ) USING  GEOMETRY_GRID
     WITH (BOUNDING_BOX =(6152300, 1775400, 6613100, 2129400), GRIDS =(LEVEL_1 = MEDIUM,LEVEL_2 = MEDIUM,LEVEL_3 = MEDIUM,LEVEL_4 = MEDIUM), 
     CELLS_PER_OBJECT = 16, PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+
+--SPATIAL GET BLOCKID
+--ALTER TABLE urbansim.parcels ALTER COLUMN block_id nvarchar(15) NOT NULL	
+UPDATE
+    usp 
+SET
+    usp.block_id = b.blockid
+FROM
+    urbansim.parcels usp
+LEFT JOIN (SELECT BLOCKID10 blockid, Shape FROM ref.blocks) b ON b.shape.STIntersects(usp.centroid) = 1
 
 --SPATIAL CREATE MGRA FIELD
 UPDATE

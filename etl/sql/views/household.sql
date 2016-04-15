@@ -1,5 +1,5 @@
 IF OBJECT_ID('input.household') IS NOT NULL
-  DROP FUNCTION urbansim.edges
+  DROP FUNCTION input.household
 GO
 
 
