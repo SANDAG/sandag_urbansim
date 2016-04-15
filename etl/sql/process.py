@@ -4,8 +4,7 @@ from pysandag.database import get_connection_string
 from sqlalchemy import create_engine
 from urbansim.models.lcm import unit_choice
 
-urbansim_engine = create_engine(get_connection_string("E:/Apps/urbansim/sandag_urbansim_rebuild/configs/dbconfig.yml", 'urbansim_database'))
-
+urbansim_engine = create_engine(get_connection_string("E:/Apps/urbansim/sandag_urbansim_rebuild/configs/dbconfig.yml", 'urbansim_database'), legacy_schema_aliasing=False)
 
 def random_allocate_agents_by_geography(agents, containers, geography_id_col, containers_units_col):
     """Allocate agents (e.g., households, jobs) to a container (e.g., buildings) based
@@ -53,8 +52,7 @@ def random_allocate_agents_by_geography(agents, containers, geography_id_col, co
 def process_households():
 
     bldgs_sql = """SELECT 
-                    id as building_id, bldg.development_type_id, bldg.parcel_id, improvement_value, residential_units, residential_sqft
-                    ,non_residential_sqft, price_per_sqft, stories, year_built, p.mgra_id as mgra
+                    bldg.id as building_id, bldg.residential_units, p.mgra_id as mgra
                   FROM 
                     urbansim.buildings bldg
                     INNER JOIN spacecore.urbansim.parcels p ON bldg.parcel_id = p.parcel_id"""
@@ -87,23 +85,16 @@ def process_households():
 
 def process_jobs():
     bldgs_sql = """SELECT 
-                    p.parcel_id, bldg.id as building_id, bldg.development_type_id, bldg.non_residential_sqft
-                    ,p.luz_id, p.block_id, usage.sqft_per_emp
+                    bldg.id as building_id, bldg.job_spaces, p.block_id 
                   FROM
                     urbansim.buildings bldg
-                    INNER JOIN urbansim.parcels p ON bldg.parcel_id = p.parcel_id 
-                    INNER JOIN input.sqft_per_job_by_devtype usage
-                        ON bldg.development_type_id = usage.development_type_id AND p.luz_id = usage.luz_id"""
+                    INNER JOIN urbansim.parcels p ON bldg.parcel_id = p.parcel_id"""
 
     # Get 2015 Households from ABM
     jobs_sql =  """SELECT block_id, job_id, sector_id FROM [input].[jobs_wac_2013]"""
 
     buildings = pd.read_sql(bldgs_sql, urbansim_engine, index_col='building_id')
     jobs = pd.read_sql(jobs_sql, urbansim_engine, index_col='job_id')
-    buildings.ix[buildings.sqft_per_emp < 40, 'sqft_per_emp'] = 40
-    buildings['job_spaces'] = np.ceil(buildings.non_residential_sqft / buildings.sqft_per_emp)
-    buildings.ix[buildings.job_spaces.isnull(), 'job_spaces'] = 0
-    buildings['job_spaces'] = buildings['job_spaces'].astype('int')
     
     results_df = random_allocate_agents_by_geography(jobs, buildings, 'block_id', 'job_spaces')
     results_df.to_csv('process_jobs_results.csv')
@@ -112,7 +103,7 @@ def process_jobs():
         del jobs['block_id']
         
     jobs.ix[jobs.building_id.isnull(), 'building_id'] = -1
-    buildings['building_id'].astype('int')
+    jobs['building_id'].astype('int')
     
     jobs.to_csv('jobs.csv')
     jobs.to_sql('jobs', urbansim_engine, schema='urbansim', if_exists='replace', chunksize=1000)
