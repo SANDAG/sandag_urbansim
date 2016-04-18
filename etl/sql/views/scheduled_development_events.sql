@@ -14,13 +14,16 @@ CREATE TABLE urbansim.scheduled_development_event (
   ,residential_units int not null
   ,non_residential_sqft int not null
   ,stories int not null
+  ,improvement_value int not null
+  ,res_price_per_sqft int not null
+  ,nonres_rent_per_sqft int not null
 )
 GO
 
 INSERT INTO urbansim.scheduled_development_event 
     (scheduled_development_event_id, parcel_id, development_type_id
 	,year_built, sqft_per_unit, residential_units, non_residential_sqft
-	,stories)
+	,stories,improvement_value, res_price_per_sqft, nonres_rent_per_sqft)
   SELECT
     siteid
     ,p.parcel_id
@@ -29,7 +32,10 @@ INSERT INTO urbansim.scheduled_development_event
     ,sqft_prunt
     ,res_unit
     ,nonres_sqf
-	,avg_story
+	,CASE WHEN avg_story < 1 THEN 1 ELSE avg_story END as stories
+	,0 as improvement_value
+	,0 as res_price_per_sqft
+	,0 as nonres_rent_per_sqft
   FROM
     input.site_spec_stg
     INNER JOIN urbansim.parcels p ON geom.STCentroid().STIntersects(p.shape) = 1
