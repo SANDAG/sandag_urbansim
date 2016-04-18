@@ -2,9 +2,8 @@ USE spacecore
 IF OBJECT_ID('urbansim.buildings') IS NOT NULL
     DROP TABLE urbansim.buildings
 GO
-CREATE TABLE urbansim.buildings (
-    id  int IDENTITY(1,1)
-	,building_id int NOT NULL
+CREATE TABLE urbansim.buildings_TEST (
+	building_id int IDENTITY(1,1) NOT NULL
 	,development_type_id int
 	,parcel_id int
 	,improvement_value float
@@ -16,17 +15,17 @@ CREATE TABLE urbansim.buildings (
 	,year_built smallint
 	,shape geometry
 )
-INSERT INTO urbansim.buildings WITH (TABLOCK) (building_id, shape)
+INSERT INTO urbansim.buildings WITH (TABLOCK) (shape)
 SELECT 
-    bldgID
-	,shape
+	shape
+    --bldgID	--NOT UNIQUE ID
 FROM gis.buildings
 
 --CREATE A PRIMARY KEY SO WE CAN CREATE A SPATIAL INDEX
-ALTER TABLE urbansim.buildings ADD CONSTRAINT pk_urbansim_buildings_id PRIMARY KEY CLUSTERED (id) 
+ALTER TABLE urbansim.buildings ADD CONSTRAINT pk_urbansim_buildings_building_id PRIMARY KEY CLUSTERED (building_id) 
 
 --SET THE SHAPES TO BE NOT NULL SO WE CAN CREATE A SPATIAL INDEX
-    ALTER TABLE urbansim.buildings ALTER COLUMN shape geometry NOT NULL
+ALTER TABLE urbansim.buildings ALTER COLUMN shape geometry NOT NULL
 
 --SELECT max(x_coord), min(x_coord), max(y_coord), min(y_coord) from gis.parcels
 
@@ -36,22 +35,6 @@ CREATE SPATIAL INDEX [ix_spatial_urbansim_buildings] ON urbansim.buildings
 ) USING  GEOMETRY_GRID
     WITH (BOUNDING_BOX =(6152300, 1775400, 6613100, 2129400), GRIDS =(LEVEL_1 = MEDIUM,LEVEL_2 = MEDIUM,LEVEL_3 = MEDIUM,LEVEL_4 = MEDIUM), 
     CELLS_PER_OBJECT = 16, PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
-
-
-/** LANDCORE DATA **/
---GET LANDCORE DATA: PARCEL_ID, DEV_TYPE
-UPDATE
-	usb
-SET
-	usb.parcel_ID = lc.parcelID
-	,usb.development_type_id = dev.development_type_id
-FROM
-	urbansim.buildings usb
-	,core.LANDCORE lc
-JOIN ref.development_type_lu_code dev 
-ON lc.lu = dev.lu_code
-WHERE usb.Shape.STCentroid().STWithin(lc.Shape) = 1
-
 
 /** PARCEL DATA **/
 --GET PARCEL DATA: RESIDENTIAL UNITS, IMPROVEMENT VALUE,
@@ -75,7 +58,7 @@ FROM
 		GROUP BY parcelid) i
 	ON usb.parcel_id = i.parcelid 
 
-/** ASSESSOR DATA **/
+/** ASSESSOR AND LANDCORE DATA **/
 --GET ASSESSOR DATA: RESIDENTIAL UNITS, NON-RES SQFT, PRICE/SQFT, YEAR BUILT
 UPDATE
 	usb
@@ -129,3 +112,8 @@ FROM
 		FROM input.costar
 		GROUP BY parcel_id) c
 	ON usb.parcel_id = c.parcel_id
+
+
+
+
+
