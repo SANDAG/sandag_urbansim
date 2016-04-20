@@ -110,19 +110,23 @@ SET
 								ELSE usb.residential_sqft
 							END
 	,usb.non_residential_sqft = CASE 
-								WHEN usb.development_type_id NOT BETWEEN 19 AND 22 THEN 
-									CASE 
-										WHEN c.rentable_building_area > 0 THEN (c.rentable_building_area/b.bldgs)
-										ELSE usb.non_residential_sqft
-									END
-								ELSE usb.non_residential_sqft
-							END
-	,usb.year_built = CASE WHEN c.year_built > 0
-							THEN c.year_built
-							ELSE usb.year_built
+									WHEN usb.development_type_id NOT BETWEEN 19 AND 22 THEN 
+										CASE 
+											WHEN c.rentable_building_area > 0 THEN (c.rentable_building_area/b.bldgs)
+											ELSE usb.non_residential_sqft
+										END
+									ELSE usb.non_residential_sqft
+								END
+	,usb.year_built = CASE 
+						WHEN c.year_built > 0 THEN c.year_built
+						ELSE
+							CASE 
+								WHEN usb.year_built  IS NULL THEN 2000
+								ELSE usb.year_built
+							END								
 						END
-	,usb.stories = CASE WHEN c.stories > 0
-						THEN c.stories
+	,usb.stories = CASE 
+						WHEN c.stories > 0 THEN c.stories
 						ELSE 1
 					END	
 FROM
@@ -132,7 +136,7 @@ FROM
 		FROM urbansim.buildings
 		GROUP BY parcel_id) b
 	 ON usb.parcel_id = b.parcel_id
-	RIGHT JOIN
+	LEFT JOIN
 		(SELECT parcel_id
 			, SUM([rentable_building_area]) rentable_building_area
 			, AVG([year_built]) year_built
