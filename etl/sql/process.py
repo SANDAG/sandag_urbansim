@@ -57,7 +57,7 @@ def process_households():
                     urbansim.buildings bldg
                     INNER JOIN spacecore.urbansim.parcels p ON bldg.parcel_id = p.parcel_id"""
 
-    # Get 2015 Households from ABM
+    # Get 2015 Households from ABM Scenario
     hh_sql =  """SELECT
                    scenario_id, lu_hh_id as household_id, building_id, mgra, tenure, persons, workers, age_of_head, income, children
                    ,race_id, cars
