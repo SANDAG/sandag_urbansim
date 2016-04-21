@@ -32,14 +32,16 @@ CREATE TABLE urbansim.nodes (
   node int NOT NULL
   ,x float NOT NULL
   ,y float NOT NULL
+  ,geom geometry NOT NULL
 )
 GO
 
-INSERT INTO urbansim.nodes (node, x, y)
+INSERT INTO urbansim.nodes (node, x, y, geom)
 SELECT
   node
   ,avg(x) as x
   ,avg(y) as y
+  ,geometry:Point(avg(x), avg(y), 2230) as geom
 FROM (
 SELECT
   FNODE as node
@@ -62,4 +64,11 @@ GO
 ALTER TABLE urbansim.nodes ADD CONSTRAINT pk_urbansim_nodes_node PRIMARY KEY CLUSTERED (node)
 GO
 
+CREATE SPATIAL INDEX [ix_spatial_urbansim_nodes] ON [urbansim].[nodes]
+(
+	[geom]
+)USING  GEOMETRY_GRID 
+WITH (BOUNDING_BOX =(6152300, 1775400, 6613100, 2129400), GRIDS =(LEVEL_1 = MEDIUM,LEVEL_2 = MEDIUM,LEVEL_3 = MEDIUM,LEVEL_4 = MEDIUM), 
+CELLS_PER_OBJECT = 16, PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
+GO
 
