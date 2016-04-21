@@ -52,7 +52,7 @@ def random_allocate_agents_by_geography(agents, containers, geography_id_col, co
 def process_households():
 
     bldgs_sql = """SELECT 
-                    bldg.id as building_id, bldg.residential_units, p.mgra_id as mgra
+                    bldg.building_id, bldg.residential_units, p.mgra_id as mgra
                   FROM 
                     urbansim.buildings bldg
                     INNER JOIN spacecore.urbansim.parcels p ON bldg.parcel_id = p.parcel_id"""
@@ -85,7 +85,7 @@ def process_households():
 
 def process_jobs():
     bldgs_sql = """SELECT 
-                    bldg.id as building_id, bldg.job_spaces, p.block_id 
+                    bldg.building_id, bldg.job_spaces, p.block_id
                   FROM
                     urbansim.buildings bldg
                     INNER JOIN urbansim.parcels p ON bldg.parcel_id = p.parcel_id"""
@@ -109,6 +109,29 @@ def process_jobs():
     jobs.to_sql('jobs', urbansim_engine, schema='urbansim', if_exists='replace', chunksize=1000)
     
 
+def process_residential_units():
+
+	bldgs_sql = """SELECT
+                    bldg.building_id, bldg.development_type_id, bldg.parcel_id, improvement_value, residential_units, residential_sqft
+                    ,non_residential_sqft, price_per_sqft, stories, year_built, p.mgra_id as mgra
+                  FROM
+                    urbansim.buildings bldg
+                    INNER JOIN spacecore.urbansim.parcels p ON bldg.parcel_id = p.parcel_id"""
+	# Get 2015 DU by Parcel
+	du_by_parcel_sql = """SELECT
+							parcelID as parcel_index, parcelID as parcel_id, SUM(du) as du
+						FROM
+							core.landcore
+						GROUP BY parcelID"""
+
+	buildings = pd.read_sql(bldgs_sql, urbansim_engine, index_col = 'building_id')
+	du = pd.read_sql(du_by_parcel_sql, urbansim_engine, index_col = 'parcel_index')
+
+	results_df = random_allocate_agents_by_geography(du, buildings, 'parcel_id', 'residential_units')
+	results_df.to_csv('process_du_results')
+
+
 if __name__ == '__main__':
-    process_households()
-    process_jobs()
+    #process_households()
+    #process_jobs()
+    process_residential_units()
