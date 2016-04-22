@@ -111,34 +111,32 @@ def process_jobs():
 
 def process_residential_units():
 
-	bldgs_sql = """SELECT
+    bldgs_sql = """SELECT
                     bldg.building_id, bldg.development_type_id, bldg.parcel_id, improvement_value, residential_units, residential_sqft
                     ,non_residential_sqft, price_per_sqft, stories, year_built, p.mgra_id as mgra
                   FROM
                     urbansim.buildings bldg
                     INNER JOIN spacecore.urbansim.parcels p ON bldg.parcel_id = p.parcel_id"""
 	# Get 2015 Units by Parcel
-	units_by_parcel_sql = """SELECT
-							parcelID as parcel_index, parcelID as parcel_id, SUM(du) as du
-						FROM
-							core.landcore
-						WHERE du > 0
-						GROUP BY parcelID"""
+    units_by_parcel_sql = """SELECT
+                        id as unit_id, parcel_id
+                        FROM
+                            input.landcore_units"""
 
-	buildings = pd.read_sql(bldgs_sql, urbansim_engine, index_col = 'building_id')
-	units = pd.read_sql(units_by_parcel_sql, urbansim_engine, index_col = 'parcel_index')
+    buildings = pd.read_sql(bldgs_sql, urbansim_engine, index_col = 'building_id')
+    units = pd.read_sql(units_by_parcel_sql, urbansim_engine, index_col = 'unit_id')
 
-	results_df = random_allocate_agents_by_geography(units, buildings, 'parcel_id', 'residential_units')
-	results_df.to_csv('process_residential_units_results')
+    results_df = random_allocate_agents_by_geography(units, buildings, 'parcel_id', 'residential_units')
+    results_df.to_csv('process_residential_units_results')
 
-    if 'parcel_id' in Units.columns:
-        del Units['parcel_id']
+    if 'parcel_id' in units.columns:
+        del units['parcel_id']
 
-    Units.ix[Units.building_id.isnull(), 'building_id'] = -1
-    Units['building_id'].astype('int')
+    units.ix[units.building_id.isnull(), 'building_id'] = -1
+    units['building_id'].astype('int')
 
-    Units.to_csv('Units.csv')
-    Units.to_sql('Units', urbansim_engine, schema='urbansim', if_exists='replace', chunksize=1000)
+    units.to_csv('units.csv')
+    units.to_sql('units', urbansim_engine, schema='urbansim', if_exists='replace', chunksize=1000)
 
 if __name__ == '__main__':
     process_residential_units()
