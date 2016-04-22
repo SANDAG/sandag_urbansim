@@ -1,3 +1,30 @@
+IF OBJECT_ID('ref.seg_class_id') IS NOT NULL
+  DROP TABLE ref.seg_class_id
+GO
+
+CREATE TABLE ref.seg_class_id (
+  seg_class_id nchar(1) not null primary key
+  ,seg_class_desc nvarchar(25) not null
+)
+
+INSERT INTO ref.seg_class_id (seg_class_id, seg_class_desc) VALUES 
+('1', 'Freeway'),
+('2', 'State Route'),
+('3', 'Major Roads'),
+('4', 'Arterial'),
+('5', 'Local Street'),
+('6', 'Unpaved'),
+('7', 'Private'),
+('8', 'Freeway Ramp'),
+('9', 'On-Ramp'),
+('A', 'Alley'),
+('H', 'Speed Hump'),
+('M', 'Military Street'),
+('P', 'Paper Street'),
+('Q', 'Undocumented Street'),
+('W', 'Walkway'),
+('Z', 'Named Private Street')
+
 IF OBJECT_ID('urbansim.edges') IS NOT NULL
   DROP TABLE urbansim.edges
 GO
@@ -32,16 +59,18 @@ CREATE TABLE urbansim.nodes (
   node int NOT NULL
   ,x float NOT NULL
   ,y float NOT NULL
+  ,on_ramp bit NOT NULL
   ,geom geometry NOT NULL
 )
 GO
 
-INSERT INTO urbansim.nodes (node, x, y, geom)
+INSERT INTO urbansim.nodes (node, x, y, on_ramp, geom)
 SELECT
   node
   ,avg(x) as x
   ,avg(y) as y
-  ,geometry:Point(avg(x), avg(y), 2230) as geom
+  ,0 as on_ramp --Dummy to assign all edges as not an on-ramp, update in the next statement
+  ,geometry::Point(avg(x), avg(y), 2230) as geom
 FROM (
 SELECT
   FNODE as node
@@ -72,3 +101,9 @@ WITH (BOUNDING_BOX =(6152300, 1775400, 6613100, 2129400), GRIDS =(LEVEL_1 = MEDI
 CELLS_PER_OBJECT = 16, PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 GO
 
+UPDATE n
+  SET n.on_ramp = 1
+FROM
+  urbansim.nodes n
+  INNER JOIN (SELECT FNODE FROM gis.roads WHERE SEGCLASS = '9') ons ON n.node = ons.FNODE
+GO
