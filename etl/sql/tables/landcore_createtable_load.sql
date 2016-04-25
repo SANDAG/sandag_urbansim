@@ -1,8 +1,8 @@
 USE spacecore
-IF OBJECT_ID('core.LANDCORE', 'u') IS NOT NULL
-	DROP TABLE core.LANDCORE
+IF OBJECT_ID('gis.landcore', 'u') IS NOT NULL
+	DROP TABLE gis.landcore
 GO
-CREATE TABLE core.LANDCORE(
+CREATE TABLE gis.landcore(
 	OBJECTID int IDENTITY(1,1) NOT NULL,
 	Shape geometry NOT NULL,
 	subParcel int NOT NULL,
@@ -22,7 +22,7 @@ CREATE TABLE core.LANDCORE(
 )
 GO
 
-INSERT INTO core.LANDCORE WITH(TABLOCK) (
+INSERT INTO gis.landcore WITH(TABLOCK) (
 	Shape
 	,subParcel
 	,lu
@@ -55,4 +55,4 @@ SELECT
 	,shape.STArea() as area
 	FROM  OPENQUERY([pila\sdgIntDb], 'SELECT * FROM lis.gis.LUDU2015') WHERE parcelid > 0
 
-CREATE NONCLUSTERED INDEX ix_landcore_parcelid ON core.landcore (parcelID) INCLUDE (du)
+CREATE NONCLUSTERED INDEX ix_landcore_parcelid ON gis.landcore (parcelID) INCLUDE (du)

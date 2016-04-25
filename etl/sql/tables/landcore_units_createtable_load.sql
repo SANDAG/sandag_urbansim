@@ -13,7 +13,7 @@ INSERT INTO input.landcore_units WITH (TABLOCK)(
 )
 SELECT l.parcelID
 	,l.du 
-	FROM core.landcore l 
+	FROM gis.landcore l 
 		INNER JOIN dbo.numbers_test n
 		ON l.du >= n.number
 	ORDER BY parcelID

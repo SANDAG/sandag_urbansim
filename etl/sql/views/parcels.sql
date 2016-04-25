@@ -60,7 +60,7 @@ LEFT JOIN (
 		  ,dev.development_type_id dev_type_id
 		  ,dev.name dev_type
 		FROM
-		  (SELECT lc.parcelID, MIN(dev.priority) p FROM core.LANDCORE lc
+		  (SELECT lc.parcelID, MIN(dev.priority) p FROM gis.landcore lc
 				INNER JOIN ref.development_type_lu_code xref ON lc.lu = xref.lu_code
 				INNER JOIN ref.development_type dev ON xref.development_type_id = dev.development_type_id
 				GROUP BY lc.parcelID) p_dev_type

@@ -47,7 +47,7 @@ SET
 	,usb.development_type_id = dev.development_type_id
 FROM
 	urbansim.buildings usb
-	,core.LANDCORE lc
+	,gis.landcore lc
 JOIN ref.development_type_lu_code dev 
 ON lc.lu = dev.lu_code
 WHERE usb.Shape.STCentroid().STWithin(lc.Shape) = 1
@@ -89,7 +89,7 @@ FROM
 		JOIN
 			(SELECT parcelID
 				,MIN(apn) apn											--GRAB LOWEST APN
-			FROM spacecore.core.LANDCORE
+			FROM spacecore.gis.landcore
 			GROUP BY parcelID) l
 		ON l.apn = LEFT(par.apn,8)										--ONE TO MANY, SELECT MIN APN
 		GROUP BY l.parcelID, LEFT(par.apn,8)
