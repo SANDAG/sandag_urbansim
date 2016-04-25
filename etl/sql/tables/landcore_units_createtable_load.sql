@@ -6,6 +6,7 @@ CREATE TABLE input.landcore_units(
 	id int IDENTITY(1,1) NOT NULL
 	,parcel_id int
 	,du smallint
+	CONSTRAINT id PRIMARY KEY (id)
 )
 INSERT INTO input.landcore_units WITH (TABLOCK)(
 	parcel_id
