@@ -4,7 +4,8 @@ from pysandag.database import get_connection_string
 from sqlalchemy import create_engine
 from urbansim.models.lcm import unit_choice
 
-urbansim_engine = create_engine(get_connection_string("E:/Apps/urbansim/sandag_urbansim_rebuild/configs/dbconfig.yml", 'urbansim_database'), legacy_schema_aliasing=False)
+urbansim_engine = create_engine(get_connection_string("d:/dev/sandag_urbansim_rebuild/configs/dbconfig.yml", 'urbansim_database'))
+#, legacy_schema_aliasing=False)
 
 def random_allocate_agents_by_geography(agents, containers, geography_id_col, containers_units_col):
     """Allocate agents (e.g., households, jobs) to a container (e.g., buildings) based
@@ -84,7 +85,7 @@ def process_households():
 
 
 def process_jobs():
-    bldgs_sql = """SELECT 
+    bldgs_sql = """SELECT
                     bldg.building_id, bldg.job_spaces, p.block_id
                   FROM
                     urbansim.buildings bldg
@@ -103,42 +104,89 @@ def process_jobs():
         del jobs['block_id']
         
     jobs.ix[jobs.building_id.isnull(), 'building_id'] = -1
-    jobs['building_id'].astype('int')
+    jobs['building_id'] = jobs['building_id'].astype('int')
     
     jobs.to_csv('jobs.csv')
     jobs.to_sql('jobs', urbansim_engine, schema='urbansim', if_exists='replace', chunksize=1000)
     
 
 def process_residential_units():
+    """Allocate total parcel DU to buildings. Only run unit choice allocation model for those parcels in which there
+    is more than one DU and more than one building on the parcel."""
 
-    bldgs_sql = """SELECT
-                    bldg.building_id, bldg.development_type_id, bldg.parcel_id, improvement_value, residential_units, residential_sqft
-                    ,non_residential_sqft, price_per_sqft, stories, year_built, p.mgra_id as mgra
-                  FROM
-                    urbansim.buildings bldg
-                    INNER JOIN spacecore.urbansim.parcels p ON bldg.parcel_id = p.parcel_id"""
-	# Get 2015 Units by Parcel
-    units_by_parcel_sql = """SELECT
-                        id as unit_id, parcel_id
-                        FROM
-                            input.landcore_units"""
+    # Select buildings from buildings table that only have one building on the parcel.
+    single_bldg_units_sql = """
+      SELECT building_id
+        ,landcore.du as units
+      FROM urbansim.buildings
+          LEFT JOIN
+              (SELECT parcelId, SUM(du) du
+              FROM gis.landcore
+              GROUP BY parcelID) landcore
+          ON landcore.parcelID = buildings.parcel_id
+      WHERE parcel_id IN
+        (SELECT parcel_id
+         FROM urbansim.buildings
+         GROUP BY parcel_id
+         HAVING COUNT(*) = 1)"""
+    units = pd.read_sql(single_bldg_units_sql, urbansim_engine, index_col='building_id')
 
-    buildings = pd.read_sql(bldgs_sql, urbansim_engine, index_col = 'building_id')
-    units = pd.read_sql(units_by_parcel_sql, urbansim_engine, index_col = 'unit_id')
+    # Get buildings that have > 1 DU. These will be the buildings we allocate units to.
+    multi_unit_multi_bldgs_sql = """
+        SELECT building_id
+          ,parcel_id
+          ,landcore.du as residential_units
+        FROM urbansim.buildings
+        LEFT JOIN
+            (SELECT parcelId, SUM(du) du
+             FROM gis.landcore
+             GROUP BY parcelID) landcore
+             ON landcore.parcelID = buildings.parcel_id
+        WHERE parcel_id IN
+            (SELECT parcel_id
+             FROM urbansim.buildings
+             GROUP BY parcel_id
+             HAVING COUNT(*) > 1)
+        AND du > 0"""
+    buildings = pd.read_sql(multi_unit_multi_bldgs_sql, urbansim_engine, index_col='building_id')
 
-    results_df = random_allocate_agents_by_geography(units, buildings, 'parcel_id', 'residential_units')
+    units_to_allocate_sql = """
+        SELECT id as unit_id
+            ,parcel_id
+        FROM input.landcore_units
+        WHERE parcel_id IN
+          (SELECT parcel_id
+           FROM urbansim.buildings
+           GROUP BY parcel_id
+           HAVING COUNT(*) > 1)
+        ORDER BY parcel_id"""
+    units_to_allocate = pd.read_sql(units_to_allocate_sql, urbansim_engine, index_col='unit_id')
+
+    results_df = random_allocate_agents_by_geography(units_to_allocate, buildings, 'parcel_id', 'residential_units')
     results_df.to_csv('process_residential_units_results')
 
-    if 'parcel_id' in units.columns:
-        del units['parcel_id']
+    # Sum allocated unit qty by building_id
+    updated_units = units_to_allocate.groupby('building_id').agg('count')
+    updated_units.columns = ['units']
+    updated_units.to_csv('unit_assignment.csv')
 
-    units.ix[units.building_id.isnull(), 'building_id'] = -1
-    units['building_id'].astype('int')
+    # Append units that were allocated to units not needing allocation, and write to SQL.
+    units = units.append(updated_units)
+    units.to_sql('unit_assignment', urbansim_engine, schema='urbansim', if_exists='replace', chunksize=1000)
 
-    units.to_csv('units.csv')
-    units.to_sql('units', urbansim_engine, schema='urbansim', if_exists='replace', chunksize=1000)
+    # Update the buildings table with the updated residential_units
+    update_sql = """
+        UPDATE urbansim.buildings
+        SET residential_units = ISNULL(unit_assignment.units, 0)
+        FROM urbansim.buildings
+          LEFT JOIN urbansim.unit_assignment
+          ON unit_assignment.building_id = buildings.building_id
+    """
+    conn = urbansim_engine.connect()
+    conn.execute(update_sql)
+    conn.close()
 
 if __name__ == '__main__':
     process_residential_units()
-    #process_households()
-    #process_jobs()
+    process_households()
+    process_jobs()
