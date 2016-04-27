@@ -6,6 +6,7 @@ CREATE TABLE input.landcore_units(
 	id int IDENTITY(1,1) NOT NULL
 	,parcel_id int
 	,du smallint
+	CONSTRAINT id PRIMARY KEY (id)
 )
 INSERT INTO input.landcore_units WITH (TABLOCK)(
 	parcel_id
@@ -13,7 +14,7 @@ INSERT INTO input.landcore_units WITH (TABLOCK)(
 )
 SELECT l.parcelID
 	,l.du 
-	FROM core.landcore l 
+	FROM gis.landcore l 
 		INNER JOIN dbo.numbers_test n
 		ON l.du >= n.number
 	ORDER BY parcelID
