@@ -62,6 +62,28 @@ JOIN [spacecore].[input].[sqft_per_emp_by_devType] sqft
 ON usbs.luz_id = sqft.luz_id AND usbs.development_type_id = sqft.development_type_id 	
 
 /**3 USE PAR / COSTAR DATA, IF AVAILABLE, TO VALIDATE DERIVED NON-RESIDENTIAL SQUARE FOOTAGE **/
+--PAR
+UPDATE
+	usbs
+SET
+	usbs.par_nrsf = l.sqft
+	,usbs.apn8 = l.apn8
+FROM
+	urbansim.buildings_nonres_synthetic usbs
+	LEFT JOIN
+		(SELECT l.parcelID
+			,LEFT(par.apn,8) apn8
+			,SUM([TOTAL_LVG_AREA]+[ADDITION_AREA]) sqft
+		FROM spacecore.input.assessor_par par
+		JOIN
+			(SELECT parcelID
+				,MIN(apn) apn											--GRAB LOWEST APN
+			FROM spacecore.gis.landcore
+			GROUP BY parcelID) l
+		ON l.apn = LEFT(par.apn,8)										--ONE TO MANY, SELECT MIN APN
+		GROUP BY l.parcelID, LEFT(par.apn,8)
+		) l
+	ON usbs.parcel_id = l.parcelID
 
 /**4 IDENTIFY THE NUMBER OF BUILDING STORIES BY DIVIDING THE DERIVED NON-RESIDENTIAL SQUARE FOOTAGE DIVIDED BY THE SYNTHESIZED, SETBACK-DERIVED FOOTPRINT AREA OF THE BUILDING **/
 
