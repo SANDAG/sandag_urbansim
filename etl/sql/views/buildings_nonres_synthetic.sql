@@ -9,23 +9,28 @@ CREATE TABLE urbansim.buildings_nonres_synthetic(
 	,luz_id int
 	,development_type_id smallint
 	,emp int
-	,sqft float
+	,sqft_per_emp float
 	,emp_sqft float
+	,parcel_sqft float
+	,par_emp_sqft_ratio float
 	,apn8 int
 	,par_nrsf float
 	,costar_nrsf float
+	,costar_sto int
+	,stories_ int
 )
 /**1 IDENTIFY PARCELS WHERE EDD DATA HAS BEEN SITED, BUT NO BUILDING EXISTS IN OUR DATABASE **/
 INSERT INTO urbansim.buildings_nonres_synthetic WITH (TABLOCK) (
 	parcel_id
 	,luz_id
 	,development_type_id
+	,parcel_sqft
 	,emp
-
 )
 SELECT usp.parcel_id
 	,usp.luz_id
 	,usp.development_type_id
+	,MAX(usp.parcel_acres*43560)
 	--,ref.[development_type_id] devtype_from_lu															--LCKEY LEVEL LU TO DEVTYPE
 --NOT GROUPED
 	--,emp.emp_adj emp
@@ -48,8 +53,9 @@ ORDER BY usp.parcel_id, usp.luz_id, usp.development_type_id
 UPDATE
 	usbs
 SET
-	usbs.sqft = sqft.sqft_per_emp
-	,usbs.emp_sqft = usbs.emp * sqft.sqft_per_emp		--REQUIRED SQFT
+	usbs.sqft_per_emp = sqft.sqft_per_emp
+	,usbs.emp_sqft = usbs.emp * sqft.sqft_per_emp			--REQUIRED SQFT
+	,usbs.par_emp_sqft_ratio = usbs.emp_sqft/parcel_sqft	--REQUIRED SQFT RATIO
 FROM
 	urbansim.buildings_nonres_synthetic usbs
 JOIN socioec_data.ca_edd.emp_2013 emp
@@ -60,6 +66,12 @@ ON usbs.parcel_id = emp.parcelId
 
 JOIN [spacecore].[input].[sqft_per_emp_by_devType] sqft
 ON usbs.luz_id = sqft.luz_id AND usbs.development_type_id = sqft.development_type_id 	
+
+--REQUIRED SQFT RATIO
+UPDATE
+	urbansim.buildings_nonres_synthetic
+SET
+	par_emp_sqft_ratio = emp_sqft/parcel_sqft	--REQUIRED SQFT RATIO
 
 /**3 USE PAR / COSTAR DATA, IF AVAILABLE, TO VALIDATE DERIVED NON-RESIDENTIAL SQUARE FOOTAGE **/
 --PAR
@@ -90,15 +102,23 @@ UPDATE
 	usbs
 SET
 	usbs.costar_nrsf = c.rentable_building_area
+	,usbs.costar_sto = c.stories
 FROM
 	urbansim.buildings_nonres_synthetic usbs
 	LEFT JOIN
 		(SELECT parcel_id
-			, SUM([rentable_building_area]) rentable_building_area
+			,SUM([rentable_building_area]) rentable_building_area
+			,AVG([number_of_stories]) stories
 		FROM input.costar
 		GROUP BY parcel_id) c
 	ON usbs.parcel_id = c.parcel_id
 /**4 IDENTIFY THE NUMBER OF BUILDING STORIES BY DIVIDING THE DERIVED NON-RESIDENTIAL SQUARE FOOTAGE DIVIDED BY THE SYNTHESIZED, SETBACK-DERIVED FOOTPRINT AREA OF THE BUILDING **/
+--UPDATE
+--	usbs
+--SET
+--	usbs.stories = usbs.emp_sqft
+--FROM
+--	urbansim.buildings_nonres_synthetic usbs
 
 /**5 USE THE LODES CENSUS BLOCK LEVEL DATA TO ASSIGN JOBS TO THE TOTALITY BUILDINGS **/
 
