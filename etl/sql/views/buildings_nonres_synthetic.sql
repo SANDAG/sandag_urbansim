@@ -85,6 +85,19 @@ FROM
 		) l
 	ON usbs.parcel_id = l.parcelID
 
+--COSTAR
+UPDATE
+	usbs
+SET
+	usbs.costar_nrsf = c.rentable_building_area
+FROM
+	urbansim.buildings_nonres_synthetic usbs
+	LEFT JOIN
+		(SELECT parcel_id
+			, SUM([rentable_building_area]) rentable_building_area
+		FROM input.costar
+		GROUP BY parcel_id) c
+	ON usbs.parcel_id = c.parcel_id
 /**4 IDENTIFY THE NUMBER OF BUILDING STORIES BY DIVIDING THE DERIVED NON-RESIDENTIAL SQUARE FOOTAGE DIVIDED BY THE SYNTHESIZED, SETBACK-DERIVED FOOTPRINT AREA OF THE BUILDING **/
 
 /**5 USE THE LODES CENSUS BLOCK LEVEL DATA TO ASSIGN JOBS TO THE TOTALITY BUILDINGS **/
