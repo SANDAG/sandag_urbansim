@@ -12,8 +12,7 @@ WITH empTotalByLckey AS
 	GROUP BY e.lckey
 ), s AS
 (
-	SELECT e.luz_id
-		  ,e.lckey
+	SELECT e.lckey
 		  ,x.development_type_id
 		  ,SUM(e.emp_pecas) as emp
 		  ,(CASE
@@ -28,21 +27,18 @@ WITH empTotalByLckey AS
 				AND p.yr = 2012
 					INNER JOIN urbansim.space_type_development_type x
 					ON x.space_type_id = p.space_type_id
-	GROUP BY e.luz_id
-		,e.lckey
+	GROUP BY e.lckey
 		,x.development_type_id
 		,p.floorspace
 		,empTotalByLckey.emp
 )
-SELECT luz_id
-	,development_type_id
+SELECT development_type_id
 	,CASE	
 		WHEN SUM(emp) = 0 THEN 0
 		ELSE SUM(sqftUsed) / SUM(emp)
 	 END as sqft_per_emp
-INTO spacecore.input.sqft_per_emp_by_devType
+--INTO spacecore.input.sqft_per_emp_by_devType
 FROM s
-GROUP BY luz_id
-	,development_type_id
-ORDER BY luz_id
-	,development_type_id
+WHERE s.sqftUsed > 0
+GROUP BY development_type_id
+ORDER BY development_type_id
