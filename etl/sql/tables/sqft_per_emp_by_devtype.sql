@@ -37,7 +37,7 @@ SELECT development_type_id
 		WHEN SUM(emp) = 0 THEN 0
 		ELSE SUM(sqftUsed) / SUM(emp)
 	 END as sqft_per_emp
---INTO spacecore.input.sqft_per_emp_by_devType
+INTO spacecore.input.sqft_per_emp_by_dev_type
 FROM s
 WHERE s.sqftUsed > 0
 GROUP BY development_type_id
