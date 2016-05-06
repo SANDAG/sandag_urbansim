@@ -6,47 +6,36 @@ GO
 CREATE TABLE urbansim.buildings_nonres_synthetic(
 	building_id int IDENTITY(1,1) NOT NULL
 	,parcel_id int
-	,luz_id int
 	,development_type_id smallint
 	,emp int
 	,sqft_per_emp float
 	,emp_sqft float
 	,parcel_sqft float
-	,par_emp_sqft_ratio float
+	,par_emp_sqft_ratio decimal(10,2)
 	,apn8 int
-	,par_nrsf float
+	,parcel_nrsf float
 	,costar_nrsf float
-	,costar_sto int
-	,stories_ int
+	,costar_stories int
+	,stories int
 )
 /**1 IDENTIFY PARCELS WHERE EDD DATA HAS BEEN SITED, BUT NO BUILDING EXISTS IN OUR DATABASE **/
 INSERT INTO urbansim.buildings_nonres_synthetic WITH (TABLOCK) (
 	parcel_id
-	,luz_id
 	,development_type_id
 	,parcel_sqft
 	,emp
 )
 SELECT usp.parcel_id
-	,usp.luz_id
 	,usp.development_type_id
-	,MAX(usp.parcel_acres*43560)
-	--,ref.[development_type_id] devtype_from_lu															--LCKEY LEVEL LU TO DEVTYPE
---NOT GROUPED
-	--,emp.emp_adj emp
-	--,sqft.sqft_per_emp sqft_fromdev
-	--,sqft_fromlu.sqft_per_emp sqft_fromlu																	--LCKEY LEVEL LU TO DEVTYPE
---GROUPED
+	,usp.parcel_acres*43560
 	,SUM(emp.emp_adj) emp
 FROM urbansim.parcels usp
 	JOIN socioec_data.ca_edd.emp_2013 emp
 	ON usp.parcel_id = emp.parcelId		--emp.shape.STWithin(usp.shape) = 1								--EDD DATA SITED
-	--JOIN [spacecore].[input].[sqft_per_emp_by_devType] sqft_fromlu
-	--ON usp.luz_id = sqft_fromlu.luz_id AND ref.[development_type_id] = sqft_fromlu.development_type_id	--LCKEY LEVEL LU TO DEVTYPE
 WHERE usp.parcel_id NOT IN (SELECT DISTINCT parcel_id FROM urbansim.buildings)							--NO BUILDING
 --AND usp.development_type_id != ref.[development_type_id]													--PARCEL LEVEL DEVTYPE != LCKEY LEVEL LU TO DEVTYPE
-GROUP BY usp.parcel_id, usp.luz_id, usp.development_type_id 
-ORDER BY usp.parcel_id, usp.luz_id, usp.development_type_id
+GROUP BY usp.parcel_id, usp.development_type_id, usp.parcel_acres
+ORDER BY usp.parcel_id, usp.development_type_id, usp.parcel_acres
 ;
 
 /**2 USING THE SQUARE FOOT PER EMPLOYEE DATA, DETERMINE THE NON-RESIDENTIAL SQUARE FOOTAGE NECESSARY TO SUPPORT THE EDD NUMBER OF EMPLOYEES **/
@@ -64,8 +53,8 @@ ON usbs.parcel_id = emp.parcelId
 --JOIN [ref].[development_type_lu_code] ref																	--LCKEY LEVEL LU TO DEVTYPE
 --ON emp.lu = ref.[lu_code]
 
-JOIN [spacecore].[input].[sqft_per_emp_by_devType] sqft
-ON usbs.luz_id = sqft.luz_id AND usbs.development_type_id = sqft.development_type_id 	
+JOIN [spacecore].[input].[sqft_per_emp_by_dev_type] sqft
+ON usbs.development_type_id = sqft.development_type_id 	
 
 --REQUIRED SQFT RATIO
 UPDATE
@@ -78,7 +67,7 @@ SET
 UPDATE
 	usbs
 SET
-	usbs.par_nrsf = l.sqft
+	usbs.parcel_nrsf = l.sqft
 	,usbs.apn8 = l.apn8
 FROM
 	urbansim.buildings_nonres_synthetic usbs
@@ -102,7 +91,7 @@ UPDATE
 	usbs
 SET
 	usbs.costar_nrsf = c.rentable_building_area
-	,usbs.costar_sto = c.stories
+	,usbs.costar_stories = c.stories
 FROM
 	urbansim.buildings_nonres_synthetic usbs
 	LEFT JOIN
