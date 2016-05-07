@@ -725,31 +725,70 @@ CREATE SPATIAL INDEX [ix_spatial_input_costar_centroid] ON input.costar
 --ADD PARCEL_ID FIELD 
 ALTER TABLE input.costar ADD parcel_id int NULL
 GO
---GET PARCEL_ID BY SPATIAL JOIN
+
+--FIX COSTAR APN TO 10 DIGIT
+ALTER TABLE input.costar
+ADD [parcel_number_1(min)_fixed10] nvarchar(10)
+
+ALTER TABLE input.costar
+ADD [parcel_number_2(max)_fixed10] nvarchar(10)
+
+WITH costar_apn AS (
+	SELECT 
+	[property_id]
+	,[parcel_number_1(min)]
+	,[parcel_number_2(max)]
+	,CASE 
+		WHEN LEN(LEFT(REPLACE([parcel_number_1(min)], '-', ''), 10)) = 10 THEN LEFT(REPLACE([parcel_number_1(min)], '-', ''), 10)
+		WHEN LEN(LEFT(REPLACE([parcel_number_1(min)], '-', ''), 10)) = 9 THEN CONCAT(LEFT(REPLACE([parcel_number_1(min)], '-', ''), 10), '0')
+		WHEN LEN(LEFT(REPLACE([parcel_number_1(min)], '-', ''), 10)) = 8 THEN CONCAT(LEFT(REPLACE([parcel_number_1(min)], '-', ''), 10), '00')
+	END AS [parcel_number_1(min)_fixed10]
+	,CASE 
+		WHEN LEN(LEFT(REPLACE([parcel_number_2(max)], '-', ''), 10)) = 10 THEN LEFT(REPLACE([parcel_number_2(max)], '-', ''), 10)
+		WHEN LEN(LEFT(REPLACE([parcel_number_2(max)], '-', ''), 10)) = 9 THEN CONCAT(LEFT(REPLACE([parcel_number_2(max)], '-', ''), 10), '0')
+		WHEN LEN(LEFT(REPLACE([parcel_number_2(max)], '-', ''), 10)) = 8 THEN CONCAT(LEFT(REPLACE([parcel_number_2(max)], '-', ''), 10), '00')
+	END AS [parcel_number_2(max)_fixed10]
+	FROM [spacecore].[input].[costar]
+	)
 UPDATE
 	c
 SET
-	c.parcel_id = usp.parcel_id
+	c.parcel_id = p.parcelid
+	,c.[parcel_number_1(min)_fixed10] = a.[parcel_number_1(min)_fixed10]
+	,c.[parcel_number_2(max)_fixed10] = a.[parcel_number_2(max)_fixed10]
+
 FROM
     input.costar c
-JOIN spacecore.urbansim.parcels usp ON c.centroid.STIntersects(usp.shape) = 1
+	JOIN [GIS].[parcels] p ON c.[parcel_number_1(min)_fixed10] = p.APN
+	JOIN costar_apn a ON c.[parcel_number_1(min)] = a.[parcel_number_1(min)]
 
---ADD LOCATE FIELD TO IDENTIFY LOCATED RECORDS
+--GET PARCELID FROM PARCELS, JOIN TO COSTAR APN 10 DIGIT
+UPDATE
+	c
+SET
+	c.parcel_id = p.parcelid
+FROM
+    input.costar c
+	JOIN [GIS].[parcels] p ON c.[parcel_number_1(min)_fixed10] = p.APN
+
+--ADD LOCATE FIELD TO IDENTIFY APN JOINED RECORDS
 ALTER TABLE input.costar ADD location varchar(10)
 GO
 UPDATE input.costar
 SET location =
-	(CASE WHEN parcel_id IS NOT NULL
-		THEN 'costar'
-		ELSE 'nearest'
+	(CASE WHEN parcel_id IS NOT NULL AND parcel_id > 0
+		THEN 'apn'
+		ELSE 'none'
 	END)
 
-/** FIND RECORDS WHERE PARCEL_ID IS NULL, LAT LONG NOT MAPPING TO PARCEL, ASSIGN TO NEAREST PARCEL**/
 
+/** FIND RECORDS WHERE PARCEL_ID IS NULL, LAT LONG NOT MAPPING TO PARCEL, ASSIGN TO NEAREST PARCEL
+	UPDATE LOCATE FIELD TO IDENTIFY SPATIAL JOINED RECORDS**/
 UPDATE
 	c
 SET
 	c.parcel_id = p.parcel_id
+	,c.location = 'nearest'
 FROM
 	input.costar c
 JOIN (
