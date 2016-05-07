@@ -753,13 +753,11 @@ WITH costar_apn AS (
 UPDATE
 	c
 SET
-	c.parcel_id = p.parcelid
-	,c.[parcel_number_1(min)_fixed10] = a.[parcel_number_1(min)_fixed10]
+	c.[parcel_number_1(min)_fixed10] = a.[parcel_number_1(min)_fixed10]
 	,c.[parcel_number_2(max)_fixed10] = a.[parcel_number_2(max)_fixed10]
 
 FROM
     input.costar c
-	JOIN [GIS].[parcels] p ON c.[parcel_number_1(min)_fixed10] = p.APN
 	JOIN costar_apn a ON c.[parcel_number_1(min)] = a.[parcel_number_1(min)]
 
 --GET PARCELID FROM PARCELS, JOIN TO COSTAR APN 10 DIGIT
