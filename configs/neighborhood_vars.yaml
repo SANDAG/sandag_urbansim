@@ -1,9 +1,3 @@
-name: networks
-
-desc: Neighborhood Accessibility Variables
-
-model_type: networks
-
 node_col: node_id
 
 variable_definitions:
@@ -23,30 +17,30 @@ variable_definitions:
     filters:
     - non_residential_sqft > 0
     radius: 2000
-    varname: nonres_rent_per_sqft
+    varname: non_residential_rent_per_sqft
 
   - name: jobs_1500m
     dataframe: jobs
     radius: 1500
     apply: np.log1p
-    
+
   - name: jobs_800m
     dataframe: jobs
     radius: 800
     apply: np.log1p
-    
+
   - name: jobs_400m
     dataframe: jobs
     radius: 400
     apply: np.log1p
-    
+
   - name: jobs1
     dataframe: jobs
     filters:
     - sector_id == 1
     radius: 1200
     apply: np.log1p
-    
+
   - name: jobs2
     dataframe: jobs
     filters:
@@ -60,119 +54,119 @@ variable_definitions:
     - sector_id == 3
     radius: 1200
     apply: np.log1p
-    
+
   - name: jobs4
     dataframe: jobs
     filters:
     - sector_id == 4
     radius: 1200
     apply: np.log1p
-    
+
   - name: jobs5
     dataframe: jobs
     filters:
     - sector_id == 5
     radius: 1200
     apply: np.log1p
-    
+
   - name: jobs6
     dataframe: jobs
     filters:
     - sector_id == 6
     radius: 1200
     apply: np.log1p
-    
+
   - name: jobs7
     dataframe: jobs
     filters:
     - sector_id == 7
     radius: 1200
     apply: np.log1p
-    
+
   - name: jobs8
     dataframe: jobs
     filters:
     - sector_id == 8
     radius: 1200
     apply: np.log1p
-    
+
   - name: jobs9
     dataframe: jobs
     filters:
     - sector_id == 9
     radius: 1200
     apply: np.log1p
-    
+
   - name: jobs10
     dataframe: jobs
     filters:
     - sector_id == 10
     radius: 1200
     apply: np.log1p
-    
+
   - name: jobs11
     dataframe: jobs
     filters:
     - sector_id == 11
     radius: 1200
     apply: np.log1p
-    
+
   - name: jobs12
     dataframe: jobs
     filters:
     - sector_id == 12
     radius: 1200
     apply: np.log1p
-    
+
   - name: jobs13
     dataframe: jobs
     filters:
     - sector_id == 13
     radius: 1200
     apply: np.log1p
-    
+
   - name: jobs14
     dataframe: jobs
     filters:
     - sector_id == 14
     radius: 1200
     apply: np.log1p
-    
+
   - name: jobs15
     dataframe: jobs
     filters:
     - sector_id == 15
     radius: 1200
     apply: np.log1p
-    
+
   - name: jobs16
     dataframe: jobs
     filters:
     - sector_id == 16
     radius: 1200
     apply: np.log1p
-    
+
   - name: jobs17
     dataframe: jobs
     filters:
     - sector_id == 17
     radius: 1200
     apply: np.log1p
-    
+
   - name: jobs18
     dataframe: jobs
     filters:
     - sector_id == 18
     radius: 1200
     apply: np.log1p
-    
+
   - name: jobs19
     dataframe: jobs
     filters:
     - sector_id == 19
     radius: 1200
     apply: np.log1p
-    
+
   - name: jobs20
     dataframe: jobs
     filters:
@@ -187,7 +181,7 @@ variable_definitions:
     aggregation: average
     decay: flat
     apply: np.log1p
-    
+
   - name: ave_age_of_head_1500m
     dataframe: households
     varname: age_of_head
@@ -195,14 +189,14 @@ variable_definitions:
     aggregation: average
     decay: flat
     apply: np.log1p
-    
+
   - name: ave_children_1500m
     dataframe: households
     varname: children
     radius: 1500
     aggregation: average
     decay: flat
-    
+
   - name: ave_year_built_1500m
     dataframe: buildings
     varname: year_built
@@ -210,7 +204,7 @@ variable_definitions:
     aggregation: average
     decay: flat
     apply: np.log1p
-    
+
   - name: population_400m
     dataframe: households
     varname: persons
@@ -225,31 +219,31 @@ variable_definitions:
     radius: 3000
     aggregation: sum
     decay: flat
-    
+
   - name: jobs_3000m
     dataframe: jobs
     radius: 3000
     decay: flat
-    
+
   - name: households_3000m
     dataframe: households
     radius: 3000
     decay: flat
-    
+
   - name: residential_units_3000m
     dataframe: buildings
     varname: residential_units
     radius: 3000
     aggregation: sum
     decay: flat
-    
+
   - name: residential_units_1500m
     dataframe: buildings
     varname: residential_units
     radius: 1500
     aggregation: sum
     decay: flat
-    
+
   - name: residential_units_800m
     dataframe: buildings
     varname: residential_units
