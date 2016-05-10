@@ -7,7 +7,8 @@ loader = TableLoader()
 def db_to_df(query):
     """Executes SQL query and returns DataFrame."""
     conn = loader.database._connection
-    return sql.read_frame(query, conn)
+    #return sql.read_frame(query, conn)
+    return sql.read_sql(query, conn)
 
 # Read from database (public schema)
 parcels = db_to_df('select * from parcels').set_index('parcel_id')
@@ -72,4 +73,5 @@ store.close()
 #Scheduled development events
 sched_dev = db_to_df('select * from scheduled_development_events').set_index('scheduled_development_event_id')
 del sched_dev['id']
-sched_dev.to_csv('../data/scheduled_development_events.csv')
+#sched_dev.to_csv('../data/scheduled_development_events.csv')
+sched_dev.to_csv('../../data/out/scheduled_development_events.csv')

@@ -19,7 +19,8 @@ import pandas.io.sql as sql
 
 @sim.model('build_networks')
 def build_networks(parcels):
-    st = pd.HDFStore(os.path.join(misc.data_dir(), "osm_sandag.h5"), "r")
+    # st = pd.HDFStore(os.path.join(misc.data_dir(), "osm_sandag.h5"), "r")
+    st = pd.HDFStore(os.path.join(misc.data_dir(), "sandag.h5"), "r")
     nodes, edges = st.nodes, st.edges
     net = pdna.Network(nodes["x"], nodes["y"], edges["from"], edges["to"],
                        edges[["weight"]])
@@ -110,7 +111,8 @@ def hlcm_luz_simulate(households, buildings, aggregations):
         if len(movers_luz) > vacant_units.sum():
             print "WARNING: Not enough locations for movers"
             print "    reducing locations to size of movers for performance gain"
-            movers_luz = movers_luz.head(vacant_units.sum())
+            # movers_luz = movers_luz.head(vacant_units.sum())
+            movers_luz = movers_luz.head(int(vacant_units.sum())) # convert to int
 
         new_units, _ = utils.yaml_to_class(cfg).predict_from_cfg(movers_luz, units, cfg)
         
@@ -256,7 +258,9 @@ def feasibility(parcels, settings,
                 feasibility['current_units'] = parcels.total_job_spaces
                 feasibility["parcel_size"] = parcels.parcel_size
                 feasibility = feasibility[feasibility.parcel_size < 200000]
-                feasibility['job_spaces'] = np.round(feasibility.non_residential_sqft / 400.0)
+                # feasibility['job_spaces'] = np.round(feasibility.non_residential_sqft / 400.0)
+                feasibility['job_spaces'] = (feasibility['non_residential_sqft'] / 400.0).round()
+
                 feasibility['net_units'] = feasibility.job_spaces - feasibility.current_units
                 feasibility.net_units = feasibility.net_units.fillna(0)
                 profitable_units = int(feasibility.net_units.sum())
@@ -705,6 +709,11 @@ def buildings_to_uc(buildings):
     
     # Export newly predicted buildings (from proforma or Sitespec) to Urban Canvas
     b = buildings.to_frame(buildings.local_columns)
+    b.residential_units = b.residential_units.fillna(0)
+    sim.add_table("buildings", b)
+    results = os.getcwd() + "\\results\\"
+    b.to_csv(results + "buildings_%s.csv"%year)
+
     new_buildings =  b[(b.note=='simulated') | (b.note.str.startswith('Sitespec'))]
     new_buildings = new_buildings[new_buildings.year_built == year]
     new_buildings = new_buildings.reset_index()
@@ -720,68 +729,69 @@ def buildings_to_uc(buildings):
     new_buildings.residential_sqft = new_buildings.residential_sqft.astype('int32')
     new_buildings.building_sqft = new_buildings.building_sqft.fillna(0).astype('int32')
     new_buildings.sqft_per_unit = new_buildings.sqft_per_unit.fillna(0).astype('int32')
+    new_buildings.to_csv(results + "new_building_test_%s.csv"%year)
+
+    # # Urban Canvas database connection
+    # conn_string = "host='urbancanvas.cp2xwchuariu.us-west-2.rds.amazonaws.com' dbname='sandag_testing' user='sandag' password='parcel22building' port=5432"
     
-    # Urban Canvas database connection
-    conn_string = "host='urbancanvas.cp2xwchuariu.us-west-2.rds.amazonaws.com' dbname='sandag_testing' user='sandag' password='parcel22building' port=5432"
-    
-    if 'uc_conn' not in sim._INJECTABLES.keys():
-        conn=psycopg2.connect(conn_string)
-        cur = conn.cursor()
+    # if 'uc_conn' not in sim._INJECTABLES.keys():
+        # conn=psycopg2.connect(conn_string)
+        # cur = conn.cursor()
         
-        sim.add_injectable('uc_conn', conn)
-        sim.add_injectable('uc_cur', cur)
+        # sim.add_injectable('uc_conn', conn)
+        # sim.add_injectable('uc_cur', cur)
         
-    else:
-        conn = sim.get_injectable('uc_conn')
-        cur = sim.get_injectable('uc_cur')
+    # else:
+        # conn = sim.get_injectable('uc_conn')
+        # cur = sim.get_injectable('uc_cur')
         
-    def exec_sql_uc(query):
-        try:
-            cur.execute(query)
-            conn.commit()
-        except:
-            conn=psycopg2.connect(conn_string)
-            cur = conn.cursor()
-            sim.add_injectable('uc_conn', conn)
-            sim.add_injectable('uc_cur', cur)
-            cur.execute(query)
-            conn.commit()
+    # def exec_sql_uc(query):
+        # try:
+            # cur.execute(query)
+            # conn.commit()
+        # except:
+            # conn=psycopg2.connect(conn_string)
+            # cur = conn.cursor()
+            # sim.add_injectable('uc_conn', conn)
+            # sim.add_injectable('uc_cur', cur)
+            # cur.execute(query)
+            # conn.commit()
             
-    def get_val_from_uc_db(query):
-        try:
-            result = sql.read_frame(query, conn)
-            return result.values[0][0]
-        except:
-            conn=psycopg2.connect(conn_string)
-            cur = conn.cursor()
-            sim.add_injectable('uc_conn', conn)
-            sim.add_injectable('uc_cur', cur)
-            result = sql.read_frame(query, conn)
-            return result.values[0][0]
+    # def get_val_from_uc_db(query):
+        # try:
+            # result = sql.read_frame(query, conn)
+            # return result.values[0][0]
+        # except:
+            # conn=psycopg2.connect(conn_string)
+            # cur = conn.cursor()
+            # sim.add_injectable('uc_conn', conn)
+            # sim.add_injectable('uc_cur', cur)
+            # result = sql.read_frame(query, conn)
+            # return result.values[0][0]
         
-    max_bid = get_val_from_uc_db("select max(building_id) FROM building where building_id<100000000;")
-    new_buildings.building_id = np.arange(max_bid+1, max_bid+1+len(new_buildings))
+    # max_bid = get_val_from_uc_db("select max(building_id) FROM building where building_id<100000000;")
+    # new_buildings.building_id = np.arange(max_bid+1, max_bid+1+len(new_buildings))
 
-    if 'projects_num' not in sim._INJECTABLES.keys(): 
-        exec_sql_uc("INSERT INTO scenario(id, name, type) select nextval('scenario_id_seq'), 'Run #' || cast(currval('scenario_id_seq') as character varying), 1;")
-        nextval = get_val_from_uc_db("SELECT MAX(ID) FROM SCENARIO WHERE ID < 100000;")
-        sim.add_injectable('projects_num', nextval)
+    # if 'projects_num' not in sim._INJECTABLES.keys(): 
+        # exec_sql_uc("INSERT INTO scenario(id, name, type) select nextval('scenario_id_seq'), 'Run #' || cast(currval('scenario_id_seq') as character varying), 1;")
+        # nextval = get_val_from_uc_db("SELECT MAX(ID) FROM SCENARIO WHERE ID < 100000;")
+        # sim.add_injectable('projects_num', nextval)
         
-        exec_sql_uc("INSERT INTO scenario_project(scenario, project) VALUES(%s, 1);" % nextval)
-        exec_sql_uc("INSERT INTO scenario_project(scenario, project) VALUES(%s, %s);" % (nextval,nextval))
+        # exec_sql_uc("INSERT INTO scenario_project(scenario, project) VALUES(%s, 1);" % nextval)
+        # exec_sql_uc("INSERT INTO scenario_project(scenario, project) VALUES(%s, %s);" % (nextval,nextval))
         
-    else:
-        nextval = sim.get_injectable('projects_num')
+    # else:
+        # nextval = sim.get_injectable('projects_num')
 
-    nextval = '{' + str(nextval) + '}'
-    new_buildings['projects'] = nextval
+    # nextval = '{' + str(nextval) + '}'
+    # new_buildings['projects'] = nextval
 
-    valid_from = '{' + str(year) + '-1-1}'
-    new_buildings['valid_from'] = valid_from
-    print 'Exporting %s buildings to Urbancanvas database for project %s and year %s.' % (len(new_buildings),nextval,year)
-    output = cStringIO.StringIO()
-    new_buildings.to_csv(output, sep='\t', header=False, index=False)
-    output.seek(0)
-    cur.copy_from(output, 'building', columns =tuple(new_buildings.columns.values.tolist()))
-    conn.commit()
+    # valid_from = '{' + str(year) + '-1-1}'
+    # new_buildings['valid_from'] = valid_from
+    # print 'Exporting %s buildings to Urbancanvas database for project %s and year %s.' % (len(new_buildings),nextval,year)
+    # output = cStringIO.StringIO()
+    # new_buildings.to_csv(output, sep='\t', header=False, index=False)
+    # output.seek(0)
+    # cur.copy_from(output, 'building', columns =tuple(new_buildings.columns.values.tolist()))
+    # conn.commit()
     

@@ -10,7 +10,8 @@ loader = TableLoader()
 def db_to_df(query):
     """Executes SQL query and returns DataFrame."""
     conn = loader.database._connection
-    return sql.read_frame(query, conn)
+    # return sql.read_frame(query, conn)
+    return sql.read_sql(query, conn)
 
 
 ##There are some duplicate parcel_id's in local_effect_distances, delete one record from each duplicate pair
@@ -190,7 +191,8 @@ df_to_db(costar_joined, 'costar', schema=loader.tables.public)
 hh_controls = db_to_df('select * from staging.pecas_hh_controls;')
 hh_controls = hh_controls[['yr', 'activity_id', 'luz_id', 'total_hh_controls']]
 hh_controls = hh_controls.rename(columns = {'yr':'year', 'total_hh_controls':'total_number_of_households'})
-hh_controls.total_number_of_households = np.round(hh_controls.total_number_of_households).astype('int')
+#hh_controls.total_number_of_households = np.round(hh_controls.total_number_of_households).astype('int')
+hh_controls = hh_controls.round({'total_number_of_households': 0})
 hh_controls.index.name = 'idx'
 df_to_db(hh_controls, 'annual_household_control_totals', schema=loader.tables.public)
 

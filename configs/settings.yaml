@@ -26,7 +26,8 @@ rates:
 
 
 build_networks:
-  name: osm_sandag.h5
+  # name: osm_sandag.h5
+  name: sandag.h5
   max_distance: 1500
 
 

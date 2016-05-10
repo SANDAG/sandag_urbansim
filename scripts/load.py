@@ -1,7 +1,6 @@
 import logging
 
 import pandas as pd,  numpy as np
-from pandas.io.excel import read_excel
 from spandex import TableLoader
 from spandex.io import df_to_db, logger
 from spandex.spatialtoolz import conform_srids, tag
@@ -9,18 +8,17 @@ from spandex.spatialtoolz import conform_srids, tag
 logger.setLevel(logging.INFO)
 
 shapefiles = {
-    'staging.parcels':
-    'space/parcel.shp',
+     'staging.parcels':
+     'space/parcel.shp',
 
-    'staging.buildings':
-    'space/building.shp',
+     'staging.buildings':
+     'space/building.shp',
 
-    'staging.blocks':
-    'space/tl_2010_06073_tabblock10.shp',
+     'staging.blocks':
+     'space/tl_2010_06073_tabblock10.shp',
 
-    'staging.sitespec':
-    'scheduled/site_spec.shp',
-
+     'staging.sitespec':
+     'scheduled/site_spec.shp',
 }
 
 # Install PostGIS and create staging schema.
@@ -35,14 +33,11 @@ loader.database.refresh()
 t = loader.tables
 staging = loader.tables.staging
 
-
 # Load shapefiles specified above to the project database.
 loader.load_shp_map(shapefiles)
 
-
 # Fix invalid geometries and reproject.
-conform_srids(loader.srid, schema=staging, fix=True)
-
+conform_srids(loader.srid, schema=staging, fix=False)
 
 # Tag parcels with a block_id
 tag(t.staging.parcels, 'block_geoid', t.staging.blocks, 'geoid10')
@@ -99,7 +94,6 @@ csvs = {
 
     'parcel_fee_schedule':
     'proformaInputs/fees/parcel_fee_schedule.csv',
-    
 }
 
 for tbl in csvs.iterkeys():
@@ -128,7 +122,6 @@ for tbl in csvs.iterkeys():
 
 
 # Load excel
-
 # xls_path = loader.get_path('scheduled/scheduled_development.xlsx')
 # df_to_db(df, 'scheduled_development', schema = staging)
 
@@ -137,17 +130,18 @@ xls_path = loader.get_path('price/marketPointe.xlsx')
 df = pd.read_excel(xls_path)
 df = df.rename(columns = {'$/Sqft':'price_per_sqft', '#Bldg':'number_of_buildings', '#Stories':'stories', 'ZipCode':'zipcode'})
 df.index.name = 'idx'
-df.stories[df.stories == '2-3'] = 3
-df.stories[df.stories == '2-4'] = 4
-df.stories[df.stories == '3-4'] = 4
-df.stories[df.stories == '1-2'] = 2
-df.stories[df.stories == '4-5'] = 5
-df.stories[df.stories == '5-6'] = 6
-df.stories[df.stories == 40942] = 1
-df.stories[df.stories == 40910] = 1
-df.stories[df.stories == 40943] = 1
-df.stories = df.stories.fillna(1).astype('int32')
-df.zipcode[df.zipcode == '92069-1615'] = 92069
+df.loc[df.stories == '2-3', 'stories'] = 3
+df.loc[df.stories == '2-4', 'stories'] = 4
+df.loc[df.stories == '3-4', 'stories'] = 4
+df.loc[df.stories == '1-2', 'stories'] = 2
+df.loc[df.stories == '4-5', 'stories'] = 5
+df.loc[df.stories == '5-6', 'stories'] = 6
+df.loc[df.stories == 40942, 'stories'] = 1
+df.loc[df.stories == 40910, 'stories'] = 1
+df.loc[df.stories == 40943, 'stories'] = 1
+
+pd.to_numeric(df.stories)
+df.stories = df.stories.fillna(1)
+df.loc[df.zipcode == '92069-1615', 'zipcode'] = 92069
 df.zipcode = df.zipcode.astype('int32')
 df_to_db(df, 'marketpointe', schema = staging)
-
