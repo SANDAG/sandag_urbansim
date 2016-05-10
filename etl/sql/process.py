@@ -4,7 +4,7 @@ from pysandag.database import get_connection_string
 from sqlalchemy import create_engine
 from urbansim.models.lcm import unit_choice
 
-urbansim_engine = create_engine(get_connection_string("d:/dev/sandag_urbansim_rebuild/configs/dbconfig.yml", 'urbansim_database'))
+urbansim_engine = create_engine(get_connection_string("../postgresql/dbconfig.yml", 'urbansim_database'))
 #, legacy_schema_aliasing=False)
 
 def random_allocate_agents_by_geography(agents, containers, geography_id_col, containers_units_col):
@@ -81,7 +81,7 @@ def process_households():
         households[col] = households[col].astype('int')
         
     households.to_csv('households.csv')
-    households.to_sql('households', urbansim_engine, schema='urbansim', if_exists='replace', chunksize=1000)
+    #households.to_sql('households', urbansim_engine, schema='urbansim', if_exists='replace', chunksize=1000)
 
 
 def process_jobs():
@@ -187,6 +187,6 @@ def process_residential_units():
     conn.close()
 
 if __name__ == '__main__':
-    process_residential_units()
+    #process_residential_units()
     process_households()
-    process_jobs()
+    #process_jobs()

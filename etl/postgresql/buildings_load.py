@@ -1,7 +1,9 @@
 import geoalchemy2
+import ogr
 import pandas as pd
+from pysandag.database import get_connection_string
+from pysandag.gis import  transform_wkt
 import sqlalchemy
-from util import get_connection_string, transform_wkt
 from sqlalchemy import create_engine
 
 #GET THE CONNECTION STRINGS
@@ -17,10 +19,13 @@ SELECT building_id
 	,residential_units
 	,residential_sqft
 	,non_residential_sqft
+    ,job_spaces
+    ,non_residential_rent_per_sqft
 	,price_per_sqft
 	,stories
 	,year_built
 FROM spacecore.urbansim.buildings
+WHERE building_id < 100
 """
 ##MSSQL SQLAlchemy
 sql_in_engine = create_engine(in_connection_string)
@@ -30,7 +35,7 @@ print 'Loaded Non-Spatial Query'
 
 ##Pandas Data Frame for spatial data
 in_query_spatial = """
-  SELECT building_id, shape.STAsText() AS shape FROM spacecore.urbansim.buildings
+  SELECT building_id, shape.STAsText() AS shape FROM spacecore.urbansim.buildings WHERE building_id < 100
 """
 df_spatial = pd.read_sql(in_query_spatial, sql_in_engine, index_col='building_id')
 print 'Loaded Spatial Query'
@@ -55,9 +60,11 @@ column_data_types = {
     'residential_units' : sqlalchemy.Integer,
     'residential_sqft' : sqlalchemy.Integer,
     'non_residential_sqft' : sqlalchemy.Integer,
+    'job_spaces': sqlalchemy.Integer,
+    'non_residential_rent_per_sqft': sqlalchemy.Float,
     'price_per_sqft' : sqlalchemy.Float,
     'stories' : sqlalchemy.Integer,
-    'year_built' : sqlalchemy.DateTime,
+    'year_built' : sqlalchemy.Integer,
     'shape' : geoalchemy2.Geography('Geometry', srid=4326)
 }
 
