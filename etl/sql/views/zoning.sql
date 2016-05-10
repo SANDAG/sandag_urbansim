@@ -90,3 +90,30 @@ CREATE SPATIAL INDEX [ix_spatial_urbansim_zoning_shape] ON urbansim.zoning
     WITH (BOUNDING_BOX =(6152300, 1775400, 6613100, 2129400), GRIDS =(LEVEL_1 = MEDIUM,LEVEL_2 = MEDIUM,LEVEL_3 = MEDIUM,LEVEL_4 = MEDIUM), 
     CELLS_PER_OBJECT = 16, PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
 
+    
+IF OBJECT_ID('urbansim.zoning_allowed_use') IS NOT NULL
+  DROP TABLE urbansim.zoning_allowed_use
+GO
+
+CREATE TABLE urbansim.zoning_allowed_use (
+  zoning_allowed_use_id int IDENTITY(1,1) NOT NULL PRIMARY KEY 
+  ,zoning_id varchar(35) NOT NULL
+  ,development_type_id int NOT NULL
+)
+GO
+
+WITH tmp(zoning_id, allowed_use_id, data) as (
+select zoning_id, LEFT(allowed_uses, CHARINDEX(',',allowed_uses+',')-1),
+    STUFF(allowed_uses, 1, CHARINDEX(',',allowed_uses+','), '')
+from urbansim.zoning WHERE allowed_uses is not null
+union all
+select zoning_id, LEFT(Data, CHARINDEX(',',Data+',')-1),
+    STUFF(Data, 1, CHARINDEX(',',Data+','), '')
+from tmp
+where Data > ''
+)
+
+INSERT INTO urbansim.zoning_allowed_use (zoning_id, development_type_id)
+select zoning_id, allowed_use_id
+from tmp
+order by zoning_id, allowed_use_id

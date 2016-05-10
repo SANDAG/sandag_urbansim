@@ -1,46 +1,27 @@
-store: sandag.h5
+store: urbansim.h5
+
+build_networks:
+  max_distance: 5280 #Distance is feet
+  on_ramp_distance: 2640
+  parks_distance: 2640
+  schools_distance: 5280
+  transit_distance: 2640
 
 aggregation_tables:
   - nodes
 
-set_nan_price_to_zero: True
-
-
-remove_invalid_building_ids: True
-
-
-reconcile_residential_units_and_households: True
-
-
-reconcile_non_residential_sqft_and_jobs: True
-
-
-set_nan_price_to_zero: True
-
-
-rates:
-  households_relocation: .05
-  jobs_relocation: .05
-  simple_households_transition: .02
-  simple_jobs_transition: .02
-
-
-build_networks:
-  name: osm_sandag.h5
-  max_distance: 1500
-
-
 households_transition:
   add_columns:
     - income_quartile
-  total_column: total_number_of_households
-
+  total_column: hh #total_number_of_households
 
 jobs_transition:
   add_columns:
-    - empsix_id
+    - sector_id
   total_column: number_of_jobs
 
+#DEFAULT LAND COST PER SQ FOOT, Used in the feasibility model
+default_land_cost: 12.21
 
 feasibility:
   parcel_filter: newest_building < 2010
@@ -58,69 +39,40 @@ feasibility:
     - max_far_from_heights
     - building_purchase_price
     - building_purchase_price_sqft
-
+#  msa_id:
+#    nonres_price_shifter:
+#      0: 0.59
+#      1: 0.74
+#      2: 1.26
+#      3: 1.66
+#      4: 1.46
+#      5: 1.66
+#      6: 1
+#    res_price_shifter:
+#      0: 0.42
+#      1: 0.54
+#      2: 1.18
+#      3: 1.66
+#      4: 1.38
+#      5: 1.66
+#      6: 1
+#  target_luz:
+#    0: 69
+#    1: 70
+#    2: 72
+#  luz_shifter:
+#    0: 0.78
 
 residential_developer:
   target_vacancy: .08
   min_unit_size: 1000
   bldg_sqft_per_job: 400
 
-
 non_residential_developer:
   target_vacancy: .49
   bldg_sqft_per_job: 400
 
-scenario: baseline
 
-
-scenario_inputs:
-  baseline:
-    zoning_table_name: zoning_baseline
-  test:
-    zoning_table_name: zoning_test
-
-
-# this maps building "forms" from the developer model
-# to building types so that when the developer builds a
-# "form" this can be converted for storing as a type
-# in the building table - in the long run, the developer
-# forms and the building types should be the same and the
-# developer model should account for the differences
-form_to_btype:
-  residential:
-    - 19
-    - 20
-    - 21
-  industrial:
-    - 2
-    - 3
-  retail:
-    - 5
-  office:
-    - 4
-  mixedresidential:
-    - 1
-  mixedoffice:
-    - 6
-
-
-building_sqft_per_job:
-  -1: 400
-  1: 400
-  2: 400
-  3: 400
-  4: 355
-  5: 1161
-  6: 470
-  7: 661
-  8: 960
-  9: 825
-  10: 445
-  11: 445
-  12: 383
-  13: 383
-  14: 383
-  
 # this maps building type ids to general building types
 # basically just reduces dimensionality
 building_type_map:

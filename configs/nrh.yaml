@@ -1,23 +1,30 @@
 name: nrh
-
+
+
 model_type: segmented_regression
-
-segmentation_col: development_type_id
-
+
+
+segmentation_col: building_type_id
+
+
 fit_filters:
 - nonres_rent_per_sqft > 0
-
+
+
 predict_filters:
 - non_residential_sqft > 0
-
+
+
 min_segment_size: 10
-
+
+
 default_config:
     model_expression: np.log1p(nonres_rent_per_sqft) ~ I(year_built < 1940) + I(year_built
         > 2005) + np.log1p(stories) + ave_income + jobs_1500m + year_built + distance_to_coast
         + distance_to_freeway + distance_to_onramp + distance_to_transit
     ytransform: np.exp
-
+
+
 models:
     &id001 !!python/long '2':
         fit_parameters:
@@ -30,7 +37,7 @@ models:
                 jobs_400m: 0.010946281356200387
                 nonres_occupancy_3000m: 0.7435930706923758
                 np.log1p(stories): 0.40693755159383965
-                pecas_price: 0.006948608806773161
+                #pecas_price: 0.006948608806773161
                 year_built: 0.002208134308593078
             Std. Error:
                 I(year_built < 1940)[T.True]: 0.2755760281525553
@@ -41,7 +48,7 @@ models:
                 jobs_400m: 0.006882533250215561
                 nonres_occupancy_3000m: 0.0653089359285537
                 np.log1p(stories): 0.040194924654467515
-                pecas_price: 0.0016604356559823444
+                #pecas_price: 0.0016604356559823444
                 year_built: 0.0006991526555837183
             T-Score:
                 I(year_built < 1940)[T.True]: 2.6292848305902217
@@ -52,14 +59,14 @@ models:
                 jobs_400m: 1.5904436576252718
                 nonres_occupancy_3000m: 11.385778379636248
                 np.log1p(stories): 10.124102858558539
-                pecas_price: 4.184810643964542
+                #pecas_price: 4.184810643964542
                 year_built: 3.1583006814863914
         fit_rsquared: 0.24965886414519878
         fit_rsquared_adj: 0.24593200419890004
         fitted: true
         model_expression: np.log1p(nonres_rent_per_sqft) ~ I(year_built < 1940) +
             I(year_built > 2005) + np.log1p(stories) + jobs_400m + year_built + distance_to_coast
-            + distance_to_freeway + pecas_price + nonres_occupancy_3000m
+            + distance_to_freeway + nonres_occupancy_3000m #+ pecas_price
         name: *id001
     &id002 !!python/long '4':
         fit_parameters:
@@ -72,7 +79,7 @@ models:
                 jobs_400m: 0.011306389379470257
                 nonres_occupancy_3000m: 0.1360238149306887
                 np.log1p(stories): 0.09900121995853087
-                pecas_price: 0.007409296390877628
+                #pecas_price: 0.007409296390877628
                 year_built: 0.008010329944229568
             Std. Error:
                 I(year_built < 1940)[T.True]: 0.13619902677383963
@@ -83,7 +90,7 @@ models:
                 jobs_400m: 0.007924190133067083
                 nonres_occupancy_3000m: 0.09057095819630011
                 np.log1p(stories): 0.02263599472121064
-                pecas_price: 0.004027051538394552
+                #pecas_price: 0.004027051538394552
                 year_built: 0.0008932140551756505
             T-Score:
                 I(year_built < 1940)[T.True]: 1.5227064593485509
@@ -94,14 +101,14 @@ models:
                 jobs_400m: 1.426819547437346
                 nonres_occupancy_3000m: 1.5018480276633022
                 np.log1p(stories): 4.373619148522049
-                pecas_price: 1.8398811935323434
+                #pecas_price: 1.8398811935323434
                 year_built: 8.967984659236398
         fit_rsquared: 0.22664981518578908
         fit_rsquared_adj: 0.21987923963780476
         fitted: true
         model_expression: np.log1p(nonres_rent_per_sqft) ~ I(year_built < 1940) +
             I(year_built > 2005) + np.log1p(stories) + ave_income + jobs_400m + year_built
-            + distance_to_coast + pecas_price + nonres_occupancy_3000m
+            + distance_to_coast + nonres_occupancy_3000m #+ pecas_price
         name: *id002
     &id003 !!python/long '5':
         fit_parameters:
@@ -113,7 +120,7 @@ models:
                 distance_to_coast: -4.982701510827561e-06
                 jobs_1500m: 0.038073336837333174
                 nonres_occupancy_3000m: 0.4029875504524784
-                pecas_price: 0.0056450214373804045
+                #pecas_price: 0.0056450214373804045
                 year_built: 0.003157008992807698
             Std. Error:
                 I(year_built < 1940)[T.True]: 0.07115150717027645
@@ -123,7 +130,7 @@ models:
                 distance_to_coast: 5.633456356870185e-07
                 jobs_1500m: 0.010048901604647678
                 nonres_occupancy_3000m: 0.09299383194435436
-                pecas_price: 0.0013877163311047922
+                #pecas_price: 0.0013877163311047922
                 year_built: 0.0007471942897790936
             T-Score:
                 I(year_built < 1940)[T.True]: 1.5525746457421448
@@ -133,14 +140,15 @@ models:
                 distance_to_coast: -8.844839109742978
                 jobs_1500m: 3.7888058153265254
                 nonres_occupancy_3000m: 4.333486877856782
-                pecas_price: 4.067849682857213
+                #pecas_price: 4.067849682857213
                 year_built: 4.225151391000406
         fit_rsquared: 0.16900618756339758
         fit_rsquared_adj: 0.16408177978599547
         fitted: true
         model_expression: np.log1p(nonres_rent_per_sqft) ~ I(year_built < 1940) +
             I(year_built > 2005) + ave_income + jobs_1500m + year_built + distance_to_coast
-            + pecas_price + nonres_occupancy_3000m
+            + nonres_occupancy_3000m #+ pecas_price
         name: *id003
-
+
+
 fitted: true

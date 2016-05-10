@@ -1,31 +1,39 @@
 name: rsh
-
+
+
 model_type: segmented_regression
-
-segmentation_col: development_type_id
-
+
+
+segmentation_col: building_type_id
+
+
 fit_filters:
 - res_price_per_sqft > 0
-- development_type_id in [19,20,21]
+- building_type_id in [19,20,21]
 - residential_units > 0
 - year_built > 1000
 - year_built < 2020
-
+
+
 predict_filters:
 - residential_units > 0
-- development_type_id in [19,20,21]
-
+- building_type_id in [19,20,21]
+
+
 min_segment_size: 10
-
+
+
 default_config:
     model_expression: np.log1p(res_price_per_sqft) ~ I(year_built < 1940) + I(year_built
         > 2005) + year_built + ave_income + jobs_1500m + distance_to_coast + distance_to_freeway
-        + distance_to_onramp + distance_to_transit + population_3000m + pecas_price
+        + distance_to_onramp + distance_to_transit + population_3000m
         + res_occupancy_3000m
+        #+ pecas_price
     ytransform: np.exp
-
+
+
 models:
-    &id001 !!python/long '19':
+    &id001 !!python/int '19':
         fit_parameters:
             Coefficient:
                 I(ave_age_of_head_1500m < 35)[T.True]: -61.77558051786865
@@ -33,7 +41,7 @@ models:
                 I(distance_to_freeway < 400)[T.True]: -0.009705177457281
                 I(distance_to_park < 400)[T.True]: 0.0031784488995522664
                 I(distance_to_school < 800)[T.True]: 0.0866931700659206
-                I(pecas_price > np.percentile(pecas_price, 85))[T.True]: 0.0726834415852105
+                #I(pecas_price > np.percentile(pecas_price, 85))[T.True]: 0.0726834415852105
                 I(year_built < 1940)[T.True]: 0.8479727629235887
                 Intercept: -61.77558051786973
                 ave_children_1500m: -0.5158811512370485
@@ -54,7 +62,7 @@ models:
                 I(distance_to_freeway < 400)[T.True]: 0.02586608140787641
                 I(distance_to_park < 400)[T.True]: 0.016134434462230892
                 I(distance_to_school < 800)[T.True]: 0.01296929397001843
-                I(pecas_price > np.percentile(pecas_price, 85))[T.True]: 0.010879518654798193
+                #I(pecas_price > np.percentile(pecas_price, 85))[T.True]: 0.010879518654798193
                 I(year_built < 1940)[T.True]: 0.04126536353972656
                 Intercept: 1.8221281613671845
                 ave_children_1500m: 0.014271099948168246
@@ -75,7 +83,7 @@ models:
                 I(distance_to_freeway < 400)[T.True]: -0.37520864889591293
                 I(distance_to_park < 400)[T.True]: 0.19699784997067604
                 I(distance_to_school < 800)[T.True]: 6.684494180356482
-                I(pecas_price > np.percentile(pecas_price, 85))[T.True]: 6.6807589463670745
+                #I(pecas_price > np.percentile(pecas_price, 85))[T.True]: 6.6807589463670745
                 I(year_built < 1940)[T.True]: 20.549261903563195
                 Intercept: -33.90298324104606
                 ave_children_1500m: -36.14866079774488
@@ -96,12 +104,14 @@ models:
         model_expression: np.log1p(res_price_per_sqft) ~ I(year_built < 1940) + ave_income
             + jobs_400m + I(distance_to_coast < 10000) + res_occupancy_3000m + I(distance_to_park
             < 400) + np.log1p(distance_to_coast) + I(distance_to_school < 800) + I(distance_to_freeway
-            < 400) + residential_units_1500m + ave_children_1500m + I(pecas_price
-            > np.percentile(pecas_price, 85)) + year_built_1940to1950 + year_built_1950to1960
+            < 400) + residential_units_1500m + ave_children_1500m
+            + year_built_1940to1950 + year_built_1950to1960
             + year_built_1960to1970 + year_built_1970to1980 + year_built + ave_year_built_1500m
             + I(ave_age_of_head_1500m < 35)
+            #+ I(pecas_price
+            #> np.percentile(pecas_price, 85))
         name: *id001
-    &id002 !!python/long '20':
+    &id002 !!python/int '20':
         fit_parameters:
             Coefficient:
                 I(ave_age_of_head_1500m < 35)[T.True]: -116.7710665565059
@@ -119,7 +129,7 @@ models:
                 np.log1p(distance_to_onramp): -0.09163313476477897
                 np.log1p(distance_to_transit): -0.24294113872131826
                 np.log1p(year_built): 18.63632116962326
-                pecas_price: 0.017429691465158707
+                #pecas_price: 0.017429691465158707
                 res_occupancy_3000m: 2.660784691276925
                 residential_units_1500m: 9.322051273794458e-05
                 year_built_1940to1950[T.True]: 1.313050341190731
@@ -143,7 +153,7 @@ models:
                 np.log1p(distance_to_onramp): 0.021819974934310097
                 np.log1p(distance_to_transit): 0.028840976674945933
                 np.log1p(year_built): 7.955700130973114
-                pecas_price: 0.003597997005912093
+                #pecas_price: 0.003597997005912093
                 res_occupancy_3000m: 0.24760502999613765
                 residential_units_1500m: 7.723903248403454e-06
                 year_built_1940to1950[T.True]: 0.23925892413538166
@@ -167,7 +177,7 @@ models:
                 np.log1p(distance_to_onramp): -4.199506875724842
                 np.log1p(distance_to_transit): -8.42347128044247
                 np.log1p(year_built): 2.342511766760586
-                pecas_price: 4.844276256072169
+                #pecas_price: 4.844276256072169
                 res_occupancy_3000m: 10.746084969753765
                 residential_units_1500m: 12.069093791045796
                 year_built_1940to1950[T.True]: 5.487988989065912
@@ -181,18 +191,20 @@ models:
         model_expression: np.log1p(res_price_per_sqft) ~ I(year_built < 1940) + ave_income
             + jobs_400m + I(distance_to_coast < 10000) + res_occupancy_3000m + I(distance_to_park
             < 400) + np.log1p(distance_to_coast) + I(distance_to_school < 800) + residential_units_1500m
-            + ave_children_1500m + pecas_price + year_built_1940to1950 + year_built_1950to1960
+            + ave_children_1500m
+            + year_built_1940to1950 + year_built_1950to1960
             + year_built_1960to1970 + year_built_1970to1980 + year_built_1980to1990
             + np.log1p(year_built) + ave_year_built_1500m + I(ave_age_of_head_1500m
             < 35) + I(distance_to_freeway < 800) + np.log1p(distance_to_onramp) +
             np.log1p(distance_to_transit)
+            #+ pecas_price
         name: *id002
-    &id003 !!python/long '21':
+    &id003 !!python/int '21':
         fit_parameters:
             Coefficient:
                 I(ave_age_of_head_1500m < 35)[T.True]: -187.1256969799695
                 I(distance_to_school < 800)[T.True]: -0.4358062088867848
-                I(pecas_price < np.percentile(pecas_price, 15))[T.True]: -0.19746482417039182
+                #I(pecas_price < np.percentile(pecas_price, 15))[T.True]: -0.19746482417039182
                 I(year_built < 1940)[T.True]: 3.158401769560977
                 Intercept: -187.12569697997324
                 ave_income: 0.4558024919654015
@@ -210,7 +222,7 @@ models:
             Std. Error:
                 I(ave_age_of_head_1500m < 35)[T.True]: 13.922085096843992
                 I(distance_to_school < 800)[T.True]: 0.07831544777846594
-                I(pecas_price < np.percentile(pecas_price, 15))[T.True]: 0.05791512820594441
+                #I(pecas_price < np.percentile(pecas_price, 15))[T.True]: 0.05791512820594441
                 I(year_built < 1940)[T.True]: 0.19403614835398
                 Intercept: 13.922085096844247
                 ave_income: 0.08355021866401179
@@ -228,7 +240,7 @@ models:
             T-Score:
                 I(ave_age_of_head_1500m < 35)[T.True]: -13.440924665974723
                 I(distance_to_school < 800)[T.True]: -5.564754097040566
-                I(pecas_price < np.percentile(pecas_price, 15))[T.True]: -3.409555159201461
+                #I(pecas_price < np.percentile(pecas_price, 15))[T.True]: -3.409555159201461
                 I(year_built < 1940)[T.True]: 16.277388498761102
                 Intercept: -13.440924665974745
                 ave_income: 5.455431466892531
@@ -248,10 +260,12 @@ models:
         fitted: true
         model_expression: np.log1p(res_price_per_sqft) ~ I(year_built < 1940) + ave_income
             + jobs_3000m + res_occupancy_3000m + I(distance_to_school < 800) + residential_units_1500m
-            + I(pecas_price < np.percentile(pecas_price, 15)) + year_built_1940to1950
+            + year_built_1940to1950
             + year_built_1950to1960 + year_built_1960to1970 + np.log1p(year_built)
             + I(ave_age_of_head_1500m < 35) + np.log1p(distance_to_onramp) + np.log1p(distance_to_transit)
             + np.log1p(distance_to_school) + np.log1p(distance_to_coast)
+            #+ I(pecas_price < np.percentile(pecas_price, 15))
         name: *id003
-
+
+
 fitted: true

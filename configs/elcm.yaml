@@ -1,28 +1,54 @@
 name: elcm
-
-model_type: segmented_locationchoice
-
+
+
+model_type: segmented_discretechoice
+
+
 segmentation_col: sector_id
-
+
+
 choosers_fit_filters: building_id > 0
-
+
+
 choosers_predict_filters: null
-
+
+
 alts_fit_filters: null
-
+
+
 alts_predict_filters: null
-
+
+
 interaction_predict_filters: null
-
+
+
 choice_column: null
-
+
+
 sample_size: 100
-
+
+
 estimation_sample_size: 1000
-
+
+
+fitted: true
+
+
+probability_mode: single_chooser
+
+
+choice_mode: aggregate
+
+
+remove_alts: True
+
+
+prediction_sample_size: null
+
 default_config:
     model_expression: jobs_800m + ave_parcel_size + is_office + is_retail
-
+
+
 models:
     &id001 !!python/long '1':
         fit_parameters:
@@ -564,5 +590,3 @@ models:
             ratio: 0.7496137788875996
         model_expression: jobs_800m + ave_parcel_size + is_office + is_retail + jobs20
         name: *id020
-
-fitted: true

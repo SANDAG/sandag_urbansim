@@ -58,8 +58,8 @@ RUNNUM
 runs
 .ipynb_checkpoints
 
-scripts/dbconfig.yml
 
 data/
+notebooks/
 
 dbconfig.yml
