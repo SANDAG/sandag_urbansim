@@ -29,22 +29,30 @@ SELECT
 	[PropertyID]
 	,[lease sign date]
 	,[start date]
-	,[sqft leased]
-	,[floor leased]
+	,CASE WHEN [sqft leased] = '-' THEN NULL
+			WHEN ISNUMERIC(REPLACE(REPLACE([sqft leased], '"', ''), ',', '')) = 1 
+				THEN CAST(REPLACE(REPLACE([sqft leased], '"', ''), ',', '')AS int)
+			ELSE NULL
+	END AS [sqft leased]
+	,RTRIM(LTRIM(REPLACE([floor leased], '"', '')))
 	,[suite]
-	,[asking rent/sf/month]
-	,[effective rent/sf/month]
+	,CASE WHEN ISNUMERIC(REPLACE([asking rent/sf/month], '$', '')) = 1 
+				THEN CAST(RTRIM(LTRIM(REPLACE([asking rent/sf/month], '$', ''))) AS numeric(10,2))
+			ELSE NULL
+	END AS [asking rent/sf/month]
+	,CASE WHEN ISNUMERIC(REPLACE([effective rent/sf/month], '$', '')) = 1 
+				THEN CAST(RTRIM(LTRIM(REPLACE([effective rent/sf/month], '$', ''))) AS numeric(10,2))
+			ELSE NULL
+	END AS [effective rent/sf/month]
 	,[use]
 	,[services]
-	,[Lease term]
+	,CAST([Lease term] AS smallint)
 	,[Lease term type]
 	,[expiration date]
 	,[tenant]
 	,[deal type]
 	,[move in date]
-	,[months on market]
-	,[lease comp id]
+	,CAST([months on market] AS smallint)
+	,CAST([lease comp id] AS bigint)
 	,[lease type]
-FROM OPENROWSET('Microsoft.Jet.OLEDB.4.0',
-                'Excel 12.0;Database=T:\socioec\urbansim\data\price\costar2016LeaseExport.xlsx',
-                'SELECT * FROM [Sheet1$]')
+FROM input.costar_transactions_staging
