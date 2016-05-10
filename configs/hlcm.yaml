@@ -1,7 +1,7 @@
 name: hlcm
 
 
-model_type: segmented_locationchoice
+model_type: segmented_discretechoice
 
 
 segmentation_col: income_quartile
@@ -30,6 +30,21 @@ sample_size: 50
 
 
 estimation_sample_size: 15000
+
+
+fitted: True
+
+
+choice_mode: aggregate
+
+
+remove_alts: True
+
+
+probability_mode: single_chooser
+
+
+prediction_sample_size: null
 
 
 default_config:
@@ -137,5 +152,3 @@ models:
             'null': -58680.34508140402
             ratio: 0.2199325556703916
         name: *id005
-
-fitted: true

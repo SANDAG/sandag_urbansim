@@ -1,11 +1,12 @@
 import pandana as pdna
 import pandas as pd
 from urbansim.developer import sqftproforma
-import urbansim.sim.simulation as sim
+import orca
+from urbansim_defaults import models
 from urbansim_defaults import utils
 
 ###  ESTIMATIONS  ##################################
-@sim.model('rsh_estimate')
+@orca.step('rsh_estimate')
 def rsh_estimate(assessor_transactions, aggregations):
     return utils.hedonic_estimate("rsh.yaml", assessor_transactions, aggregations)
 
@@ -18,7 +19,7 @@ def get_year():
 
 
 ### SIMULATIONS ####################################
-@sim.model('build_networks')
+@orca.step('build_networks')
 def build_networks(settings , store, parcels):
     edges, nodes = store['edges'], store['nodes']
     net = pdna.Network(nodes["x"], nodes["y"], edges["from"], edges["to"],
@@ -42,14 +43,14 @@ def build_networks(settings , store, parcels):
     net.set_pois('transit', transit.x, transit.y)
 
 
-    sim.add_injectable("net", net)
+    orca.add_injectable("net", net)
 
     p = parcels.to_frame(parcels.local_columns)
 
     p['node_id'] = net.get_node_ids(p['x'], p['y'])
 
     #p.to_csv('data/parcels.csv')
-    sim.add_table("parcels", p)
+    orca.add_table("parcels", p)
 
 """
 @sim.model('feasibility')
@@ -274,7 +275,7 @@ def feasibility(parcels, settings, fee_schedule,
     sim.add_table("feasibility", far_predictions)
 """
 
-@sim.model('jobs_transition')
+@orca.step('jobs_transition')
 def jobs_transition(jobs, employment_controls, year, settings):
     return utils.full_transition(jobs,
                                  employment_controls,
@@ -283,13 +284,13 @@ def jobs_transition(jobs, employment_controls, year, settings):
                                  "building_id")
 
 
-@sim.model('nrh_simulate2')
+@orca.step('nrh_simulate2')
 def nrh_simulate2(buildings, aggregations):
     return utils.hedonic_simulate("nrh2.yaml", buildings, aggregations,
                                   "non_residential_price")
 
 
-@sim.model('scheduled_development_events')
+@orca.step('scheduled_development_events')
 def scheduled_development_events(scheduled_development_events, buildings):
     year = get_year()
     sched_dev = scheduled_development_events.to_frame()
@@ -306,4 +307,4 @@ def scheduled_development_events(scheduled_development_events, buildings):
         merge = Developer(pd.DataFrame({})).merge
         b = buildings.to_frame(buildings.local_columns)
         all_buildings = merge(b,sched_dev[b.columns])
-        sim.add_table("buildings", all_buildings)
+        orca.add_table("buildings", all_buildings)
