@@ -739,14 +739,14 @@ WITH costar_apn AS (
 	,[parcel_number_1(min)]
 	,[parcel_number_2(max)]
 	,CASE 
-		WHEN LEN(LEFT(REPLACE([parcel_number_1(min)], '-', ''), 10)) = 10 THEN LEFT(REPLACE([parcel_number_1(min)], '-', ''), 10)
-		WHEN LEN(LEFT(REPLACE([parcel_number_1(min)], '-', ''), 10)) = 9 THEN CONCAT(LEFT(REPLACE([parcel_number_1(min)], '-', ''), 10), '0')
-		WHEN LEN(LEFT(REPLACE([parcel_number_1(min)], '-', ''), 10)) = 8 THEN CONCAT(LEFT(REPLACE([parcel_number_1(min)], '-', ''), 10), '00')
+		WHEN LEN(REPLACE([parcel_number_1(min)], '-', '')) = 10 THEN REPLACE([parcel_number_1(min)], '-', '')
+		WHEN LEN(REPLACE([parcel_number_1(min)], '-', '')) = 9 THEN CONCAT(REPLACE([parcel_number_1(min)], '-', ''), '0')
+		WHEN LEN(REPLACE([parcel_number_1(min)], '-', '')) = 8 THEN CONCAT(REPLACE([parcel_number_1(min)], '-', ''), '00')
 	END AS [parcel_number_1(min)_fixed10]
 	,CASE 
-		WHEN LEN(LEFT(REPLACE([parcel_number_2(max)], '-', ''), 10)) = 10 THEN LEFT(REPLACE([parcel_number_2(max)], '-', ''), 10)
-		WHEN LEN(LEFT(REPLACE([parcel_number_2(max)], '-', ''), 10)) = 9 THEN CONCAT(LEFT(REPLACE([parcel_number_2(max)], '-', ''), 10), '0')
-		WHEN LEN(LEFT(REPLACE([parcel_number_2(max)], '-', ''), 10)) = 8 THEN CONCAT(LEFT(REPLACE([parcel_number_2(max)], '-', ''), 10), '00')
+		WHEN LEN(REPLACE([parcel_number_2(max)], '-', '')) = 10 THEN REPLACE([parcel_number_2(max)], '-', '')
+		WHEN LEN(REPLACE([parcel_number_2(max)], '-', '')) = 9 THEN CONCAT(REPLACE([parcel_number_2(max)], '-', ''), '0')
+		WHEN LEN(REPLACE([parcel_number_2(max)], '-', '')) = 8 THEN CONCAT(REPLACE([parcel_number_2(max)], '-', ''), '00')
 	END AS [parcel_number_2(max)_fixed10]
 	FROM [spacecore].[input].[costar]
 	)
