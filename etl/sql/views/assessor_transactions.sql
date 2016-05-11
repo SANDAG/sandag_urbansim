@@ -1,24 +1,21 @@
 use [spacecore];
 GO
 
-IF OBJECT_ID('input.assessor_par_transactions', 'U') IS NOT NULL
-BEGIN
-	DROP TABLE input.assessor_par_transactions;
-END
-CREATE TABLE input.assessor_par_transactions (parcel_id int NOT NULL
-                                        ,apn bigint NOT NULL
-										,year_built smallint
-										,beds smallint
-										,baths decimal(3,1)
-										,has_view bit
-										,sqft int
-										,oc_doc_date char(6) NOT NULL
-                                        ,tx_date date
-										,tx_price int NOT NULL);
+IF OBJECT_ID('estimation.assessor_par_transactions', 'U') IS NULL
+    CREATE TABLE estimation.assessor_par_transactions (parcel_id int NOT NULL
+                                            ,apn bigint NOT NULL
+										    ,year_built smallint
+										    ,beds smallint
+										    ,baths decimal(3,1)
+										    ,has_view bit
+										    ,sqft int
+										    ,oc_doc_date char(6) NOT NULL
+                                            ,tx_date date
+										    ,tx_price int NOT NULL);
 
 DECLARE @chg_summary TABLE (change varchar(20));
 
-MERGE INTO input.assessor_par_transactions
+MERGE INTO estimation.assessor_par_transactions
 USING (
     SELECT parcels.parcelid as parcel_id
         ,assessor_par.apn
@@ -100,7 +97,7 @@ FROM @chg_summary
 GROUP BY change;
 
 --Set the APN's year_built, beds, baths, has_view, sqft
-UPDATE input.assessor_par_transactions
+UPDATE estimation.assessor_par_transactions
 SET year_built = p.year_built
     ,beds = p.beds
     ,baths = p.baths
@@ -124,32 +121,32 @@ WHERE p.APN = assessor_par_transactions.apn;
 
 
 --Fix malformed dates and convert column to date type.
-UPDATE input.assessor_par_transactions
+UPDATE estimation.assessor_par_transactions
 SET oc_doc_date = LEFT(oc_doc_date, 2) + REPLACE(RIGHT(oc_doc_date, 4), '0230', '0229')
 WHERE RIGHT(oc_doc_date, 4) = '0230';
 
-UPDATE input.assessor_par_transactions
+UPDATE estimation.assessor_par_transactions
 SET oc_doc_date = LEFT(oc_doc_date, 2) + REPLACE(RIGHT(oc_doc_date, 4), '0431', '0430')
 WHERE RIGHT(oc_doc_date, 4) = '0431';
 
-UPDATE input.assessor_par_transactions
+UPDATE estimation.assessor_par_transactions
 SET oc_doc_date = LEFT(oc_doc_date, 2) + REPLACE(RIGHT(oc_doc_date, 4), '0631', '0630')
 WHERE RIGHT(oc_doc_date, 4) = '0631';
 
-UPDATE input.assessor_par_transactions
+UPDATE estimation.assessor_par_transactions
 SET oc_doc_date = LEFT(oc_doc_date, 2) + REPLACE(RIGHT(oc_doc_date, 4), '0931', '0930')
 WHERE RIGHT(oc_doc_date, 4) = '0931';
 
-UPDATE input.assessor_par_transactions
+UPDATE estimation.assessor_par_transactions
 SET oc_doc_date = LEFT(oc_doc_date, 2) + REPLACE(RIGHT(oc_doc_date, 4), '1131', '1130')
 WHERE RIGHT(oc_doc_date, 4) = '1131';
 
 --Fix malformed leap years.
-UPDATE input.assessor_par_transactions
+UPDATE estimation.assessor_par_transactions
 SET oc_doc_date = LEFT(oc_doc_date, 2) + '0228'
 WHERE RIGHT(oc_doc_date,4) = '0229'
 AND LEFT(oc_doc_date, 2) % 4 <> 0;
 
 --SET tx_date based on fixed oc_doc_date; code 111 = YYMMDD format
-UPDATE input.assessor_par_transactions
+UPDATE estimation.assessor_par_transactions
 SET tx_date = CONVERT(DATE, oc_doc_date, 111);
