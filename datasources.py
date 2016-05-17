@@ -5,6 +5,11 @@ import orca
 import urbansim.utils.misc as misc
 
 
+@orca.table('assessor_transactions', cache=True)
+def datasource_assessor_transactions(store):
+    return store['assessor_transactions']
+
+
 @orca.table('building_sqft_per_job', cache=True)
 def building_sqft_per_job(store):
     return store['building_sqft_per_job']
@@ -50,5 +55,6 @@ def zoning_allowed_uses(store, parcels):
 
     return allowed_df
 
-
+orca.broadcast('parcels', 'assessor_transactions', cast_index=True, onto_on='parcel_id')
+orca.broadcast('nodes', 'assessor_transactions', cast_index=True, onto_on='node_id')
 orca.broadcast('zoning', 'parcels', cast_index=True, onto_on='zoning_id')

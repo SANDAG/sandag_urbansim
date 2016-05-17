@@ -26,6 +26,8 @@ zoning_allowed_uses_sql = """SELECT development_type_id, zoning_id FROM urbansim
 fee_schedule_sql = """SELECT development_type_id, development_fee_per_unit_space_initial FROM urbansim.fee_schedule"""
 zoning_sql = """SELECT zoning_id, max_dua, max_building_height as max_height, max_far FROM urbansim.zoning"""
 
+assessor_transactions_sql = """SELECT parcel_id, tx_price FROM (SELECT parcel_id, RANK() OVER (PARTITION BY parcel_id ORDER BY tx_date) as tx, tx_date, tx_price FROM estimation.assessor_par_transactions) x WHERE tx = 1"""
+
 nodes_df = pd.read_sql(nodes_sql, urbansim_engine, index_col='node_id')
 edges_df = pd.read_sql(edges_sql, urbansim_engine)
 parcels_df = pd.read_sql(parcels_sql, urbansim_engine, index_col='parcel_id')
@@ -42,6 +44,7 @@ employment_controls_df = pd.read_sql(employment_controls_sql, urbansim_engine, i
 zoning_allowed_uses_df = pd.read_sql(zoning_allowed_uses_sql, urbansim_engine, index_col='development_type_id')
 fee_schedule_df = pd.read_sql(fee_schedule_sql, urbansim_engine, index_col='development_type_id')
 zoning_df = pd.read_sql(zoning_sql, urbansim_engine, index_col='zoning_id')
+assessor_transactions_df = pd.read_sql(assessor_transactions_sql, urbansim_engine)
 
 building_sqft_per_job_df.sort_values(['luz_id', 'development_type_id'], inplace=True)
 building_sqft_per_job_df.set_index(['luz_id', 'development_type_id'], inplace=True)
@@ -66,3 +69,4 @@ with pd.HDFStore('data/urbansim.h5', mode='w') as store:
     store.put('zoning_allowed_uses', zoning_allowed_uses_df, format='t')
     store.put('fee_schedule', fee_schedule_df, format='t')
     store.put('zoning', zoning_df, format='t')
+    store.put('assessor_transactions', assessor_transactions_df, format='t')

@@ -12,7 +12,7 @@ def rsh_estimate(assessor_transactions, aggregations):
 
 
 def get_year():
-    year = sim.get_injectable('year')
+    year = orca.get_injectable('year')
     if year is None:
         year = 2015
     return year

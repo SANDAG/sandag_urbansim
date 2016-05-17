@@ -3,6 +3,11 @@ import pandas as pd
 import orca
 from urbansim.utils import misc
 
+#####  ASSESSOR TRANSACTIONS #####
+@orca.column('assessor_transactions', 'node_id')
+def col_assessor_node_id(parcels, assessor_transactions):
+    return misc .reindex(parcels.node_id, assessor_transactions.parcel_id)
+
 #####  BUILDINGS #####
 @orca.column('buildings', 'building_sqft')
 def building_sqft(buildings):
@@ -141,6 +146,38 @@ def building_purchase_price(parcels):
 @orca.column('parcels', 'building_purchase_price_sqft')
 def building_purchase_price_sqft():
     return parcel_average_price("residential") * .81
+
+
+@orca.column('parcels', 'distance_to_onramp')
+def parcels_distance_to_onramp(settings, net, parcels):
+    ramp_distance = settings['build_networks']['on_ramp_distance']
+    distance_df = net.nearest_pois(ramp_distance, 'onramps', num_pois=1, max_distance=ramp_distance)
+    distance_df.columns = ['distance_to_onramp']
+    return misc.reindex(distance_df.distance_to_onramp, parcels.node_id)
+
+
+@orca.column('parcels', 'distance_to_park')
+def parcels_distance_to_park(settings, net, parcels):
+    park_distance = settings['build_networks']['parks_distance']
+    distance_df = net.nearest_pois(park_distance, 'parks', num_pois=1, max_distance=park_distance)
+    distance_df.columns = ['distance_to_park']
+    return misc.reindex(distance_df.distance_to_park, parcels.node_id)
+
+
+@orca.column('parcels','distance_to_school')
+def parcels_distance_to_school(settings, net, parcels):
+    school_distance = settings['build_networks']['schools_distance']
+    distance_df = net.nearest_pois(school_distance, 'schools', num_pois=1, max_distance=school_distance)
+    distance_df.columns = ['distance_to_school']
+    return misc.reindex(distance_df.distance_to_school, parcels.node_id)
+
+
+@orca.column('parcels','distance_to_transit')
+def parcels_distance_to_transit(settings, net, parcels):
+    transit_distance = settings['build_networks']['transit_distance']
+    distance_df = net.nearest_pois(transit_distance, 'transit', num_pois=1, max_distance=transit_distance)
+    distance_df.columns = ['distance_to_transit']
+    return misc.reindex(distance_df.distance_to_transit, parcels.node_id)
 
 
 @orca.column('parcels', 'land_cost')
