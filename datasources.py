@@ -30,6 +30,10 @@ def household_controls(store):
     return store['household_controls']
 
 
+@orca.table('intersections', cache=True)
+def intersections(store):
+    return store['intersections']
+
 @orca.table('scheduled_development_events', cache=True)
 def scheduled_development_events(store):
     return store['scheduled_development_events']

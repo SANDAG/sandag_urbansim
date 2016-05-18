@@ -20,7 +20,7 @@ def get_year():
 
 ### SIMULATIONS ####################################
 @orca.step('build_networks')
-def build_networks(settings , store, parcels):
+def build_networks(settings , store, parcels, intersections):
     edges, nodes = store['edges'], store['nodes']
     net = pdna.Network(nodes["x"], nodes["y"], edges["from"], edges["to"],
                        edges[["weight"]])
@@ -42,15 +42,17 @@ def build_networks(settings , store, parcels):
     transit = store.transit
     net.set_pois('transit', transit.x, transit.y)
 
-
     orca.add_injectable("net", net)
 
     p = parcels.to_frame(parcels.local_columns)
+    i = intersections.to_frame(intersections.local_columns)
 
     p['node_id'] = net.get_node_ids(p['x'], p['y'])
+    i['node_id'] = net.get_node_ids(i['x'], i['y'])
 
     #p.to_csv('data/parcels.csv')
     orca.add_table("parcels", p)
+    orca.add_table("intersections", i)
 
 """
 @sim.model('feasibility')

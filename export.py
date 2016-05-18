@@ -6,6 +6,8 @@ import pandas as pd
 urbansim_engine = create_engine(get_connection_string("configs/dbconfig.yml", 'urbansim_database'))
 
 nodes_sql = 'SELECT node as node_id, x, y, on_ramp FROM urbansim.nodes'
+# Necessary to duplicate nodes in order to generate built environment variables for the regessions
+intersection_sql = 'SELECT node as intersection_id, x, y FROM urbansim.nodes'
 edges_sql = 'SELECT from_node as [from], to_node as [to], distance as [weight] FROM urbansim.edges'
 parcels_sql = 'SELECT parcel_id, development_type_id, luz_id, parcel_acres as acres, zoning_id, centroid.STX as x, centroid.STY as y, distance_to_coast, distance_to_freeway FROM urbansim.parcels'
 buildings_sql = 'SELECT building_id, parcel_id, development_type_id as building_type_id, COALESCE(residential_units, 0) as residential_units, residential_sqft, COALESCE(non_residential_sqft,0) as non_residential_sqft, 0 as non_residential_rent_per_sqft, COALESCE(year_built, -1) year_built, COALESCE(stories, 1) as stories FROM urbansim.buildings'
@@ -29,6 +31,7 @@ zoning_sql = """SELECT zoning_id, max_dua, max_building_height as max_height, ma
 assessor_transactions_sql = """SELECT parcel_id, tx_price FROM (SELECT parcel_id, RANK() OVER (PARTITION BY parcel_id ORDER BY tx_date) as tx, tx_date, tx_price FROM estimation.assessor_par_transactions) x WHERE tx = 1"""
 
 nodes_df = pd.read_sql(nodes_sql, urbansim_engine, index_col='node_id')
+intersection_df = pd.read_sql(intersection_sql, urbansim_engine, index_col='intersection_id')
 edges_df = pd.read_sql(edges_sql, urbansim_engine)
 parcels_df = pd.read_sql(parcels_sql, urbansim_engine, index_col='parcel_id')
 buildings_df = pd.read_sql(buildings_sql, urbansim_engine, index_col='building_id')
@@ -54,6 +57,7 @@ edges_df.sort_values(['from', 'to'], inplace=True)
 
 with pd.HDFStore('data/urbansim.h5', mode='w') as store:
     store.put('nodes', nodes_df, format='t')
+    store.put('intersections', intersection_df, format='t')
     store.put('edges', edges_df, format='t')
     store.put('parcels', parcels_df, format='t')
     store.put('buildings', buildings_df, format='t')

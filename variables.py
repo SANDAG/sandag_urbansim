@@ -6,7 +6,7 @@ from urbansim.utils import misc
 #####  ASSESSOR TRANSACTIONS #####
 @orca.column('assessor_transactions', 'node_id')
 def col_assessor_node_id(parcels, assessor_transactions):
-    return misc .reindex(parcels.node_id, assessor_transactions.parcel_id)
+    return misc.reindex(parcels.node_id, assessor_transactions.parcel_id)
 
 #####  BUILDINGS #####
 @orca.column('buildings', 'building_sqft')

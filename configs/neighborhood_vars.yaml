@@ -10,6 +10,11 @@ variable_definitions:
     decay: flat
     apply: np.log1p
 
+  - name: intersections_2640ft
+    dataframe: intersections
+    radius: 2640
+    aggregation: count
+
   - name: ave_parcel_size_1600ft
     dataframe: parcels
     varname: parcel_acres
