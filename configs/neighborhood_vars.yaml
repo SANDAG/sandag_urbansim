@@ -10,6 +10,23 @@ variable_definitions:
     decay: flat
     apply: np.log1p
 
+  - name: ave_parcel_size_1600ft
+    dataframe: parcels
+    varname: parcel_acres
+    radius: 1600
+    aggregation: average
+    decay: flat
+    apply: np.log1p
+
+  - name: retail_acres_800ft
+    dataframe: parcels
+    varname: parcel_acres
+    radius: 800
+    filters:
+     - development_type_id == 5
+    aggregation: sum
+    apply: np.log1p
+
   - name: mean_nonres_rent_2000m
     aggregation: average
     dataframe: buildings

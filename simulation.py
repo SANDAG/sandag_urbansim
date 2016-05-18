@@ -15,6 +15,3 @@ orca.get_table('households').to_frame(['household_id', 'building_id', 'persons',
 orca.get_table('jobs').to_frame(['job_id', 'building_id', 'sector_id']).to_csv('data/jobs.csv')
 orca.get_table('feasibility').to_frame().to_csv('data/feasibility.csv')
 orca.get_table('parcels').to_frame().to_csv('data/parcels.csv')
-
-
-
