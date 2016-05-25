@@ -71,6 +71,11 @@ def luz_id(buildings, parcels):
     return misc.reindex(parcels.luz_id, buildings.parcel_id)
 
 
+@orca.column('buildings', 'parcel_size')
+def building_parcel_size(buildings, parcels):
+    return misc.reindex(parcels.parcel_size, buildings.parcel_id)
+
+
 @orca.column('buildings', 'sqft_per_job', cache=True)
 def sqft_per_job(buildings, building_sqft_per_job):
     bldgs = buildings.to_frame(['luz_id', 'building_type_id'])
