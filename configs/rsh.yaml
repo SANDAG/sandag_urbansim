@@ -22,32 +22,30 @@ predict_filters:
 
 min_segment_size: 10
 
-
 default_config:
     model_expression: np.log1p(res_price_per_sqft) ~ I(year_built < 1940) + I(year_built
         > 2005) + year_built + ave_income + jobs_1500m + distance_to_coast + distance_to_freeway
         + distance_to_onramp + distance_to_transit + population_3000m
         + res_occupancy_3000m
         #+ pecas_price
-    ytransform: np.exp
+    ytransform: #np.exp
 
 
 models:
     &id001 !!python/int '19':
         fit_parameters:
             Coefficient:
-                Intercept: 6.65913
-                ave_children_1500m: -0.25745
-                distance_to_coast: -0.00005181
-                ave_income: 0.28722
-                I(year_built < 1950)[T.True]: 0.13069
-                year_built: -0.00090344
-                res_occupancy_3000m: -0.39857
-                np.log1p(parcel_size): -0.06217
-                intersections_1320ft: 0.00320
-                retail_acres_800ft: -0.04953
-                I(ave_age_of_head_1500m < 35)[T.True]: 2.91539
-                distance_to_transit: 0.00002492
+                Intercept: 8.83139322092922
+                ave_children_1500m: -0.27347253246852
+                distance_to_coast: -0.0000543707202878226
+                ave_income: 0.231816013636662
+                I(year_built < 1950)[T.True]: 0.127213286584947
+                year_built: -0.00232474535225579
+                res_occupancy_3000m: -0.0556724679854863
+                np.log1p(parcel_size): -0.0690675195409076
+                intersections_1320ft: 0.00170244833626892
+                I(ave_age_of_head_1500m < 35)[T.True]: 0.4489408031697
+                distance_to_transit: 0.0000476818722629645
             Std. Error:
                 ave_children_1500m: -0.25745
                 distance_to_coast: -0.00005181
@@ -57,7 +55,6 @@ models:
                 res_occupancy_3000m: -0.39857
                 np.log1p(parcel_size): -0.06217
                 intersections_1320ft: 0.00320
-                retail_acres_800ft: -0.04953
                 I(ave_age_of_head_1500m < 35)[T.True]: 2.91539
                 distance_to_transit: 0.00002492
             T-Score:
@@ -69,15 +66,14 @@ models:
                 res_occupancy_3000m: -0.39857
                 np.log1p(parcel_size): -0.06217
                 intersections_1320ft: 0.00320
-                retail_acres_800ft: -0.04953
                 I(ave_age_of_head_1500m < 35)[T.True]: 2.91539
                 distance_to_transit: 0.00002492
         fit_rsquared: 0.3214
         fit_rsquared_adj: 0.3198
         fitted: true
         model_expression: np.log1p(res_price_per_sqft) ~ ave_children_1500m + distance_to_coast + ave_income
-                          + I(year_built < 1950) + year_built + res_occupancy_3000m + np.log1p(parcel_size)
-                          + intersections_1320ft + retail_acres_800ft + I(ave_age_of_head_1500m < 35) + distance_to_transit
+                          + I(year_built < 1950) + year_built + res_occupancy_3000m + (np.log1p(parcel_size) + 1)
+                          + intersections_1320ft + I(ave_age_of_head_1500m < 35) + distance_to_transit
         name: *id001
     &id002 !!python/int '20':
         fit_parameters:
