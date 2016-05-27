@@ -131,14 +131,14 @@ def income_quartile(households):
 
 
 #####  NODES #######
-@orca.column('nodes', 'nonres_occupancy_3000m')
-def nonres_occupancy_3000m(nodes):
-    return nodes.jobs_3000m / (nodes.job_spaces_3000m + 1.0)
+@orca.column('nodes', 'nonres_occupancy_10000ft')
+def nonres_occupancy_3000ft(nodes):
+    return nodes.jobs_10000ft / (nodes.job_spaces_10000ft + 1.0)
 
 
-@orca.column('nodes', 'res_occupancy_3000m')
-def res_occupancy_3000m(nodes):
-    return nodes.households_3000m / (nodes.residential_units_3000m + 1.0)
+@orca.column('nodes', 'res_occupancy_10000ft')
+def res_occupancy_10000ft(nodes):
+    return nodes.households_10000ft / (nodes.residential_units_10000ft + 1.0)
 
 
 ###### PARCELS ######
@@ -233,6 +233,10 @@ def total_sqft(parcels, buildings):
     return buildings.building_sqft.groupby(buildings.parcel_id).sum().\
         reindex(parcels.index).fillna(0)
 
+
+@orca.column('parcels', 'zone_id', cache=True)
+def parcel_zone_id(parcels):
+    return parcels.zoning_id
 
 ###### MISCELLANEOUS #######
 @orca.injectable('add_extra_columns_func', autocall=False)
