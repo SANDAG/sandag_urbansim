@@ -7,7 +7,7 @@ CREATE TABLE urbansim.buildings(
 	,development_type_id smallint
 	,parcel_id int
 	,improvement_value float
-	,residential_units tinyint
+	,residential_units smallint
 	,residential_sqft int
 	,non_residential_sqft int
     ,job_spaces smallint
@@ -16,10 +16,12 @@ CREATE TABLE urbansim.buildings(
 	,stories int
 	,year_built smallint
 	,shape geometry
+	,data_source nvarchar(50)
 )
-INSERT INTO urbansim.buildings WITH (TABLOCK) (shape)
+INSERT INTO urbansim.buildings WITH (TABLOCK) (shape, data_source)
 SELECT 
 	shape
+	,dataSource
     --bldgID	--NOT UNIQUE ID
 FROM gis.buildings
 
@@ -126,6 +128,7 @@ SET
 							END								
 						END
 	,usb.stories = CASE 
+
 						WHEN c.stories > 0 THEN c.stories
 						ELSE 1
 					END	
