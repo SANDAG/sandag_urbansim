@@ -168,10 +168,10 @@ def process_residential_units():
     # Sum allocated unit qty by building_id
     updated_units = units_to_allocate.groupby('building_id').agg('count')
     updated_units.columns = ['units']
-    updated_units.to_csv('unit_assignment.csv')
 
     # Append units that were allocated to units not needing allocation, and write to SQL.
     units = units.append(updated_units)
+    units.to_csv('unit_assignment.csv')
     units.to_sql('unit_assignment', urbansim_engine, schema='urbansim', if_exists='replace', chunksize=1000)
 
     # Update the buildings table with the updated residential_units
