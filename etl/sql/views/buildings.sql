@@ -85,7 +85,7 @@ JOIN (
 			) x
 	WHERE row_id = 1
 	) usp
-ON usb.parcel_id = usp.parcel_id
+ON usb.building_id = usp.building_id
 
 
 /** ASSESSOR AND LANDCORE DATA **/
