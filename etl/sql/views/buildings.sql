@@ -61,7 +61,7 @@ SET
 	usb.parcel_id = usp.parcel_id
 FROM
 	urbansim.buildings usb
-LEFT JOIN (
+JOIN (
 	SELECT row_id, building_id, parcel_id, dist 
 	FROM (
 		SELECT
