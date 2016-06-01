@@ -19,6 +19,11 @@ def distance_to_coaset(buildings, parcels):
     return misc.reindex(parcels.distance_to_coast, buildings.parcel_id)
 
 
+@orca.column('buildings', 'distance_to_coast_mi')
+def distance_to_coast_mi(buildings):
+    return buildings.distance_to_coast / 5280.0
+
+
 @orca.column('buildings', 'distance_to_freeway')
 def distance_to_freeway(buildings, parcels):
     return misc.reindex(parcels.distance_to_freeway, buildings.parcel_id)
@@ -30,6 +35,11 @@ def distance_to_onramp(settings, net, buildings):
     distance_df = net.nearest_pois(ramp_distance, 'onramps', num_pois=1, max_distance=ramp_distance)
     distance_df.columns = ['distance_to_onramp']
     return misc.reindex(distance_df.distance_to_onramp, buildings.node_id)
+
+
+@orca.column('buildings', 'distance_to_onramp_mi')
+def distance_to_onramp_mi(buildings):
+    return buildings.distance_to_onramp / 5280.0
 
 
 @orca.column('buildings', 'distance_to_park')
@@ -54,6 +64,11 @@ def distance_to_transit(settings, net, buildings):
     distance_df = net.nearest_pois(transit_distance, 'transit', num_pois=1, max_distance=transit_distance)
     distance_df.columns = ['distance_to_transit']
     return misc.reindex(distance_df.distance_to_transit, buildings.node_id)
+
+
+@orca.column('buildings','distance_to_transit_mi')
+def distance_to_transit_mi(buildings):
+    return buildings.distance_to_transit / 5280.0
 
 
 @orca.column('buildings', 'is_office')
@@ -99,6 +114,14 @@ def vacant_residential_units(buildings, households):
 @orca.column('buildings', 'year_built_1940to1950')
 def year_built_1940to1950(buildings):
     return (buildings.year_built >= 1940) & (buildings.year_built < 1950)
+
+
+@orca.column('buildings', 'structure_age')
+def structure_age(buildings):
+    year = orca.get_injectable('year')
+    if year is None:
+        year = 2015
+    return (year - buildings.year_built)
 
 
 @orca.column('buildings', 'year_built_1950to1960')

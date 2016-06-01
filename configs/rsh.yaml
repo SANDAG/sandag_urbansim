@@ -35,45 +35,46 @@ models:
     &id001 !!python/int '19':
         fit_parameters:
             Coefficient:
-                Intercept: 8.83139322092922
-                ave_children_5000ft: -0.27347253246852
-                distance_to_coast: -0.0000543707202878226
-                ave_income: 0.231816013636662
-                I(year_built < 1950)[T.True]: 0.127213286584947
-                year_built: -0.00232474535225579
-                res_occupancy_10000ft: -0.0556724679854863
-                np.log1p(parcel_size): -0.0690675195409076
-                intersections_1320ft: 0.00170244833626892
-                I(ave_age_of_head_5000ft < 35)[T.True]: 0.4489408031697
-                distance_to_transit: 0.0000476818722629645
+                Intercept: 1.83521947593216
+                ave_children_5000ft: -0.3896508583762
+                distance_to_coast_mi: -0.236365488816722
+                ave_income: 0.453783669417563
+                I(year_built < 1950)[T.True]: 0.171720744531184
+                structure_age: 0.00327727254036542
+                np.log1p(parcel_size): -0.054690518735313
+                I(ave_age_of_head_5000ft < 35)[T.True]: -0.0113287939130329
+                distance_to_transit_mi: 0.0976622685698323
+                distance_to_onramp_mi: 0.384847803312455
+                jobs_5000ft: 0.0103506796093126
             Std. Error:
-                ave_children_5000ft: -0.25745
-                distance_to_coast: -0.00005181
-                ave_income: 0.28722
-                I(year_built < 1950)[T.True]: 0.13069
-                year_built: -0.00090344
-                res_occupancy_10000ft: -0.39857
-                np.log1p(parcel_size): -0.06217
-                intersections_1320ft: 0.00320
-                I(ave_age_of_head_5000ft < 35)[T.True]: 2.91539
-                distance_to_transit: 0.00002492
+                ave_children_5000ft: -0.3896508583762
+                distance_to_coast_mi: -0.236365488816722
+                ave_income: 0.453783669417563
+                I(year_built < 1950)[T.True]: 0.171720744531184
+                structure_age: 0.00327727254036542
+                np.log1p(parcel_size): -0.054690518735313
+                I(ave_age_of_head_5000ft < 35)[T.True]: -0.0113287939130329
+                distance_to_transit_mi: 0.0976622685698323
+                distance_to_onramp_mi: 0.384847803312455
+                jobs_5000ft: 0.0103506796093126
             T-Score:
-                ave_children_5000ft: -0.25745
-                distance_to_coast: -0.00005181
-                ave_income: 0.28722
-                I(year_built < 1950)[T.True]: 0.13069
-                year_built: -0.00090344
-                res_occupancy_10000ft: -0.39857
-                np.log1p(parcel_size): -0.06217
-                intersections_1320ft: 0.00320
-                I(ave_age_of_head_5000ft < 35)[T.True]: 2.91539
-                distance_to_transit: 0.00002492
+                ave_children_5000ft: -0.3896508583762
+                distance_to_coast_mi: -0.236365488816722
+                ave_income: 0.453783669417563
+                I(year_built < 1950)[T.True]: 0.171720744531184
+                structure_age: 0.00327727254036542
+                np.log1p(parcel_size): -0.054690518735313
+                I(ave_age_of_head_5000ft < 35)[T.True]: -0.0113287939130329
+                distance_to_transit_mi: 0.0976622685698323
+                distance_to_onramp_mi: 0.384847803312455
+                jobs_5000ft: 0.0103506796093126
         fit_rsquared: 0.3214
         fit_rsquared_adj: 0.3198
         fitted: true
-        model_expression: np.log1p(res_price_per_sqft) ~ ave_children_5000ft + distance_to_coast + ave_income
-                          + I(year_built < 1950) + year_built + res_occupancy_10000ft + (np.log1p(parcel_size) + 1)
-                          + intersections_1320ft + I(ave_age_of_head_5000ft < 35) + distance_to_transit
+        model_expression: np.log1p(res_price_per_sqft) ~ ave_children_5000ft + distance_to_coast_mi + ave_income
+                          + I(year_built < 1950) + structure_age + (np.log1p(parcel_size))
+                          + I(ave_age_of_head_5000ft < 35) + distance_to_transit_mi + distance_to_onramp_mi
+                          + jobs_5000ft
         name: *id001
     &id002 !!python/int '20':
         fit_parameters:
