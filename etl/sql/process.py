@@ -60,10 +60,10 @@ def process_households():
 
     # Get 2015 Households from ABM
     hh_sql =  """SELECT
-                   scenario_id, lu_hh_id as household_id, building_id, mgra, tenure, persons, workers, age_of_head, income, children
+                   scenario_id, household_id, building_id, mgra, tenure, persons, workers, age_of_head, income, children
                    ,race_id, cars
                  FROM
-                    input.household(127)"""
+                    input.vi_households"""
                
     buildings = pd.read_sql(bldgs_sql, urbansim_engine, index_col='building_id')
     households = pd.read_sql(hh_sql, urbansim_engine, index_col='household_id')
