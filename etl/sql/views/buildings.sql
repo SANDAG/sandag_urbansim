@@ -54,6 +54,40 @@ JOIN ref.development_type_lu_code dev
 ON lc.lu = dev.lu_code
 WHERE usb.Shape.STCentroid().STWithin(lc.Shape) = 1
 
+--VALIDATE PARCEL_ID TO EXISTING PARCELS, ASSIGN NEAREST PARCEL_ID
+UPDATE
+	usb
+SET
+	usb.parcel_id = usp.parcel_id
+FROM
+	urbansim.buildings usb
+JOIN (
+	SELECT row_id, building_id, parcel_id, dist 
+	FROM (
+		SELECT
+			ROW_NUMBER() OVER (PARTITION BY usb.building_id ORDER BY usb.building_id, usb.shape.STCentroid().STDistance(usp.shape)) row_id
+			,usb.building_id
+			,usp.parcel_id
+			,usb.shape.STCentroid().STDistance(usp.shape) AS dist
+		FROM urbansim.parcels usp
+			INNER JOIN (SELECT b.building_id
+							--,b.residential_units
+							--,b.parcel_id
+							,p.parcel_id
+							--,p.mgra_id
+							,b.shape 
+						FROM urbansim.buildings b 
+						LEFT JOIN urbansim.parcels p 
+						ON b.parcel_id = p.parcel_id 
+						WHERE p.parcel_id IS NULL		--NO PARCEL_ID FOUND
+						) usb 
+			ON usb.shape.STCentroid().STBuffer(100).STIntersects(usp.shape) = 1
+			) x
+	WHERE row_id = 1
+	) usp
+ON usb.building_id = usp.building_id
+
+
 /** ASSESSOR AND LANDCORE DATA **/
 --GET ASSESSOR DATA: RESIDENTIAL UNITS, NON-RES SQFT, PRICE/SQFT, YEAR BUILT
 UPDATE
