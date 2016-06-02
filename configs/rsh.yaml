@@ -42,38 +42,38 @@ models:
                 I(year_built < 1950)[T.True]: 0.171720744531184
                 structure_age: 0.00327727254036542
                 np.log1p(parcel_size): -0.054690518735313
-                I(ave_age_of_head_5000ft < 35)[T.True]: -0.0113287939130329
+                ave_age_of_head_5000ft: -0.0113287939130329
                 distance_to_transit_mi: 0.0976622685698323
                 distance_to_onramp_mi: 0.384847803312455
                 jobs_5000ft: 0.0103506796093126
             Std. Error:
-                ave_children_5000ft: -0.3896508583762
-                distance_to_coast_mi: -0.236365488816722
-                ave_income: 0.453783669417563
-                I(year_built < 1950)[T.True]: 0.171720744531184
-                structure_age: 0.00327727254036542
-                np.log1p(parcel_size): -0.054690518735313
-                I(ave_age_of_head_5000ft < 35)[T.True]: -0.0113287939130329
-                distance_to_transit_mi: 0.0976622685698323
-                distance_to_onramp_mi: 0.384847803312455
-                jobs_5000ft: 0.0103506796093126
+                ave_children_5000ft: 0.0242909879085969
+                distance_to_coast_mi: 0.0120326768241894
+                ave_income: 0.0241504241189992
+                I(year_built < 1950)[T.True]: 0.0227115915806614
+                structure_age: 0.000344501795788102
+                np.log1p(parcel_size): 0.0120226726310902
+                ave_age_of_head_5000ft: 0.00213081618440033
+                distance_to_transit_mi: 0.0366077384836067
+                distance_to_onramp_mi: 0.0847468963482117
+                jobs_5000ft: 0.00363723488505628
             T-Score:
-                ave_children_5000ft: -0.3896508583762
-                distance_to_coast_mi: -0.236365488816722
-                ave_income: 0.453783669417563
-                I(year_built < 1950)[T.True]: 0.171720744531184
-                structure_age: 0.00327727254036542
-                np.log1p(parcel_size): -0.054690518735313
-                I(ave_age_of_head_5000ft < 35)[T.True]: -0.0113287939130329
-                distance_to_transit_mi: 0.0976622685698323
-                distance_to_onramp_mi: 0.384847803312455
-                jobs_5000ft: 0.0103506796093126
-        fit_rsquared: 0.3214
-        fit_rsquared_adj: 0.3198
+                ave_children_5000ft: -16.0409638275065
+                distance_to_coast_mi: -19.6436331059398
+                ave_income: 18.7898840691816
+                I(year_built < 1950)[T.True]: 7.56092957736181
+                structure_age: 9.51307824932566
+                np.log1p(parcel_size): -4.54894850866065
+                ave_age_of_head_5000ft: -5.31664532866367
+                distance_to_transit_mi: 2.6678039293131
+                distance_to_onramp_mi: 4.54114333262632
+                jobs_5000ft: 2.84575506845566
+        fit_rsquared: 0.3579
+        fit_rsquared_adj: 0.3563
         fitted: true
         model_expression: np.log1p(res_price_per_sqft) ~ ave_children_5000ft + distance_to_coast_mi + ave_income
                           + I(year_built < 1950) + structure_age + (np.log1p(parcel_size))
-                          + I(ave_age_of_head_5000ft < 35) + distance_to_transit_mi + distance_to_onramp_mi
+                          + ave_age_of_head_5000ft + distance_to_transit_mi + distance_to_onramp_mi
                           + jobs_5000ft
         name: *id001
     &id002 !!python/int '20':
