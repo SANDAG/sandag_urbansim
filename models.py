@@ -54,6 +54,14 @@ def build_networks(settings , store, parcels, intersections):
     orca.add_table("parcels", p)
     orca.add_table("intersections", i)
 
+
+@orca.step('rsh_simulate')
+def rsh_simulate(settings, buildings, aggregations):
+    yaml_cfg = settings['rsh_yaml']
+    return utils.hedonic_simulate(yaml_cfg, buildings, aggregations,
+                                  "residential_price")
+
+
 """
 @sim.model('feasibility')
 def feasibility(parcels, settings, fee_schedule,

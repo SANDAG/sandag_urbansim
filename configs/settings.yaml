@@ -10,6 +10,8 @@ build_networks:
 aggregation_tables:
   - nodes
 
+rsh_yaml: rsh.yaml
+
 households_transition:
   add_columns:
     - income_quartile

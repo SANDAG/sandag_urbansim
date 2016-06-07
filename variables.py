@@ -83,7 +83,7 @@ def is_retail(buildings):
 
 @orca.column('buildings', 'luz_id')
 def luz_id(buildings, parcels):
-    return misc.reindex(parcels.luz_id, buildings.parcel_id)
+    return misc.reindex(parcels.luz_id, buildings.parcel_id).fillna(0)
 
 
 @orca.column('buildings', 'parcel_size')
