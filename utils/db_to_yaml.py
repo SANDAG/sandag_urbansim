@@ -4,7 +4,7 @@ from pysandag.database import get_connection_string
 from urbansim.utils import yamlio
 import numpy as np
 
-yaml_outfile = "../configs/rsh_luz_only.yaml"
+yaml_outfile = "../configs/rsh_luz_plus_20160609.yaml"
 
 # create yaml from model stored in database
 # database -> python dictionary -> yaml
@@ -25,8 +25,8 @@ dict_luz_rsh = {'name': 'rsh',
 
 # SAS regression model from database for building_type_id = 19
 regression_engine = create_engine(get_connection_string("../configs/dbconfig.yml", 'regression_database'))
-luz_sql = 'SELECT * FROM dbo.regression_data_luz_1'
-luz_df = pd.read_sql(luz_sql, regression_engine, index_col='parcel_id')
+luz_sql = 'SELECT * FROM dbo.regression_data_60916'
+luz_df = pd.read_sql(luz_sql, regression_engine)
 
 db_first_row = luz_df.head(1) # contains all coefficients needed for model
 db_sas_dict = db_first_row.to_dict()
@@ -43,13 +43,11 @@ se = {se_luz: db_sas_dict[se_luz] for se_luz in se_keys}
 t_score_keys = [column_name for column_name, t_score_value in db_sas_dict.items() if column_name.startswith('t_luz')]
 t_score = {t_luz: db_sas_dict[t_luz] for t_luz in t_score_keys}
 
-
 # Format data for model specification in yaml
 # e.g. I(luz_id == 60)[T.True]: -0.31077807116719014
 # note: must have white space around equal sign
 # note: value from db dictionary is numpy float, convert to python float
 # before writing to yaml, otherwise odd results
-
 
 # coefficients
 param_dict = dict()
@@ -109,8 +107,7 @@ dict_luz_rsh['models'][19L]['fitted'] = True
 dict_luz_rsh['models'][19L]['fit_rsquared'] = 0.26386213899155664
 dict_luz_rsh['models'][19L]['fit_rsquared_adj'] = 0.2621440640086523
 dict_luz_rsh['default_config'] = {}
-# dict_luz_rsh['default_config']['model_expression'] = expr
-# dict_luz_rsh['default_config']['ytransform'] = 'np.exp'
-
+dict_luz_rsh['default_config']['model_expression'] = expr
+dict_luz_rsh['default_config']['ytransform'] = 'np.exp'
 
 yamlio.convert_to_yaml(dict_luz_rsh,yaml_outfile)
