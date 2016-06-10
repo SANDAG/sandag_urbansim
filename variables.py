@@ -105,6 +105,7 @@ def unit_sqft(buildings):
     return (buildings.residential_sqft /
             buildings.residential_units.replace(0, 1)).fillna(0).astype('int')
 
+
 @orca.column('buildings', 'vacant_residential_units')
 def vacant_residential_units(buildings, households):
     return buildings.residential_units.sub(

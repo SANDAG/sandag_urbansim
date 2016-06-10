@@ -26,9 +26,9 @@ variable_definitions:
   - name: retail_acres_800ft
     dataframe: parcels
     varname: parcel_acres
+    radius: 800
     filters:
     - development_type_id == 5
-    radius: 800
     aggregation: sum
     apply: np.log1p
 
@@ -41,6 +41,10 @@ variable_definitions:
     radius: 6500 #ft
     varname: non_residential_rent_per_sqft
 
+  - name: sqft
+    dataframe: buildings
+    varname: residential_sqft
+   
   - name: jobs_5000ft
     dataframe: jobs
     radius: 5000

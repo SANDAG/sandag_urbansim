@@ -7,8 +7,8 @@ orca.run([#'scheduled_development_events'
          'neighborhood_vars','rsh_simulate','nrh_simulate','nrh_simulate2'
          ,'jobs_transition',"elcm_simulate"
          ,'households_transition', "hlcm_simulate"
-         ,"price_vars","feasibility","residential_developer","non_residential_developer"
-], iter_vars=range(2015,2016))
+         ,"price_vars","feasibility","residential_developer","non_residential_developer"]
+         ,iter_vars=range(2015,2016))
 
 orca.get_table('nodes').to_frame().to_csv('data/nodes.csv')
 orca.get_table('buildings').to_frame().to_csv('data/buildings.csv')
