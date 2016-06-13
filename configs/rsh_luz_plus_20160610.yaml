@@ -25,12 +25,12 @@ min_segment_size: 10
 
 
 default_config:
-    model_expression: np.log1p(res_price_per_sqft) ~  I(np.logical_and(residential_sqft <= 1, residential_sqft < 500))
-        + I(np.logical_and(residential_sqft <= 500, residential_sqft < 1000))
-        + I(np.logical_and(residential_sqft <= 1000, residential_sqft < 1500))
-        + I(np.logical_and(residential_sqft <= 3000, residential_sqft < 3500))
-        + I(np.logical_and(residential_sqft <= 3500, residential_sqft < 4000))
-        + I(np.logical_and(residential_sqft <= 4000, residential_sqft < 4500))
+    model_expression: np.log1p(res_price_per_sqft) ~  I(np.logical_and(residential_sqft >= 1, residential_sqft < 500))
+        + I(np.logical_and(residential_sqft >= 500, residential_sqft < 1000))
+        + I(np.logical_and(residential_sqft >= 1000, residential_sqft < 1500))
+        + I(np.logical_and(residential_sqft >= 3000, residential_sqft < 3500))
+        + I(np.logical_and(residential_sqft >= 3500, residential_sqft < 4000))
+        + I(np.logical_and(residential_sqft >= 4000, residential_sqft < 4500))
         + I(year_built < 1950) + I(luz_id==63) + I(luz_id==60)
         + structure_age + np.log1p(parcel_size) + jobs_5000ft + I(distance_to_freeway <= 2640)
         + I(distance_to_coast <= 2640) + I(distance_to_school <= 1320)
@@ -66,12 +66,12 @@ models:
     &id001 !!python/long '19':
         fit_parameters:
             Coefficient:
-                I(np.logical_and(residential_sqft <= 1, residential_sqft < 500))[T.True]: 0.930146087371793
-                I(np.logical_and(residential_sqft <= 500, residential_sqft < 1000))[T.True]: 0.527301981127805
-                I(np.logical_and(residential_sqft <= 1000, residential_sqft < 1500))[T.True]: 0.3084170088736
-                I(np.logical_and(residential_sqft <= 3000, residential_sqft < 3500))[T.True]: -0.211849201170879
-                I(np.logical_and(residential_sqft <= 3500, residential_sqft < 4000))[T.True]: -0.261493686161145
-                I(np.logical_and(residential_sqft <= 4000, residential_sqft < 4500))[T.True]: -0.282013147089161
+                I(np.logical_and(residential_sqft >= 1, residential_sqft < 500))[T.True]: 0.930146087371793
+                I(np.logical_and(residential_sqft >= 500, residential_sqft < 1000))[T.True]: 0.527301981127805
+                I(np.logical_and(residential_sqft >= 1000, residential_sqft < 1500))[T.True]: 0.3084170088736
+                I(np.logical_and(residential_sqft >= 3000, residential_sqft < 3500))[T.True]: -0.211849201170879
+                I(np.logical_and(residential_sqft >= 3500, residential_sqft < 4000))[T.True]: -0.261493686161145
+                I(np.logical_and(residential_sqft >= 4000, residential_sqft < 4500))[T.True]: -0.282013147089161
                 I(year_built < 1950)[T.True]: 0.0746752541994736
                 structure_age: -0.00102305167565127
                 np.log1p(parcel_size): 0.0685086914609709
@@ -206,12 +206,12 @@ models:
                 I(luz_id == 99)[T.True]: 0.2787164873769403
                 Intercept: 5.109372054873094
             Std. Error:
-                I(np.logical_and(residential_sqft <= 1, residential_sqft < 500))[T.True]: 0.0358605499948899
-                I(np.logical_and(residential_sqft <= 500, residential_sqft < 1000))[T.True]: 0.00510341995805356
-                I(np.logical_and(residential_sqft <= 1000, residential_sqft < 1500))[T.True]: 0.00276500531379836
-                I(np.logical_and(residential_sqft <= 3000, residential_sqft < 3500))[T.True]: 0.0049079644980907
-                I(np.logical_and(residential_sqft <= 3500, residential_sqft < 4000))[T.True]: 0.00635542300936181
-                I(np.logical_and(residential_sqft <= 4000, residential_sqft < 4500))[T.True]: 0.00864628416334625
+                I(np.logical_and(residential_sqft >= 1, residential_sqft < 500))[T.True]: 0.0358605499948899
+                I(np.logical_and(residential_sqft >= 500, residential_sqft < 1000))[T.True]: 0.00510341995805356
+                I(np.logical_and(residential_sqft >= 1000, residential_sqft < 1500))[T.True]: 0.00276500531379836
+                I(np.logical_and(residential_sqft >= 3000, residential_sqft < 3500))[T.True]: 0.0049079644980907
+                I(np.logical_and(residential_sqft >= 3500, residential_sqft < 4000))[T.True]: 0.00635542300936181
+                I(np.logical_and(residential_sqft >= 4000, residential_sqft < 4500))[T.True]: 0.00864628416334625
                 I(year_built < 1950)[T.True]: 0.0055016210831539
                 structure_age: 0.0000889512827266363
                 np.log1p(parcel_size): 0.00295355036366367
@@ -346,12 +346,12 @@ models:
                 I(luz_id == 99)[T.True]: 0.021283600244157288
                 Intercept: 0.02673438650606081
             T-Score:
-                I(np.logical_and(residential_sqft <= 1, residential_sqft < 500))[T.True]: 25.9378645197672
-                I(np.logical_and(residential_sqft <= 500, residential_sqft < 1000))[T.True]: 103.323258807202
-                I(np.logical_and(residential_sqft <= 1000, residential_sqft < 1500))[T.True]: 111.543007651555
-                I(np.logical_and(residential_sqft <= 3000, residential_sqft < 3500))[T.True]: -43.1643711467948
-                I(np.logical_and(residential_sqft <= 3500, residential_sqft < 4000))[T.True]: -41.1449695442701
-                I(np.logical_and(residential_sqft <= 4000, residential_sqft < 4500))[T.True]: -32.6166873261794
+                I(np.logical_and(residential_sqft >= 1, residential_sqft < 500))[T.True]: 25.9378645197672
+                I(np.logical_and(residential_sqft >= 500, residential_sqft < 1000))[T.True]: 103.323258807202
+                I(np.logical_and(residential_sqft >= 1000, residential_sqft < 1500))[T.True]: 111.543007651555
+                I(np.logical_and(residential_sqft >= 3000, residential_sqft < 3500))[T.True]: -43.1643711467948
+                I(np.logical_and(residential_sqft >= 3500, residential_sqft < 4000))[T.True]: -41.1449695442701
+                I(np.logical_and(residential_sqft >= 4000, residential_sqft < 4500))[T.True]: -32.6166873261794
                 I(year_built < 1950)[T.True]: 13.573318313057
                 structure_age: -11.5012582651034
                 np.log1p(parcel_size): 23.1953693100363
@@ -488,12 +488,12 @@ models:
         fit_rsquared: 0.6781
         fit_rsquared_adj: 0.6770
         fitted: true
-        model_expression: np.log1p(res_price_per_sqft) ~  I(np.logical_and(residential_sqft <= 1, residential_sqft < 500))
-            + I(np.logical_and(residential_sqft <= 500, residential_sqft < 1000))
-            + I(np.logical_and(residential_sqft <= 1000, residential_sqft < 1500))
-            + I(np.logical_and(residential_sqft <= 3000, residential_sqft < 3500))
-            + I(np.logical_and(residential_sqft <= 3500, residential_sqft < 4000))
-            + I(np.logical_and(residential_sqft <= 4000, residential_sqft < 4500))
+        model_expression: np.log1p(res_price_per_sqft) ~  I(np.logical_and(residential_sqft >= 1, residential_sqft < 500))
+            + I(np.logical_and(residential_sqft >= 500, residential_sqft < 1000))
+            + I(np.logical_and(residential_sqft >= 1000, residential_sqft < 1500))
+            + I(np.logical_and(residential_sqft >= 3000, residential_sqft < 3500))
+            + I(np.logical_and(residential_sqft >= 3500, residential_sqft < 4000))
+            + I(np.logical_and(residential_sqft >= 4000, residential_sqft < 4500))
             + I(year_built < 1950) + I(luz_id==63) + I(luz_id==60)
             + structure_age + np.log1p(parcel_size) + jobs_5000ft + I(distance_to_freeway <= 2640)
             + I(distance_to_coast <= 2640) + I(distance_to_school <= 1320)
