@@ -1,7 +1,6 @@
 import geoalchemy2
 import pandas as pd
 import sqlalchemy
-##from util import get_connection_string, transform_wkt
 from pysandag.database import get_connection_string
 from pysandag.gis import transform_wkt
 from sqlalchemy import create_engine
@@ -26,7 +25,7 @@ SELECT
     ,min_dua
     ,max_dua
     ,max_building_height
-    ,allowed_uses
+--    ,allowed_uses
 FROM spacecore.urbansim.zoning
 
 """
@@ -38,7 +37,11 @@ print 'Loaded Non-Spatial Query'
 
 ##Pandas Data Frame for spatial data
 in_query_spatial = """
-SELECT zoning_id ,shape.STAsText() as shape FROM spacecore.urbansim.zoning
+SELECT
+    zoning_id
+    ,shape.STAsText() as shape
+FROM spacecore.urbansim.zoning
+WHERE shape IS NOT NULL
 """
 df_spatial = pd.read_sql(in_query_spatial, sql_in_engine, index_col='zoning_id')
 print 'Loaded Spatial Query'
