@@ -1,5 +1,4 @@
 import geoalchemy2
-import ogr
 import pandas as pd
 from pysandag.database import get_connection_string
 from pysandag.gis import  transform_wkt
