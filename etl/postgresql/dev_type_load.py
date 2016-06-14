@@ -1,6 +1,6 @@
 import pandas as pd
 import sqlalchemy
-from util import get_connection_string
+from pysandag.database import get_connection_string
 from sqlalchemy import create_engine
 
 #GET THE CONNECTION STRINGS

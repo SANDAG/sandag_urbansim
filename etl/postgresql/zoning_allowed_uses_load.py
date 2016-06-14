@@ -1,8 +1,6 @@
-import geoalchemy2
 import pandas as pd
 import sqlalchemy
 from pysandag.database import get_connection_string
-from pysandag.gis import transform_wkt
 from sqlalchemy import create_engine
 
 #GET THE CONNECTION STRINGS
