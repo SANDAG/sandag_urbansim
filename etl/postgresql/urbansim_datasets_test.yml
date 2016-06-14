@@ -1,22 +1,63 @@
-building_sqft_per_job:
+building_sqft_per_job :
     ##Input Query
-    in_query : """
-    SELECT TOP 100
-        id
-        ,luz_id
-        ,development_type_id
-        ,sqft_per_emp
-    FROM
-        spacecore.urbansim.building_sqft_per_job
-    """
+    in_query_non_spatial : >
+        SELECT TOP 100
+            zoning_id
+            ,shape.STAsText() as shape
+        FROM spacecore.urbansim.zoning
+        WHERE shape IS NOT NULL
     ##Index Column
-    index_col : 'id'
+    index_col : id
     ##Output
-    out_table : 'building_sqft_per_job'
+    out_table : building_sqft_per_job
     #Map columns
-    column_data_types : {
-        'id' : sqlalchemy.Integer,
-        'luz_id' : sqlalchemy.Integer,
-        'development_type_id' : sqlalchemy.Integer,
-        'sqft_per_emp' : sqlalchemy.Float
-    }
+    column_data_types :
+        id: sqlalchemy.Integer
+        luz_id: sqlalchemy.Integer
+        development_type_id: sqlalchemy.Integer
+        sqft_per_emp: sqlalchemy.Float
+
+buildings :
+    ##Input Query
+    in_query_non_spatial : >
+        SELECT TOP 100
+            building_id
+            ,development_type_id
+            ,parcel_id
+            ,improvement_value
+            ,residential_units
+            ,residential_sqft
+            ,non_residential_sqft
+            ,job_spaces
+            ,non_residential_rent_per_sqft
+            ,price_per_sqft
+            ,stories
+            ,year_built
+        FROM
+            spacecore.urbansim.buildings
+    ##Index Column
+    index_col : building_id
+    ##Input Query Spatial
+    in_query_spatial : >
+        SELECT TOP 100
+            building_id
+            ,shape.STAsText() AS shape
+        FROM
+            spacecore.urbansim.buildings
+    ##Output
+    out_table : buildings
+    #Map columns --> Notice special geometry column
+    column_data_types :
+        building_id : sqlalchemy.Integer
+        development_type_id : sqlalchemy.Integer
+        parcel_id : sqlalchemy.Integer
+        improvement_value : sqlalchemy.Float
+        residential_units : sqlalchemy.Integer
+        residential_sqft : sqlalchemy.Integer
+        non_residential_sqft : sqlalchemy.Integer
+        job_spaces : sqlalchemy.Integer
+        non_residential_rent_per_sqft: sqlalchemy.Float
+        price_per_sqft : sqlalchemy.Float
+        stories : sqlalchemy.Integer
+        year_built : sqlalchemy.Integer
+        shape : geoalchemy2.Geography('Geometry', srid=4326)
