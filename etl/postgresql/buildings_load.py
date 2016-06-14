@@ -24,7 +24,6 @@ SELECT building_id
 	,stories
 	,year_built
 FROM spacecore.urbansim.buildings
-WHERE building_id < 100
 """
 ##MSSQL SQLAlchemy
 sql_in_engine = create_engine(in_connection_string)
@@ -34,7 +33,9 @@ print 'Loaded Non-Spatial Query'
 
 ##Pandas Data Frame for spatial data
 in_query_spatial = """
-  SELECT building_id, shape.STAsText() AS shape FROM spacecore.urbansim.buildings WHERE building_id < 100
+SELECT building_id
+    ,shape.STAsText() AS shape
+FROM spacecore.urbansim.buildings
 """
 df_spatial = pd.read_sql(in_query_spatial, sql_in_engine, index_col='building_id')
 print 'Loaded Spatial Query'

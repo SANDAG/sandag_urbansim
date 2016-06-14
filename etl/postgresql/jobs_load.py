@@ -1,6 +1,6 @@
 import pandas as pd
 import sqlalchemy
-from util import get_connection_string
+from pysandag.database import get_connection_string
 from sqlalchemy import create_engine
 
 #GET THE CONNECTION STRINGS
@@ -10,9 +10,9 @@ out_connection_string = get_connection_string("dbconfig.yml", 'out_db')
 ##Input Query
 in_query = """
 SELECT job_id
-    ,block_id
+    ,building_id
     ,sector_id
-FROM isam.urbansim.jobs
+FROM spacecore.urbansim.jobs
 """
 ##MSSQL SQLAlchemy
 sql_in_engine = create_engine(in_connection_string)
@@ -26,7 +26,7 @@ out_table = 'jobs'
 #Map columns
 column_data_types = {
     'job_id' : sqlalchemy.Integer,
-    'block_id' : sqlalchemy.BigInteger,
+    'building_id' : sqlalchemy.BigInteger,
     'sector_id' : sqlalchemy.Integer,
 }
 
