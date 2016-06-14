@@ -1,0 +1,327 @@
+building_sqft_per_job:
+    ##Input Query
+    in_query_non_spatial = """
+    SELECT
+        id
+        ,luz_id
+        ,development_type_id
+        ,sqft_per_emp
+    FROM
+        spacecore.urbansim.building_sqft_per_job
+    """
+    ##Index Column
+    index_col = 'id'
+    ##Output
+    out_table = 'building_sqft_per_job'
+    #Map columns
+    column_data_types = {
+        'id' : sqlalchemy.Integer,
+        'luz_id' : sqlalchemy.Integer,
+        'development_type_id' : sqlalchemy.Integer,
+        'sqft_per_emp' : sqlalchemy.Float
+    }
+buildings:
+    ##Input Query
+    in_query_non_spatial = """
+    SELECT
+        building_id
+        ,development_type_id
+        ,parcel_id
+        ,improvement_value
+        ,residential_units
+        ,residential_sqft
+        ,non_residential_sqft
+        ,job_spaces
+        ,non_residential_rent_per_sqft
+        ,price_per_sqft
+        ,stories
+        ,year_built
+    FROM
+        spacecore.urbansim.buildings
+    """
+    ##Index Column
+    index_col = 'building_id'
+    ##Input Query Spatial
+    in_query_spatial = """
+    SELECT
+        building_id
+        ,shape.STAsText() AS shape
+    FROM
+        spacecore.urbansim.buildings
+    """
+    ##Output
+    out_table = 'buildings'
+    #Map columns --> Notice special geometry column
+    column_data_types = {
+        'building_id' : sqlalchemy.Integer,
+        'development_type_id' : sqlalchemy.Integer,
+        'parcel_id' : sqlalchemy.Integer,
+        'improvement_value' : sqlalchemy.Float,
+        'residential_units' : sqlalchemy.Integer,
+        'residential_sqft' : sqlalchemy.Integer,
+        'non_residential_sqft' : sqlalchemy.Integer,
+        'job_spaces': sqlalchemy.Integer,
+        'non_residential_rent_per_sqft': sqlalchemy.Float,
+        'price_per_sqft' : sqlalchemy.Float,
+        'stories' : sqlalchemy.Integer,
+        'year_built' : sqlalchemy.Integer,
+        'shape' : geoalchemy2.Geography('Geometry', srid=4326)
+    }
+development_type:
+    ##Input Query
+    in_query_non_spatial = """
+    SELECT
+        development_type_id
+        ,name
+        ,building_form
+        ,site_use
+        ,priority
+    FROM
+        spacecore.ref.development_type
+    """
+    ##Index Column
+    index_col = 'development_type_id'
+    ##Output
+    out_table = 'development_type'
+    #Map columns --> Notice special geometry column
+    column_data_types = {
+        'development_type_id' : sqlalchemy.Integer,
+        'name' : sqlalchemy.String,
+        'building_form' : sqlalchemy.String,
+        'site_use' : sqlalchemy.String,
+        'priority' : sqlalchemy.Integer,
+
+    }
+edges:
+    ##Input Query
+    in_query_non_spatial = """
+    SELECT
+        from_node
+          ,to_node
+          ,distance
+    FROM
+        spacecore.urbansim.edges
+    """
+    ##Index Column
+    index_col = ['from_node', 'to_node']
+    ##Output
+    out_table = 'edges'
+    #Map columns
+    column_data_types = {
+        'from_node' : sqlalchemy.Integer,
+        'to_node' : sqlalchemy.Integer,
+        'distance' : sqlalchemy.Float
+    }
+households:
+    ##Input Query
+    in_query_non_spatial = """
+    SELECT
+        household_id
+        ,scenario_id
+        ,building_id
+        ,tenure
+        ,persons
+        ,workers
+        ,age_of_head
+        ,income
+        ,children
+        ,race_id
+        ,cars
+    FROM
+        spacecore.urbansim.households
+    """
+    ##Index Column
+    index_col = 'household_id'
+    ##Output
+    out_table = 'households'
+    #Map columns
+    column_data_types = {
+        'household_id' : sqlalchemy.Integer,
+        'scenario_id' : sqlalchemy.Integer,
+        'building_id' : sqlalchemy.Integer,
+        'tenure' : sqlalchemy.Integer,
+        'persons' : sqlalchemy.Integer,
+        'workers' : sqlalchemy.Integer,
+        'age_of_head' : sqlalchemy.Integer,
+        'income' : sqlalchemy.Integer,
+        'children' : sqlalchemy.Integer,
+        'race_id' : sqlalchemy.Integer,
+        'cars' : sqlalchemy.Integer
+    }
+jobs:
+    ##Input Query
+    in_query_non_spatial = """
+    SELECT
+        job_id
+        ,building_id
+        ,sector_id
+    FROM
+        spacecore.urbansim.jobs
+    """
+    ##Index Column
+    index_col = 'job_id'
+    ##Output
+    out_table = 'jobs'
+    #Map columns
+    column_data_types = {
+        'job_id' : sqlalchemy.Integer,
+        'building_id' : sqlalchemy.BigInteger,
+        'sector_id' : sqlalchemy.Integer,
+    }
+nodes:
+    ##Input Query
+    in_query_non_spatial = """
+    SELECT
+        node
+        ,x
+        ,y
+        ,on_ramp
+    FROM
+        spacecore.urbansim.nodes
+    """
+    ##Index Column
+    index_col = 'node'
+    ##Input Query Spatial
+    in_query_spatial = """
+    SELECT
+        node
+        ,geom.STAsText() AS shape
+    FROM
+        spacecore.urbansim.nodes
+    """
+    ##Output
+    out_table = 'nodes'
+    #Map columns --> Notice special geometry column
+    column_data_types = {
+        'building_id' : sqlalchemy.Integer,
+        'development_type_id' : sqlalchemy.Integer,
+        'parcel_id' : sqlalchemy.Integer,
+        'improvement_value' : sqlalchemy.Float,
+        'residential_units' : sqlalchemy.Integer,
+        'residential_sqft' : sqlalchemy.Integer,
+        'non_residential_sqft' : sqlalchemy.Integer,
+        'job_spaces': sqlalchemy.Integer,
+        'non_residential_rent_per_sqft': sqlalchemy.Float,
+        'price_per_sqft' : sqlalchemy.Float,
+        'stories' : sqlalchemy.Integer,
+        'year_built' : sqlalchemy.Integer,
+        'shape' : geoalchemy2.Geography('Geometry', srid=4326)
+    }
+parcels:
+    ##Input Query
+    in_query_non_spatial = """
+    SELECT
+        parcel_id
+        ,development_type_id
+        ,zoning_id
+        ,land_value
+        ,parcel_acres
+        ,region_id
+        ,mgra_id
+        ,luz_id
+        ,msa_id
+        ,proportion_undevelopable
+        ,tax_exempt_status
+    FROM
+      spacecore.urbansim.parcels
+    """
+    ##Index Column
+    index_col='parcel_id'
+    ##Pandas Data Frame for spatial data
+    in_query_spatial = """
+    SELECT
+        parcel_id
+        ,shape.STAsText() as shape
+        ,centroid.STAsText() as centroid
+    FROM
+        spacecore.urbansim.parcels
+    """
+    ##Output
+    out_table = 'parcels'
+    #Map columns --> Notice special geometry column
+    column_data_types = {
+        'parcel_id' : sqlalchemy.Integer,
+        'development_type_id' : sqlalchemy.Integer,
+        'zoning_id': sqlalchemy.VARCHAR,
+        'land_value' : sqlalchemy.Integer,
+        'parcel_acres' : sqlalchemy.Float,
+        'region_id' : sqlalchemy.Integer,
+        'mgra_id' : sqlalchemy.Integer,
+        'luz_id' : sqlalchemy.Integer,
+        'msa_id' : sqlalchemy.Integer,
+        'proportion_undevelopable' : sqlalchemy.Numeric,
+        'tax_exempt_status' : sqlalchemy.String,
+        'shape_wkt': sqlalchemy.String,
+        'shape' : geoalchemy2.Geography('Geometry', srid=4326),
+        'centroid': geoalchemy2.Geography('Point', srid=4326)
+    }
+zoning_allowed_use:
+    ##Input Query
+    in_query_non_spatial = """
+    SELECT
+        zoning_id
+        ,zoning_allowed_use_id
+        ,development_type_id
+    FROM
+        urbansim.zoning_allowed_use
+    """
+    ##Index Column
+    index_col = 'zoning_id'
+    ##Output
+    out_table = 'zoning_allowed_use'
+    #Map columns
+    column_data_types = {
+        'zoning_id' : sqlalchemy.String,
+        'zoning_allowed_use_id' : sqlalchemy.String,
+        'development_type_id' : sqlalchemy.String,
+    }
+zoning:
+    ##Input Query
+    in_query_non_spatial = """
+    SELECT
+        zoning_id
+        ,jurisdiction_id
+        ,zone_code
+        ,region_id
+        ,min_far
+        ,max_far
+        ,min_front_setback
+        ,max_front_setback
+        ,rear_setback
+        ,side_setback
+        ,min_dua
+        ,max_dua
+        ,max_building_height
+    FROM
+        spacecore.urbansim.zoning
+    """
+    ##Index Column
+    index_col = 'zoning_id'
+    ##Input Query Spatial
+    in_query_spatial = """
+    SELECT
+        zoning_id
+        ,shape.STAsText() as shape
+    FROM spacecore.urbansim.zoning
+    WHERE shape IS NOT NULL
+    """
+    ##Output
+    out_table = 'zoning'
+    #Map columns --> Notice special geometry column
+    column_data_types = {
+        'zoning_id' : sqlalchemy.String,
+        'jurisdiction_id' : sqlalchemy.Integer,
+        'zone_code' : sqlalchemy.String,
+        'region_id' : sqlalchemy.Integer,
+        'min_far' : sqlalchemy.Numeric,
+        'max_far' : sqlalchemy.Numeric,
+        'min_front_setback' : sqlalchemy.Numeric,
+        'max_front_setback' : sqlalchemy.Numeric,
+        'rear_setback' : sqlalchemy.Numeric,
+        'side_setback' : sqlalchemy.Numeric,
+        'min_dua' : sqlalchemy.Numeric,
+        'max_dua' : sqlalchemy.Numeric,
+        'max_building_height' : sqlalchemy.Integer,
+        'allowed_uses' : sqlalchemy.String,
+        'shape' : geoalchemy2.Geography('Geometry', srid=4326)
+    }

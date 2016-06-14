@@ -1,0 +1,22 @@
+building_sqft_per_job:
+    ##Input Query
+    in_query : """
+    SELECT TOP 100
+        id
+        ,luz_id
+        ,development_type_id
+        ,sqft_per_emp
+    FROM
+        spacecore.urbansim.building_sqft_per_job
+    """
+    ##Index Column
+    index_col : 'id'
+    ##Output
+    out_table : 'building_sqft_per_job'
+    #Map columns
+    column_data_types : {
+        'id' : sqlalchemy.Integer,
+        'luz_id' : sqlalchemy.Integer,
+        'development_type_id' : sqlalchemy.Integer,
+        'sqft_per_emp' : sqlalchemy.Float
+    }
