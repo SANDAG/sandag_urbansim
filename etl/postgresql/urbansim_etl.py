@@ -15,14 +15,8 @@ with open('E:\\apps\\sandag_urbansim\\etl\\postgresql\\urbansim_datasets_test.ym
     #print ds['building_sqft_per_job']['out_table']
     #print ds['building_sqft_per_job']['column_data_types']
 
-dataset = ds['building_sqft_per_job']
+dataset = ds['edges']
 print dataset
-
-dataset = ds['buildings']
-print dataset
-print dataset['column_data_types']
-print dataset['column_data_types']['residential_sqft']
-
 
 ## SELECT DATASETS TO LOAD FROM yaml
 """
@@ -54,21 +48,22 @@ df_non_spatial = pd.read_sql(in_query_non_spatial, sql_in_engine, index_col= dat
 print 'Loaded Non-Spatial Query'
 
 ##CHECK FOR SPATIAL DATA PROCESSING >>
-#if dataset['in_query_spatial'] == True:
-##PANDAS DATAFRAME FOR SPATIAL DATA
-in_query_spatial = dataset['in_query_spatial']
-df_spatial = pd.read_sql(in_query_spatial, sql_in_engine, index_col=dataset['index_col'])
-print 'Loaded Spatial Query'
+if dataset.has_key('in_query_spatial'):
+    ##PANDAS DATAFRAME FOR SPATIAL DATA
+    in_query_spatial = dataset['in_query_spatial']
+    df_spatial = pd.read_sql(in_query_spatial, sql_in_engine, index_col=dataset['index_col'])
+    print 'Loaded Spatial Query'
 
-#Transform Shape from SPCS to WGS --> See method above for details
-s = df_spatial['shape'].apply(lambda x: transform_wkt(x))
-df_spatial['shape'] = s
-print 'Transformed Shapes'
+    #Transform Shape from SPCS to WGS --> See method above for details
+    s = df_spatial['shape'].apply(lambda x: transform_wkt(x))
+    df_spatial['shape'] = s
+    print 'Transformed Shapes'
 
-#Join spatial and non-spatial frames
-df = pd.concat([df_non_spatial, df_spatial], axis = 1)
-#else:
-#    print 'Non-spatial Dataset'
+    #Join spatial and non-spatial frames
+    df = pd.concat([df_non_spatial, df_spatial], axis = 1)
+else:
+    df = df_non_spatial
+    print 'Non-spatial Dataset'
 ##SPATIAL DATA PROCESSING <<
 
 ##Output
