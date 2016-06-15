@@ -7,16 +7,16 @@ from sqlalchemy import create_engine
 
 import yaml
 with open('E:\\apps\\sandag_urbansim\\etl\\postgresql\\urbansim_datasets_test.yml') as y:
-    ds = yaml.load(y)
-    print ds
+    datasets = yaml.load(y)
+    print datasets
     #print ds['building_sqft_per_job']['in_query_non_spatial']
     #print ds['building_sqft_per_job']['index_col']
     #print ds['building_sqft_per_job']['in_query_spatial']
     #print ds['building_sqft_per_job']['out_table']
     #print ds['building_sqft_per_job']['column_data_types']
 
-dataset = ds['edges']
-print dataset
+#dataset = ds['edges']
+#print dataset
 
 ## SELECT DATASETS TO LOAD FROM yaml
 """
@@ -34,49 +34,53 @@ for dataset in datasets(
 ):
 """
 
-#GET THE CONNECTION STRINGS
-in_connection_string = get_connection_string("dbconfig.yml", 'in_db')
-out_connection_string = get_connection_string("dbconfig.yml", 'out_db')
+for key in datasets:
+    dataset = datasets[key]
 
-##INPUT QUERY
-in_query_non_spatial = dataset['in_query_non_spatial']
+    #GET THE CONNECTION STRINGS
+    in_connection_string = get_connection_string("dbconfig.yml", 'in_db')
+    out_connection_string = get_connection_string("dbconfig.yml", 'out_db')
 
-##MSSQL SQLAlchemy
-sql_in_engine = create_engine(in_connection_string)
-##Pandas Data Frame for non-spatial data
-df_non_spatial = pd.read_sql(in_query_non_spatial, sql_in_engine, index_col= dataset['index_col'])
-print 'Loaded Non-Spatial Query'
+    ##INPUT QUERY
+    in_query_non_spatial = dataset['in_query_non_spatial']
 
-##CHECK FOR SPATIAL DATA PROCESSING >>
-if dataset.has_key('in_query_spatial'):
-    ##PANDAS DATAFRAME FOR SPATIAL DATA
-    in_query_spatial = dataset['in_query_spatial']
-    df_spatial = pd.read_sql(in_query_spatial, sql_in_engine, index_col=dataset['index_col'])
-    print 'Loaded Spatial Query'
+    ##MSSQL SQLAlchemy
+    sql_in_engine = create_engine(in_connection_string)
+    ##Pandas Data Frame for non-spatial data
+    df_non_spatial = pd.read_sql(in_query_non_spatial, sql_in_engine, index_col= dataset['index_col'])
+    print 'Loaded Non-Spatial Query'
 
-    #Transform Shape from SPCS to WGS --> See method above for details
-    s = df_spatial['shape'].apply(lambda x: transform_wkt(x))
-    df_spatial['shape'] = s
-    print 'Transformed Shapes'
+    ##CHECK FOR SPATIAL DATA PROCESSING >>
+    if dataset.has_key('in_query_spatial'):
+        ##PANDAS DATAFRAME FOR SPATIAL DATA
+        in_query_spatial = dataset['in_query_spatial']
+        df_spatial = pd.read_sql(in_query_spatial, sql_in_engine, index_col=dataset['index_col'])
+        print 'Loaded Spatial Query'
 
-    #Join spatial and non-spatial frames
-    df = pd.concat([df_non_spatial, df_spatial], axis = 1)
-else:
-    df = df_non_spatial
-    print 'Non-spatial Dataset'
-##SPATIAL DATA PROCESSING <<
+        #Transform Shape from SPCS to WGS --> See method above for details
+        s = df_spatial['shape'].apply(lambda x: transform_wkt(x))
+        df_spatial['shape'] = s
+        print 'Transformed Shapes'
 
-##Output
-out_table = dataset['out_table']
+        #Join spatial and non-spatial frames
+        df = pd.concat([df_non_spatial, df_spatial], axis = 1)
+    else:
+        df = df_non_spatial
+        print 'Non-spatial Dataset'
+    ##SPATIAL DATA PROCESSING <<
 
-#Map columns --> Notice special geometry column
-column_data_types = dataset['column_data_types']
+    ##Output
+    out_table = dataset['out_table']
 
-print 'Start Data Load'
-##PostgreSQL SQLAlchemy
-sql_out_engine = create_engine(out_connection_string)
+    #Map columns --> Notice special geometry column
+    column_data_types = dataset['column_data_types']
 
-#Write PostgreSQL
-df.to_sql(out_table, sql_out_engine, schema='urbansim_test', if_exists='replace', index=True, dtype = column_data_types)
+    print 'Start Data Load'
+    ##PostgreSQL SQLAlchemy
+    sql_out_engine = create_engine(out_connection_string)
 
-print "Table Loaded to {0}".format(out_table)
+    #Write PostgreSQL
+    df.to_sql(out_table, sql_out_engine, schema='urbansim_test', if_exists='replace', index=True, dtype = column_data_types)
+
+    print "Table Loaded to {0}".format(out_table)
+    print '*' * 30
