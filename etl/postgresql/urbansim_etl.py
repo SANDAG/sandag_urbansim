@@ -5,7 +5,7 @@ from sqlalchemy import create_engine
 import yaml
 
 ##OPEN yaml DATASET DICTIONARY
-with open('E:\\apps\\sandag_urbansim\\etl\\postgresql\\urbansim_datasets_test.yml') as y:
+with open('E:\\apps\\sandag_urbansim\\etl\\postgresql\\urbansim_datasets.yml') as y:
     datasets = yaml.load(y)
 
 ##SELECT DATASETS TO LOAD FROM yaml
