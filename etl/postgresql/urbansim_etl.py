@@ -1,40 +1,29 @@
-import geoalchemy2
 import pandas as pd
 from pysandag.database import get_connection_string
 from pysandag.gis import  transform_wkt
-import sqlalchemy
 from sqlalchemy import create_engine
-
 import yaml
+
+##OPEN yaml DATASET DICTIONARY
 with open('E:\\apps\\sandag_urbansim\\etl\\postgresql\\urbansim_datasets_test.yml') as y:
     datasets = yaml.load(y)
-    print datasets
-    #print ds['building_sqft_per_job']['in_query_non_spatial']
-    #print ds['building_sqft_per_job']['index_col']
-    #print ds['building_sqft_per_job']['in_query_spatial']
-    #print ds['building_sqft_per_job']['out_table']
-    #print ds['building_sqft_per_job']['column_data_types']
 
-#dataset = ds['edges']
-#print dataset
+##SELECT DATASETS TO LOAD FROM yaml
+selected = [
+    #'building_sqft_per_job',
+    'buildings',
+    'development_type',
+    #'edges',
+    #'households',
+    #'jobs',
+    #'nodes',
+    'parcels',
+    'zoning_allowed_use',
+    'zoning'
+]
 
-## SELECT DATASETS TO LOAD FROM yaml
-"""
-for dataset in datasets(
-    building_sqft_per_job,
-    buildings,
-    development_type,
-    edges,
-    households,
-    jobs,
-    nodes,
-    parcels,
-    zoning_allowed_use,
-    zoning,
-):
-"""
-
-for key in datasets:
+##PROCESS SELECTED DATASETS
+for key in selected:
     dataset = datasets[key]
 
     #GET THE CONNECTION STRINGS
