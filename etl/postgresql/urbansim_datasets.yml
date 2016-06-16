@@ -1,7 +1,7 @@
 building_sqft_per_job :
     ##Input Query
     in_query_non_spatial : >
-        SELECT TOP 100
+        SELECT
             id
             ,luz_id
             ,development_type_id
@@ -21,7 +21,7 @@ building_sqft_per_job :
 buildings :
     ##Input Query
     in_query_non_spatial : >
-        SELECT TOP 100
+        SELECT
             building_id
             ,development_type_id
             ,parcel_id
@@ -40,7 +40,7 @@ buildings :
     index_col : building_id
     ##Input Query Spatial
     in_query_spatial : >
-        SELECT TOP 100
+        SELECT
             building_id
             ,shape.STAsText() AS shape
         FROM
@@ -66,7 +66,7 @@ buildings :
 development_type :
     ##Input Query
     in_query_non_spatial : >
-        SELECT TOP 100
+        SELECT
             development_type_id
             ,name
             ,building_form
@@ -85,10 +85,11 @@ development_type :
         building_form : !!python/name:sqlalchemy.String
         site_use : !!python/name:sqlalchemy.String
         priority : !!python/name:sqlalchemy.Integer
+
 edges :
     ##Input Query
     in_query_non_spatial : >
-        SELECT TOP 100
+        SELECT
             from_node
               ,to_node
               ,distance
@@ -107,7 +108,7 @@ edges :
 households :
     ##Input Query
     in_query_non_spatial : >
-        SELECT TOP 100
+        SELECT
             household_id
             ,scenario_id
             ,building_id
@@ -142,7 +143,7 @@ households :
 jobs :
     ##Input Query
     in_query_non_spatial : >
-        SELECT TOP 100
+        SELECT
             job_id
             ,building_id
             ,sector_id
@@ -161,7 +162,7 @@ jobs :
 nodes :
     ##Input Query
     in_query_non_spatial : >
-        SELECT TOP 100
+        SELECT
             node
             ,x
             ,y
@@ -173,7 +174,7 @@ nodes :
     index_col : node
     ##Input Query Spatial
     in_query_spatial : >
-        SELECT TOP 100
+        SELECT
             node
             ,geom.STAsText() AS shape
         FROM
@@ -199,7 +200,7 @@ nodes :
 parcels :
     ##Input Query
     in_query_non_spatial : >
-        SELECT TOP 100
+        SELECT
             parcel_id
             ,development_type_id
             ,zoning_id
@@ -217,7 +218,7 @@ parcels :
     index_col : parcel_id
     ##Pandas Data Frame for spatial data
     in_query_spatial : >
-        SELECT TOP 100
+        SELECT
             parcel_id
             ,shape.STAsText() as shape
             ,centroid.STAsText() as centroid
@@ -245,7 +246,7 @@ parcels :
 zoning_allowed_use :
     ##Input Query
     in_query_non_spatial : >
-        SELECT TOP 100
+        SELECT
             zoning_id
             ,zoning_allowed_use_id
             ,development_type_id
@@ -264,7 +265,7 @@ zoning_allowed_use :
 zoning :
     ##Input Query
     in_query_non_spatial : >
-        SELECT TOP 100
+        SELECT
             zoning_id
             ,jurisdiction_id
             ,zone_code
@@ -284,7 +285,7 @@ zoning :
     index_col : zoning_id
     ##Input Query Spatial
     in_query_spatial : >
-        SELECT TOP 100
+        SELECT
             zoning_id
             ,shape.STAsText() as shape
         FROM spacecore.urbansim.zoning
