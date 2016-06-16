@@ -1,6 +1,6 @@
 import pandas as pd
 from pysandag.database import get_connection_string
-from pysandag.gis import  transform_wkt
+from pysandag.gis import transform_wkt
 from sqlalchemy import create_engine
 import yaml
 
@@ -10,13 +10,13 @@ with open('E:\\apps\\sandag_urbansim\\etl\\postgresql\\urbansim_datasets.yml') a
 
 ##SELECT DATASETS TO LOAD FROM yaml
 selected = [
-    #'building_sqft_per_job',
+    'building_sqft_per_job',
     'buildings',
     'development_type',
-    #'edges',
-    #'households',
-    #'jobs',
-    #'nodes',
+    'edges',
+    'households',
+    'jobs',
+    'nodes',
     'parcels',
     'zoning_allowed_use',
     'zoning'
@@ -25,6 +25,7 @@ selected = [
 ##PROCESS SELECTED DATASETS
 for key in selected:
     dataset = datasets[key]
+    print ">>> {0}".format(key)
 
     #GET THE CONNECTION STRINGS
     in_connection_string = get_connection_string("dbconfig.yml", 'in_db')
@@ -69,7 +70,7 @@ for key in selected:
     sql_out_engine = create_engine(out_connection_string)
 
     #Write PostgreSQL
-    df.to_sql(out_table, sql_out_engine, schema='urbansim_test', if_exists='replace', index=True, dtype = column_data_types)
+    df.to_sql(out_table, sql_out_engine, schema='urbansim', if_exists='replace', index=True, dtype = column_data_types)
 
     print "Table Loaded to {0}".format(out_table)
     print '*' * 30
