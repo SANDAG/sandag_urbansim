@@ -54,6 +54,7 @@ print 'Transformed Shapes'
 
 #Join spatial and non-spatial frames
 df = pd.concat([df_non_spatial, df_spatial], axis = 1)
+df.index.name = df_non_spatial.index.name
 
 ##Output
 out_table = 'zoning'
