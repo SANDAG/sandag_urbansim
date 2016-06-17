@@ -10,15 +10,15 @@ with open('E:\\apps\\sandag_urbansim\\etl\\postgresql\\urbansim_datasets.yml') a
 
 ##SELECT DATASETS TO LOAD FROM yaml
 selected = [
-    'building_sqft_per_job',
-    'buildings',
-    'development_type',
-    'edges',
-    'households',
-    'jobs',
-    'nodes',
-    'parcels',
-    'zoning_allowed_use',
+    #'building_sqft_per_job',
+    #'buildings',
+    #'development_type',
+    #'edges',
+    #'households',
+    #'jobs',
+    #'nodes',
+    #'parcels',
+    #'zoning_allowed_use',
     'zoning'
 ]
 
@@ -71,6 +71,7 @@ for key in selected:
 
     #Write PostgreSQL
     df.to_sql(out_table, sql_out_engine, schema='urbansim', if_exists='replace', index=True, dtype = column_data_types)
+    #df.to_csv(out_table+'.csv')
 
     print "Table Loaded to {0}".format(out_table)
     print '*' * 30
