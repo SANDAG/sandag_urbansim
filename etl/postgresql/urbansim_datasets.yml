@@ -240,7 +240,7 @@ parcels :
     #Map columns --> Notice special geometry column
     column_data_types :
         parcel_id : !!python/name:sqlalchemy.Integer
-        block_id : !!python/name:sqlalchemy.Integer
+        block_id : !!python/name:sqlalchemy.String
         development_type_id : !!python/name:sqlalchemy.Integer
         zoning_id : !!python/name:sqlalchemy.VARCHAR
         land_value : !!python/name:sqlalchemy.Integer

@@ -17,8 +17,8 @@ selected = [
     #'households',
     #'jobs',
     #'nodes',
-    #'parcels',
-    #'zoning_allowed_use',
+    'parcels',
+    'zoning_allowed_use',
     'zoning'
 ]
 
