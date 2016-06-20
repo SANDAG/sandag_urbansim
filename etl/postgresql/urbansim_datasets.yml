@@ -285,6 +285,10 @@ zoning :
             ,min_dua
             ,max_dua
             ,max_building_height
+            ,zone_code_link
+            ,notes
+            ,review_date
+            ,review_by
         FROM
             spacecore.urbansim.zoning
     ##Index Column
@@ -313,5 +317,8 @@ zoning :
         min_dua : !!python/name:sqlalchemy.Numeric
         max_dua : !!python/name:sqlalchemy.Numeric
         max_building_height : !!python/name:sqlalchemy.Integer
-        allowed_uses : !!python/name:sqlalchemy.String
+        zone_code_link : !!python/name:sqlalchemy.String
+        notes : !!python/name:sqlalchemy.String
+        review_date : !!python/name:sqlalchemy.DateTime
+        review_by : !!python/name:sqlalchemy.String
         shape : !!python/name:geoalchemy2.Geography #('Geometry', srid=4326)
