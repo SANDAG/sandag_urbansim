@@ -36,6 +36,7 @@ buildings :
             ,stories
             ,year_built
             ,data_source
+            ,luz_id
         FROM
             spacecore.urbansim.buildings
     ##Index Column
@@ -66,6 +67,7 @@ buildings :
         stories : !!python/name:sqlalchemy.Integer
         year_built : !!python/name:sqlalchemy.Integer
         data_source : !!python/name:sqlalchemy.VARCHAR
+        luz_id: !!python/name:sqlalchemy.Integer
         shape : !!python/name:geoalchemy2.Geography #('Geometry', srid=4326)
         centroid : !!python/name:geoalchemy2.Geography #('Geometry', srid=4326)
 
@@ -276,6 +278,7 @@ zoning :
             ,jurisdiction_id
             ,zone_code
             ,region_id
+            ,min_lot_size
             ,min_far
             ,max_far
             ,min_front_setback
@@ -284,6 +287,7 @@ zoning :
             ,side_setback
             ,min_dua
             ,max_dua
+            ,max_res_units
             ,max_building_height
             ,zone_code_link
             ,notes
@@ -307,6 +311,7 @@ zoning :
         zoning_id : !!python/name:sqlalchemy.String
         jurisdiction_id : !!python/name:sqlalchemy.Integer
         zone_code : !!python/name:sqlalchemy.String
+        min_lot_size: !!python/name:sqlalchemy.Integer
         region_id : !!python/name:sqlalchemy.Integer
         min_far : !!python/name:sqlalchemy.Numeric
         max_far : !!python/name:sqlalchemy.Numeric
@@ -316,6 +321,7 @@ zoning :
         side_setback : !!python/name:sqlalchemy.Numeric
         min_dua : !!python/name:sqlalchemy.Numeric
         max_dua : !!python/name:sqlalchemy.Numeric
+        max_res_units: !!python/name:sqlalchemy.Integer
         max_building_height : !!python/name:sqlalchemy.Integer
         zone_code_link : !!python/name:sqlalchemy.String
         notes : !!python/name:sqlalchemy.String
