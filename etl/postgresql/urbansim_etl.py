@@ -54,6 +54,7 @@ for key in selected:
 
         #Join spatial and non-spatial frames
         df = pd.concat([df_non_spatial, df_spatial], axis = 1)
+        df.index.name = df_non_spatial.index.name
     else:
         df = df_non_spatial
         print 'Non-spatial Dataset'

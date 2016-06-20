@@ -266,8 +266,7 @@ zoning :
     ##Input Query
     in_query_non_spatial : >
         SELECT
-            zone_id
-            ,zoning_id
+            zoning_id
             ,jurisdiction_id
             ,zone_code
             ,region_id
@@ -283,11 +282,11 @@ zoning :
         FROM
             spacecore.urbansim.zoning
     ##Index Column
-    index_col : zone_id
+    index_col : zoning_id
     ##Input Query Spatial
     in_query_spatial : >
         SELECT
-            zone_id
+            zoning_id
             ,shape.STAsText() as shape
         FROM spacecore.urbansim.zoning
         WHERE shape IS NOT NULL
@@ -295,7 +294,6 @@ zoning :
     out_table : zoning
     #Map columns --> Notice special geometry column
     column_data_types :
-        zone_id : !!python/name:sqlalchemy.Integer
         zoning_id : !!python/name:sqlalchemy.String
         jurisdiction_id : !!python/name:sqlalchemy.Integer
         zone_code : !!python/name:sqlalchemy.String
