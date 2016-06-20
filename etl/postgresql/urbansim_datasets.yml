@@ -208,6 +208,7 @@ parcels :
     in_query_non_spatial : >
         SELECT
             parcel_id
+            ,block_id
             ,development_type_id
             ,zoning_id
             ,land_value
@@ -218,6 +219,10 @@ parcels :
             ,msa_id
             ,proportion_undevelopable
             ,tax_exempt_status
+            ,distance_to_freeway
+            ,distance_to_onramp
+            ,distance_to_coast
+            ,distance_to_transit
         FROM
           spacecore.urbansim.parcels
     ##Index Column
@@ -235,6 +240,7 @@ parcels :
     #Map columns --> Notice special geometry column
     column_data_types :
         parcel_id : !!python/name:sqlalchemy.Integer
+        block_id : !!python/name:sqlalchemy.Integer
         development_type_id : !!python/name:sqlalchemy.Integer
         zoning_id : !!python/name:sqlalchemy.VARCHAR
         land_value : !!python/name:sqlalchemy.Integer
@@ -245,7 +251,10 @@ parcels :
         msa_id : !!python/name:sqlalchemy.Integer
         proportion_undevelopable : !!python/name:sqlalchemy.Numeric
         tax_exempt_status : !!python/name:sqlalchemy.String
-        shape_wkt : !!python/name:sqlalchemy.String
+        distance_to_freeway : !!python/name:sqlalchemy.Float
+        distance_to_onramp : !!python/name:sqlalchemy.Float
+        distance_to_coast : !!python/name:sqlalchemy.Float
+        distance_to_transit : !!python/name:sqlalchemy.Float
         shape : !!python/name:geoalchemy2.Geography #('Geometry', srid=4326)
         centroid : !!python/name:geoalchemy2.Geography #('Point', srid=4326)
 

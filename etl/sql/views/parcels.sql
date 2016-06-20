@@ -19,7 +19,9 @@ CREATE TABLE urbansim.parcels (
     ,proportion_undevelopable float
     ,tax_exempt_status bit
     ,distance_to_freeway float
-    ,distance_to_coast float
+    ,distance_to_onramp float
+	,distance_to_coast float
+    ,distance_to_transit float
     ,apn nvarchar(10) --This doesn't really work for condo lots
     ,shape geometry
     ,centroid geometry --Placeholder for spatial operations
