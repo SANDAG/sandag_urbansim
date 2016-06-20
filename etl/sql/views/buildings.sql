@@ -3,9 +3,10 @@ IF OBJECT_ID('urbansim.buildings') IS NOT NULL
     DROP TABLE urbansim.buildings
 GO
 CREATE TABLE urbansim.buildings(
-	building_id int IDENTITY(1,1) NOT NULL
+	building_id int NOT NULL
 	,development_type_id smallint
-	,parcel_id int
+	,subparcel_id int NOT NULL
+	,parcel_id int NOT NULL
 	,improvement_value float
 	,residential_units smallint
 	,residential_sqft int
@@ -16,13 +17,24 @@ CREATE TABLE urbansim.buildings(
 	,stories int
 	,year_built smallint
 	,shape geometry
+	,centroid geometry
 	,data_source nvarchar(50)
 )
-INSERT INTO urbansim.buildings WITH (TABLOCK) (shape, data_source)
+INSERT INTO urbansim.buildings WITH (TABLOCK) (
+	building_id
+	,subparcel_id
+	,parcel_id
+	,shape
+	,centroid
+	,data_source
+	)
 SELECT 
-	shape
+	bldgID
+	,subparcelID
+	,parcelID
+	,shape
+	,centroid
 	,dataSource
-    --bldgID	--NOT UNIQUE ID
 FROM gis.buildings
 
 --CREATE A PRIMARY KEY SO WE CAN CREATE A SPATIAL INDEX
@@ -30,12 +42,20 @@ ALTER TABLE urbansim.buildings ADD CONSTRAINT pk_urbansim_buildings_building_id 
 
 --SET THE SHAPES TO BE NOT NULL SO WE CAN CREATE A SPATIAL INDEX
 ALTER TABLE urbansim.buildings ALTER COLUMN shape geometry NOT NULL
+ALTER TABLE urbansim.buildings ALTER COLUMN centroid geometry NOT NULL
 
 --SELECT max(x_coord), min(x_coord), max(y_coord), min(y_coord) from gis.parcels
 
-CREATE SPATIAL INDEX [ix_spatial_urbansim_buildings] ON urbansim.buildings
+CREATE SPATIAL INDEX [ix_spatial_urbansim_buildings_shape] ON urbansim.buildings
 (
     shape
+) USING  GEOMETRY_GRID
+    WITH (BOUNDING_BOX =(6152300, 1775400, 6613100, 2129400), GRIDS =(LEVEL_1 = MEDIUM,LEVEL_2 = MEDIUM,LEVEL_3 = MEDIUM,LEVEL_4 = MEDIUM), 
+    CELLS_PER_OBJECT = 16, PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+
+CREATE SPATIAL INDEX [ix_spatial_urbansim_buildings_centroid] ON urbansim.buildings
+(
+    centroid
 ) USING  GEOMETRY_GRID
     WITH (BOUNDING_BOX =(6152300, 1775400, 6613100, 2129400), GRIDS =(LEVEL_1 = MEDIUM,LEVEL_2 = MEDIUM,LEVEL_3 = MEDIUM,LEVEL_4 = MEDIUM), 
     CELLS_PER_OBJECT = 16, PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
@@ -53,39 +73,6 @@ FROM
 JOIN ref.development_type_lu_code dev 
 ON lc.lu = dev.lu_code
 WHERE usb.Shape.STCentroid().STWithin(lc.Shape) = 1
-
---VALIDATE PARCEL_ID TO EXISTING PARCELS, ASSIGN NEAREST PARCEL_ID
-UPDATE
-	usb
-SET
-	usb.parcel_id = usp.parcel_id
-FROM
-	urbansim.buildings usb
-JOIN (
-	SELECT row_id, building_id, parcel_id, dist 
-	FROM (
-		SELECT
-			ROW_NUMBER() OVER (PARTITION BY usb.building_id ORDER BY usb.building_id, usb.shape.STCentroid().STDistance(usp.shape)) row_id
-			,usb.building_id
-			,usp.parcel_id
-			,usb.shape.STCentroid().STDistance(usp.shape) AS dist
-		FROM urbansim.parcels usp
-			INNER JOIN (SELECT b.building_id
-							--,b.residential_units
-							--,b.parcel_id
-							,p.parcel_id
-							--,p.mgra_id
-							,b.shape 
-						FROM urbansim.buildings b 
-						LEFT JOIN urbansim.parcels p 
-						ON b.parcel_id = p.parcel_id 
-						WHERE p.parcel_id IS NULL		--NO PARCEL_ID FOUND
-						) usb 
-			ON usb.shape.STCentroid().STBuffer(100).STIntersects(usp.shape) = 1
-			) x
-	WHERE row_id = 1
-	) usp
-ON usb.building_id = usp.building_id
 
 
 /** ASSESSOR AND LANDCORE DATA **/
@@ -183,7 +170,7 @@ FROM
 	ON usb.parcel_id = c.parcel_id
 
 
-/*
+
 <<<<<<< HEAD
 
 
@@ -207,4 +194,3 @@ FROM
     INNER JOIN urbansim.parcels p ON usb.parcel_id = p.parcel_id
     INNER JOIN urbansim.building_sqft_per_job sq ON usb.development_type_id = sq.development_type_id AND p.luz_id = sq.luz_id
 >>>>>>> ea548a1ef74e00dea6b16b8fadca53d50c152d20
-*/
