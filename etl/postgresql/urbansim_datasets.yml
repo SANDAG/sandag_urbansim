@@ -25,6 +25,7 @@ buildings :
             building_id
             ,development_type_id
             ,parcel_id
+            ,subparcel_id
             ,improvement_value
             ,residential_units
             ,residential_sqft
@@ -34,6 +35,7 @@ buildings :
             ,price_per_sqft
             ,stories
             ,year_built
+            ,data_source
         FROM
             spacecore.urbansim.buildings
     ##Index Column
@@ -43,6 +45,7 @@ buildings :
         SELECT
             building_id
             ,shape.STAsText() AS shape
+            ,centroid.STAsText() AS centroid
         FROM
             spacecore.urbansim.buildings
     ##Output
@@ -52,6 +55,7 @@ buildings :
         building_id : !!python/name:sqlalchemy.Integer
         development_type_id : !!python/name:sqlalchemy.Integer
         parcel_id : !!python/name:sqlalchemy.Integer
+        subparcel_id : !!python/name:sqlalchemy.Integer
         improvement_value : !!python/name:sqlalchemy.Float
         residential_units : !!python/name:sqlalchemy.Integer
         residential_units :  !!python/name:sqlalchemy.Integer
@@ -61,7 +65,9 @@ buildings :
         price_per_sqft : !!python/name:sqlalchemy.Float
         stories : !!python/name:sqlalchemy.Integer
         year_built : !!python/name:sqlalchemy.Integer
+        data_source : !!python/name:sqlalchemy.VARCHAR
         shape : !!python/name:geoalchemy2.Geography #('Geometry', srid=4326)
+        centroid : !!python/name:geoalchemy2.Geography #('Geometry', srid=4326)
 
 development_type :
     ##Input Query
