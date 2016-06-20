@@ -5,13 +5,13 @@ from sqlalchemy import create_engine
 import yaml
 
 ##OPEN yaml DATASET DICTIONARY
-with open('E:\\apps\\sandag_urbansim\\etl\\postgresql\\urbansim_datasets.yml') as y:
+with open('urbansim_datasets.yml') as y:
     datasets = yaml.load(y)
 
 ##SELECT DATASETS TO LOAD FROM yaml
 selected = [
     #'building_sqft_per_job',
-    #'buildings',
+    'buildings',
     #'development_type',
     #'edges',
     #'households',
@@ -47,9 +47,10 @@ for key in selected:
         df_spatial = pd.read_sql(in_query_spatial, sql_in_engine, index_col=dataset['index_col'])
         print 'Loaded Spatial Query'
 
-        #Transform Shape from SPCS to WGS --> See method above for details
-        s = df_spatial['shape'].apply(lambda x: transform_wkt(x))
-        df_spatial['shape'] = s
+        for col in df_spatial.columns:
+            #Transform Shape from SPCS to WGS --> See method above for details
+            s = df_spatial[col].apply(lambda x: transform_wkt(x))
+            df_spatial[col] = s
         print 'Transformed Shapes'
 
         #Join spatial and non-spatial frames
