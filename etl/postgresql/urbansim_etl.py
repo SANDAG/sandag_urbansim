@@ -1,7 +1,7 @@
 import pandas as pd
 from pysandag.database import get_connection_string
 from pysandag.gis import transform_wkt
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, MetaData, Table, Index, PrimaryKeyConstraint
 import yaml
 
 ##OPEN yaml DATASET DICTIONARY
@@ -11,31 +11,31 @@ with open('urbansim_datasets.yml') as y:
 ##SELECT DATASETS TO LOAD FROM yaml
 selected = [
     #'building_sqft_per_job',
-    'buildings',
+    #'buildings',
     #'development_type',
     #'edges',
     #'households',
     #'jobs',
     #'nodes',
     'parcels',
-    'zoning_allowed_use',
-    'zoning'
+    #'zoning_allowed_use',
+    #'zoning'
 ]
+
+sql_in_engine = create_engine(get_connection_string("dbconfig.yml", 'in_db'))
+sql_out_engine = create_engine(get_connection_string("dbconfig.yml", 'out_db'))
+schema = datasets['schema']
+
+metadata = MetaData(bind=sql_out_engine, schema=schema)
 
 ##PROCESS SELECTED DATASETS
 for key in selected:
     dataset = datasets[key]
     print ">>> {0}".format(key)
 
-    #GET THE CONNECTION STRINGS
-    in_connection_string = get_connection_string("dbconfig.yml", 'in_db')
-    out_connection_string = get_connection_string("dbconfig.yml", 'out_db')
-
     ##INPUT QUERY
     in_query_non_spatial = dataset['in_query_non_spatial']
 
-    ##MSSQL SQLAlchemy
-    sql_in_engine = create_engine(in_connection_string)
     ##Pandas Data Frame for non-spatial data
     df_non_spatial = pd.read_sql(in_query_non_spatial, sql_in_engine, index_col= dataset['index_col'])
     print 'Loaded Non-Spatial Query'
@@ -68,12 +68,23 @@ for key in selected:
     column_data_types = dataset['column_data_types']
 
     print 'Start Data Load'
-    ##PostgreSQL SQLAlchemy
-    sql_out_engine = create_engine(out_connection_string)
 
     #Write PostgreSQL
-    df.to_sql(out_table, sql_out_engine, schema='urbansim', if_exists='replace', index=True, dtype = column_data_types)
+    df.to_sql(out_table, sql_out_engine, schema=schema, if_exists='replace', index=True, dtype=column_data_types)
     #df.to_csv(out_table+'.csv')
 
     print "Table Loaded to {0}".format(out_table)
+
+    indexes = dataset['indexes']
+    tbl = Table(out_table, metadata, autoload=True)
+
+    for name, col in indexes.iteritems():
+        print "Building Index: " + name
+        idx = Index(name, tbl.c[col])
+        idx.create()
+
+    print "Index Creation Complete"
+
+
+
     print '*' * 30

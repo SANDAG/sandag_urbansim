@@ -1,3 +1,5 @@
+schema : urbansim_test
+
 building_sqft_per_job :
     ##Input Query
     in_query_non_spatial : >
@@ -41,6 +43,9 @@ buildings :
             spacecore.urbansim.buildings
     ##Index Column
     index_col : building_id
+    indexes :
+        ix_buildings_parcel_id: parcel_id
+        ix_buidlings_development_type_id: development_type_id
     ##Input Query Spatial
     in_query_spatial : >
         SELECT
@@ -59,16 +64,16 @@ buildings :
         subparcel_id : !!python/name:sqlalchemy.Integer
         improvement_value : !!python/name:sqlalchemy.Float
         residential_units : !!python/name:sqlalchemy.Integer
-        residential_units :  !!python/name:sqlalchemy.Integer
+        residential_sqft :  !!python/name:sqlalchemy.Integer
         non_residential_sqft : !!python/name:sqlalchemy.Integer
         job_spaces : !!python/name:sqlalchemy.Integer
         non_residential_rent_per_sqft : !!python/name:sqlalchemy.Float
         price_per_sqft : !!python/name:sqlalchemy.Float
         stories : !!python/name:sqlalchemy.Integer
         year_built : !!python/name:sqlalchemy.Integer
-        data_source : !!python/name:sqlalchemy.VARCHAR
+        data_source : !!python/name:sqlalchemy.String
         luz_id: !!python/name:sqlalchemy.Integer
-        shape : !!python/name:geoalchemy2.Geography #('Geometry', srid=4326)
+        shape : !!python/name:geoalchemy2.Geography
         centroid : !!python/name:geoalchemy2.Geography #('Geometry', srid=4326)
 
 development_type :
@@ -132,6 +137,8 @@ households :
             spacecore.urbansim.households
     ##Index Column
     index_col : household_id
+    indexes :
+        ix_households_building_id: building_id
     ##Output
     out_table : households
     #Map columns
@@ -159,6 +166,9 @@ jobs :
             spacecore.urbansim.jobs
     ##Index Column
     index_col : job_id
+    indexes :
+        ix_jobs_building_id: building_id
+        ix_jobs_sector_id: sector_id
     ##Output
     out_table : jobs
     #Map columns
@@ -229,6 +239,9 @@ parcels :
           spacecore.urbansim.parcels
     ##Index Column
     index_col : parcel_id
+    indexes :
+        ix_parcels_mgra_id: mgra_id
+        ix_parcels_zoning_id: zoning_id
     ##Pandas Data Frame for spatial data
     in_query_spatial : >
         SELECT
@@ -237,6 +250,7 @@ parcels :
             ,centroid.STAsText() as centroid
         FROM
             spacecore.urbansim.parcels
+        WHERE
     ##Output
     out_table : parcels
     #Map columns --> Notice special geometry column
@@ -270,14 +284,17 @@ zoning_allowed_use :
         FROM
             urbansim.zoning_allowed_use
     ##Index Column
-    index_col : zoning_id
+    index_col : zoning_allowed_use_id
+    indexes :
+        ix_zoning_allowed_use_zoning_id: zoning_id
+        ix_zoning_allowed_use_development_type_id: development_type_id
     ##Output
     out_table : zoning_allowed_use
     #Map columns
     column_data_types :
         zoning_id : !!python/name:sqlalchemy.String
-        zoning_allowed_use_id : !!python/name:sqlalchemy.String
-        development_type_id : !!python/name:sqlalchemy.String
+        zoning_allowed_use_id : !!python/name:sqlalchemy.Integer
+        development_type_id : !!python/name:sqlalchemy.Integer
 
 zoning :
     ##Input Query
@@ -306,6 +323,8 @@ zoning :
             spacecore.urbansim.zoning
     ##Index Column
     index_col : zoning_id
+    indexes :
+        ix_zoning_jurisdiction_id: jurisdiction_id
     ##Input Query Spatial
     in_query_spatial : >
         SELECT
