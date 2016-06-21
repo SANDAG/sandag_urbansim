@@ -1,7 +1,7 @@
 import pandas as pd
 from pysandag.database import get_connection_string
 from pysandag.gis import transform_wkt
-from sqlalchemy import create_engine, MetaData, Table, Index, PrimaryKeyConstraint
+from sqlalchemy import create_engine, MetaData, Table, Index, Column
 import yaml
 
 ##OPEN yaml DATASET DICTIONARY
@@ -69,8 +69,16 @@ for key in selected:
 
     print 'Start Data Load'
 
+    tbl = Table(out_table, metadata)
+    for column_name, column_type in column_data_types.iteritems():
+        tbl.append_column(Column(column_name, column_type, primary_key=column_name==df.index.name))
+
+    if tbl.exists():
+        tbl.drop()
+    tbl.create()
+
     #Write PostgreSQL
-    df.to_sql(out_table, sql_out_engine, schema=schema, if_exists='replace', index=True, dtype=column_data_types)
+    df.to_sql(out_table, sql_out_engine, schema=schema, if_exists='append', index=True, dtype=column_data_types)
     #df.to_csv(out_table+'.csv')
 
     print "Table Loaded to {0}".format(out_table)

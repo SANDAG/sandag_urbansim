@@ -250,7 +250,6 @@ parcels :
             ,centroid.STAsText() as centroid
         FROM
             spacecore.urbansim.parcels
-        WHERE
     ##Output
     out_table : parcels
     #Map columns --> Notice special geometry column
@@ -271,7 +270,7 @@ parcels :
         distance_to_onramp : !!python/name:sqlalchemy.Float
         distance_to_coast : !!python/name:sqlalchemy.Float
         distance_to_transit : !!python/name:sqlalchemy.Float
-        shape : !!python/name:geoalchemy2.Geography #('Geometry', srid=4326)
+        shape : !!python/name:geoalchemy2.Geography
         centroid : !!python/name:geoalchemy2.Geography #('Point', srid=4326)
 
 zoning_allowed_use :
