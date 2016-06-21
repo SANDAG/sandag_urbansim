@@ -2,9 +2,9 @@ import numpy as np
 import pandas as pd
 from pysandag.database import get_connection_string
 from sqlalchemy import create_engine
-from urbansim.models.lcm import unit_choice
+from urbansim.models.dcm import unit_choice
 
-urbansim_engine = create_engine(get_connection_string("../postgresql/dbconfig.yml", 'urbansim_database'))
+urbansim_engine = create_engine(get_connection_string("../postgresql/dbconfig.yml", 'in_db'))
 #, legacy_schema_aliasing=False)
 
 def random_allocate_agents_by_geography(agents, containers, geography_id_col, containers_units_col):
@@ -49,14 +49,103 @@ def random_allocate_agents_by_geography(agents, containers, geography_id_col, co
     
     return audit_df
 
+def expand_residential_units():
+    extra_households = """
+      WITH supply AS (
+        SELECT count(*) bldgs, sum(bldg.residential_units) res_units, p.mgra as mgra
+        FROM urbansim.buildings bldg
+        INNER JOIN spacecore.ref.parcel_mgra_lookup p ON bldg.parcel_id = p.parcel_id
+        GROUP BY p.mgra),
+      demand as (
+        SELECT COUNT(*) hh, mgra
+        FROM input.vi_households GROUP BY mgra)
+
+    SELECT
+      COALESCE(s.mgra,d.mgra) mgra
+      ,d.hh as households
+      ,s.res_units as residential_units
+      ,s.bldgs as buildings
+      ,COALESCE(d.hh,0) - COALESCE(s.res_units,0) as extra_households
+    FROM
+      supply s
+      FULL OUTER JOIN demand d ON s.mgra = d.mgra
+    WHERE
+      COALESCE(d.hh,0) - COALESCE(s.res_units,0) > 0
+    ORDER BY COALESCE(s.mgra,d.mgra)
+    """
+
+    buildings_sql = """
+    SELECT
+        building_id, residential_units, mgra
+    FROM
+        urbansim.buildings bldg
+        INNER JOIN spacecore.ref.parcel_mgra_lookup p ON bldg.parcel_id = p.parcel_id
+    """
+
+    mgra = pd.read_sql(extra_households, urbansim_engine, index_col='mgra')
+    buildings = pd.read_sql(buildings_sql, urbansim_engine, index_col='building_id')
+
+    for x in mgra.index:
+        alts = buildings.ix[buildings.mgra == x]
+        if len(alts) == 0:
+            ix = buildings.index.max() + 1
+            buildings.ix[ix] = [1, x]
+            alts = buildings.ix[buildings.mgra == x]
+
+        prob = np.arange(0, 1, 1.0 / len(alts)) + (1.0 / len(alts))
+        print "MGRA: " + str(x) + ", Length: " + str(len(alts))
+        for i in xrange(int(mgra.ix[x].extra_households)):
+            test = np.random.random_sample()
+            for j in xrange(len(prob)):
+                if test <= prob[j]:
+                    buildings.ix[alts.iloc[j].name]['residential_units'] = buildings.ix[alts.iloc[j].name][
+                                                                               'residential_units'] + 1
+                    break
+
+    buildings.to_sql('extra_building_res_units', urbansim_engine, schema='input', if_exists='replace')
 
 def process_households():
+    check_sql = """
+        WITH supply AS (
+          SELECT count(*) bldgs, sum(bldg.residential_units) res_units, p.mgra as mgra FROM
+            urbansim.buildings bldg
+            INNER JOIN spacecore.ref.parcel_mgra_lookup p ON bldg.parcel_id = p.parcel_id
+		    GROUP BY p.mgra),
+        demand as (
+          SELECT COUNT(*) hh, mgra FROM input.vi_households GROUP BY mgra)
 
-    bldgs_sql = """SELECT 
-                    bldg.building_id, bldg.residential_units, p.mgra_id as mgra
-                  FROM 
-                    urbansim.buildings bldg
-                    INNER JOIN spacecore.urbansim.parcels p ON bldg.parcel_id = p.parcel_id"""
+        SELECT
+          COALESCE(s.mgra,d.mgra) mgra
+          ,d.hh as households
+          ,s.res_units as residential_units
+          ,s.bldgs as buildings
+          ,COALESCE(d.hh,0) - COALESCE(s.res_units,0) as extra_households
+        FROM
+          supply s
+          FULL OUTER JOIN demand d ON s.mgra = d.mgra
+        WHERE
+          COALESCE(d.hh,0) - COALESCE(s.res_units,0) > 0
+        ORDER BY COALESCE(s.mgra,d.mgra)
+    """
+
+    check_df = pd.read_sql(check_sql, urbansim_engine, index_col='mgra')
+    if len(check_df) > 0:
+        print "Some MGRAs have more demand than residential units.\nSee output: hh_check.csv"
+        check_df.to_csv("hh_check.csv")
+        print "Expand residential units..."
+
+        expand_residential_units()
+
+        bldgs_sql = """
+            SELECT building_id,residential_units,mgra
+            FROM [spacecore].[input].[extra_building_res_units]
+         """
+    else:
+        bldgs_sql = """
+          SELECT bldg.building_id, bldg.residential_units, p.mgra as mgra
+          FROM urbansim.buildings bldg
+            INNER JOIN spacecore.ref.parcel_mgra_lookup p ON bldg.parcel_id = p.parcel_id
+        """
 
     # Get 2015 Households from ABM
     hh_sql =  """SELECT
@@ -80,8 +169,19 @@ def process_households():
     for col in households.columns:
         households[col] = households[col].astype('int')
         
-    households.to_csv('households.csv')
-    #households.to_sql('households', urbansim_engine, schema='urbansim', if_exists='replace', chunksize=1000)
+    #households.to_csv('households.csv')
+    households.to_sql('households', urbansim_engine, schema='urbansim', if_exists='replace', chunksize=1000)
+
+    print """
+      UPDATE b
+        SET b.residential_units = hh.residential_units
+      FROM
+        urbansim.buildings b
+        INNER JOIN (SELECT building_id, COUNT(*) residential_units FROM urbansim.households GROUP BY building_id) hh
+	    ON b.building_id = hh.building_id
+      WHERE
+        b.residential_units < hh.residential_units
+    """
 
 
 def process_jobs():

@@ -73,8 +73,8 @@ buildings :
         year_built : !!python/name:sqlalchemy.Integer
         data_source : !!python/name:sqlalchemy.String
         luz_id: !!python/name:sqlalchemy.Integer
-        shape : !!python/name:geoalchemy2.Geography
-        centroid : !!python/name:geoalchemy2.Geography #('Geometry', srid=4326)
+        shape : !!python/object:geoalchemy2.Geography { geometry_type: 'POLYGON', srid: 4326, spatial_index: True }
+        centroid : !!python/object:geoalchemy2.Geography { geometry_type: 'POINT', srid: 4326, spatial_index: True }
 
 development_type :
     ##Input Query
@@ -135,6 +135,8 @@ households :
             ,cars
         FROM
             spacecore.urbansim.households
+        WHERE
+            building_id IN (SELECT building_id FROM urbansim.buildings)
     ##Index Column
     index_col : household_id
     indexes :
@@ -213,7 +215,7 @@ nodes :
         price_per_sqft : !!python/name:sqlalchemy.Float
         stories : !!python/name:sqlalchemy.Integer
         year_built : !!python/name:sqlalchemy.Integer
-        shape : !!python/name:geoalchemy2.Geography #('Geometry', srid=4326)
+        shape : !!python/object:geoalchemy2.Geography { geometry_type: 'POINT', srid: 4326, spatial_index: True }
 
 parcels :
     ##Input Query
@@ -257,7 +259,7 @@ parcels :
         parcel_id : !!python/name:sqlalchemy.Integer
         block_id : !!python/name:sqlalchemy.String
         development_type_id : !!python/name:sqlalchemy.Integer
-        zoning_id : !!python/name:sqlalchemy.VARCHAR
+        zoning_id : !!python/name:sqlalchemy.String
         land_value : !!python/name:sqlalchemy.Integer
         parcel_acres : !!python/name:sqlalchemy.Float
         region_id : !!python/name:sqlalchemy.Integer
@@ -270,8 +272,8 @@ parcels :
         distance_to_onramp : !!python/name:sqlalchemy.Float
         distance_to_coast : !!python/name:sqlalchemy.Float
         distance_to_transit : !!python/name:sqlalchemy.Float
-        shape : !!python/name:geoalchemy2.Geography
-        centroid : !!python/name:geoalchemy2.Geography #('Point', srid=4326)
+        shape : !!python/object:geoalchemy2.Geography { geometry_type: 'MULTIPOLYGON', srid: 4326, spatial_index: True }
+        centroid : !!python/object:geoalchemy2.Geography { geometry_type: 'POINT', srid: 4326, spatial_index: True }
 
 zoning_allowed_use :
     ##Input Query
@@ -354,4 +356,4 @@ zoning :
         notes : !!python/name:sqlalchemy.String
         review_date : !!python/name:sqlalchemy.DateTime
         review_by : !!python/name:sqlalchemy.String
-        shape : !!python/name:geoalchemy2.Geography #('Geometry', srid=4326)
+        shape : !!python/object:geoalchemy2.Geography { geometry_type: 'MULTIPOLYGON', srid: 4326, spatial_index: True }
