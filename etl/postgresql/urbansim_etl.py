@@ -14,12 +14,13 @@ selected = [
     #'buildings',
     #'development_type',
     #'edges',
-    #'households',
+    'households',
     #'jobs',
     #'nodes',
-    'parcels',
+    #'parcels',
     #'zoning_allowed_use',
-    #'zoning'
+    #'zoning',
+    #'household_controls'
 ]
 
 sql_in_engine = create_engine(get_connection_string("dbconfig.yml", 'in_db'))

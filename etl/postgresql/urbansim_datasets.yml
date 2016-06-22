@@ -1,4 +1,4 @@
-schema : urbansim_test
+schema : urbansim
 
 building_sqft_per_job :
     ##Input Query
@@ -357,3 +357,28 @@ zoning :
         review_date : !!python/name:sqlalchemy.DateTime
         review_by : !!python/name:sqlalchemy.String
         shape : !!python/object:geoalchemy2.Geography { geometry_type: 'MULTIPOLYGON', srid: 4326, spatial_index: True }
+
+household_controls :
+    in_query_non_spatial: >
+        SELECT
+            ROW_NUMBER() OVER (ORDER BY yr, hh_income_id) as household_control_id
+            ,yr
+            ,hh_income_id as income_quartile
+            ,hh as households
+        FROM
+            isam.defm.households
+        WHERE
+            dem_version = 'S0021'
+            and eco_version = '001' AND yr > 2010
+
+    index_col: household_control_id
+    indexes :
+        ix_household_ctrl_yr: yr
+    ##Output
+    out_table : household_controls
+    #Map columns
+    column_data_types :
+        household_control_id : !!python/name:sqlalchemy.Integer
+        yr : !!python/name:sqlalchemy.Integer
+        income_quartile : !!python/name:sqlalchemy.Integer
+        households: !!python/name:sqlalchemy.Integer
