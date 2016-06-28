@@ -123,7 +123,7 @@ UPDATE
 SET 
 	usb.centroid = usb.shape.STBuffer(-10).STPointOnSurface()
 FROM
-	[urbansim].[buildings_adj2] usb
+	[staging].[buildings_adj2] usb
 WHERE
 	subparcel_id IN(
 					SELECT 
