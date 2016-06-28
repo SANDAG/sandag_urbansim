@@ -36,7 +36,7 @@ ORDER BY b.building_id
 
 --SELECT LARGER PARTS, DISCARD SMALLER
 SELECT *
-INTO staging.buildings_adj1
+INTO staging.buildings_du_from_lc
 FROM (
 	SELECT * 
 	FROM (
@@ -68,26 +68,26 @@ FROM (
 	) x
 
 --ADD CENTROIDS
-UPDATE [staging].[buildings_adj2]
+UPDATE [staging].[buildings_du_from_lc]
 SET centroid = shape.STCentroid()
 
 --CREATE A PRIMARY KEY SO WE CAN CREATE A SPATIAL INDEX
-ALTER TABLE [staging].[buildings_adj2] ADD CONSTRAINT pk_staging_buildings_adj2_building_id PRIMARY KEY CLUSTERED (building_id) 
+ALTER TABLE [staging].[buildings_du_from_lc] ADD CONSTRAINT pk_staging_buildings_du_from_lc_building_id PRIMARY KEY CLUSTERED (building_id) 
 
 --SET THE SHAPES TO BE NOT NULL SO WE CAN CREATE A SPATIAL INDEX
-ALTER TABLE [staging].[buildings_adj2] ALTER COLUMN shape geometry NOT NULL
-ALTER TABLE [staging].[buildings_adj2] ALTER COLUMN centroid geometry NOT NULL
+ALTER TABLE [staging].[buildings_du_from_lc] ALTER COLUMN shape geometry NOT NULL
+ALTER TABLE [staging].[buildings_du_from_lc] ALTER COLUMN centroid geometry NOT NULL
 
 --SELECT max(x_coord), min(x_coord), max(y_coord), min(y_coord) from gis.parcels
 
-CREATE SPATIAL INDEX [ix_spatial_staging_buildings_adj2_shape] ON [staging].[buildings_adj2]
+CREATE SPATIAL INDEX [ix_spatial_staging_buildings_du_from_lc_shape] ON [staging].[buildings_du_from_lc]
 (
     shape
 ) USING  GEOMETRY_GRID
     WITH (BOUNDING_BOX =(6152300, 1775400, 6613100, 2129400), GRIDS =(LEVEL_1 = MEDIUM,LEVEL_2 = MEDIUM,LEVEL_3 = MEDIUM,LEVEL_4 = MEDIUM), 
     CELLS_PER_OBJECT = 16, PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
 
-CREATE SPATIAL INDEX [ix_spatial_staging_buildings_adj2_centroid] ON [staging].[buildings_adj2]
+CREATE SPATIAL INDEX [ix_spatial_staging_buildings_du_from_lc_centroid] ON [staging].[buildings_du_from_lc]
 (
     centroid
 ) USING  GEOMETRY_GRID
@@ -102,9 +102,9 @@ CREATE SPATIAL INDEX [ix_spatial_staging_buildings_adj2_centroid] ON [staging].[
 SELECT c.subparcel_id centroid
 	, b.subparcel_id subparcel
 FROM	
-	[staging].[buildings_adj2] c
+	[staging].[buildings_du_from_lc] c
 JOIN
-	[staging].[buildings_adj2] b
+	[staging].[buildings_du_from_lc] b
 ON c.centroid.STWithin(b.shape) = 1
 WHERE b.subparcel_id != c.subparcel_id
 ORDER BY c.subparcel_id
@@ -115,7 +115,7 @@ ORDER BY c.subparcel_id
 FIX BAD CENTROIDS, REPLACE WITH POINT ON SURFACE***/
 
 --ALLOW NULLS TO AVOID ERROR
-ALTER TABLE [staging].[buildings_adj2] ALTER COLUMN centroid geometry NOT NULL
+ALTER TABLE [staging].[buildings_du_from_lc] ALTER COLUMN centroid geometry NOT NULL
 
 --CENTROID FIX WITH POINT ON SURFACE
 UPDATE 
@@ -123,15 +123,15 @@ UPDATE
 SET 
 	usb.centroid = usb.shape.STBuffer(-10).STPointOnSurface()
 FROM
-	[staging].[buildings_adj2] usb
+	[staging].[buildings_du_from_lc] usb
 WHERE
 	subparcel_id IN(
 					SELECT 
 						c.subparcel_id
 					FROM	
-						[staging].[buildings_adj2] c
+						[staging].[buildings_du_from_lc] c
 					JOIN
-						[staging].[buildings_adj2] b
+						[staging].[buildings_du_from_lc] b
 					ON c.centroid.STWithin(b.shape) = 1
 					WHERE b.subparcel_id != c.subparcel_id
 					) 
@@ -144,21 +144,21 @@ SET
 	usb.subparcel_id = l.subParcel
 	,usb.du_lc = l.du
 FROM
-	[staging].[buildings_adj2] usb
+	[staging].[buildings_du_from_lc] usb
 JOIN (SELECT subParcel, du, Shape FROM [GIS].[landcore]) l on l.Shape.STIntersects(usb.centroid) = 1
 
 --CHECK TOTALS
 SELECT SUM(du) FROM [GIS].[landcore]
-SELECT SUM(du_lc) FROM [staging].[buildings_adj2]
-SELECT SUM(du_lc) FROM (SELECT DISTINCT subparcel_id, du_lc FROM [staging].[buildings_adj2]) x
+SELECT SUM(du_lc) FROM [staging].[buildings_du_from_lc]
+SELECT SUM(du_lc) FROM (SELECT DISTINCT subparcel_id, du_lc FROM [staging].[buildings_du_from_lc]) x
 
 
 /*** GRAB LU FROM LANDCORE SUBPARCEL USING POINTONSURFACE FOR ALL RECORDS ***/
 
 --ADD COLUMN TO HOLD LU FROM POINTONSURFACE
-ALTER TABLE [staging].[buildings_adj2]
+ALTER TABLE [staging].[buildings_du_from_lc]
 ADD subparcel_id_pos int
-ALTER TABLE [staging].[buildings_adj2]
+ALTER TABLE [staging].[buildings_du_from_lc]
 ADD du_lc_pos int
 
 --BUILDING POINTONSURFACE, GET SUBPARCEL, DU FROM LANDCORE
@@ -168,5 +168,5 @@ SET
 	usb.subparcel_id_pos = l.subParcel
 	,usb.du_lc_pos = l.du
 FROM
-	[staging].[buildings_adj2] usb
+	[staging].[buildings_du_from_lc] usb
 JOIN (SELECT subParcel, du, Shape FROM [GIS].[landcore]) l on l.Shape.STIntersects(usb.shape.STBuffer(-10).STPointOnSurface()) = 1
