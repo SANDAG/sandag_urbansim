@@ -299,6 +299,8 @@ def parcel_sales_price_sqft(use):
 
 @orca.injectable('parcel_average_price', autocall=False)
 def parcel_average_price(use):
+    if len(orca.get_table('nodes').index) == 0:
+        return pd.Series(0, orca.get_table('parcels').index)
     return misc.reindex(orca.get_table('nodes')[use],
                         orca.get_table('parcels').node_id)
 
