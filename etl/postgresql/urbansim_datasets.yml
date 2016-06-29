@@ -1,5 +1,29 @@
 schema : urbansim
 
+assessor_transactions :
+    in_query_non_spatial: >
+        SELECT
+            ROW_NUMBER() OVER (ORDER BY parcel_id, tx_price) as assessor_transactions_id
+            ,parcel_id
+            ,tx_price
+        FROM
+            (SELECT parcel_id, RANK() OVER (PARTITION BY parcel_id ORDER BY tx_date) as tx
+                ,tx_date
+                ,tx_price
+            FROM estimation.assessor_par_transactions) x
+        WHERE
+            tx = 1
+    index_col: assessor_transactions_id
+    indexes :
+        ix_assessor_transactions_tx_price : parcel_id
+    ##Output
+    out_table : assessor_transactions
+    #Map columns
+    column_data_types :
+        assessor_transactions_id : !!python/name:sqlalchemy.Integer
+        parcel_id : !!python/name:sqlalchemy.Integer
+        tx_price : !!python/name:sqlalchemy.Integer
+
 building_sqft_per_job :
     ##Input Query
     in_query_non_spatial : >
@@ -121,6 +145,74 @@ edges :
         from_node : !!python/name:sqlalchemy.Integer
         to_node : !!python/name:sqlalchemy.Integer
         distance : !!python/name:sqlalchemy.Float
+
+employment_controls :
+    in_query_non_spatial: >
+        SELECT
+            ROW_NUMBER() OVER (ORDER BY yr, sector_id) as employment_control_id
+            ,yr
+            ,jobs as number_of_jobs
+            ,sector_id
+        FROM
+            isam.defm.jobs
+        WHERE
+            dem_version = 'S0021'
+            AND eco_version = '001'
+            AND yr >= 2015
+    index_col: employment_control_id
+    indexes :
+        ix_employment_ctrl_yr: yr
+    ##Output
+    out_table : employment_controls
+    #Map columns
+    column_data_types :
+        employment_control_id : !!python/name:sqlalchemy.Integer
+        yr : !!python/name:sqlalchemy.Integer
+        number_of_jobs : !!python/name:sqlalchemy.Integer
+        sector_id: !!python/name:sqlalchemy.Integer
+
+fee_schedule :
+    in_query_non_spatial: >
+        SELECT
+            development_type_id
+            ,development_fee_per_unit_space_initial
+        FROM
+            urbansim.fee_schedule
+    index_col: development_type_id
+    indexes :
+        ix_fee_schedule_development_type_id : development_type_id
+    ##Output
+    out_table : fee_schedule
+    #Map columns
+    column_data_types :
+        development_type_id : !!python/name:sqlalchemy.Integer
+        development_fee_per_unit_space_initial : !!python/name:sqlalchemy.Numeric
+
+household_controls :
+    in_query_non_spatial: >
+        SELECT
+            ROW_NUMBER() OVER (ORDER BY yr, hh_income_id) as household_control_id
+            ,yr
+            ,hh_income_id as income_quartile
+            ,hh as households
+        FROM
+            isam.defm.households
+        WHERE
+            dem_version = 'S0021'
+            AND eco_version = '001'
+            AND yr > 2010
+
+    index_col: household_control_id
+    indexes :
+        ix_household_ctrl_yr: yr
+    ##Output
+    out_table : household_controls
+    #Map columns
+    column_data_types :
+        household_control_id : !!python/name:sqlalchemy.Integer
+        yr : !!python/name:sqlalchemy.Integer
+        income_quartile : !!python/name:sqlalchemy.Integer
+        households: !!python/name:sqlalchemy.Integer
 
 households :
     ##Input Query
@@ -279,6 +371,126 @@ parcels :
         shape : !!python/object:geoalchemy2.Geography { geometry_type: 'MULTIPOLYGON', srid: 4326, spatial_index: True }
         centroid : !!python/object:geoalchemy2.Geography { geometry_type: 'POINT', srid: 4326, spatial_index: True }
 
+parks :
+    ##Input Query
+    in_query_non_spatial : >
+        SELECT
+            subparcel as park_id
+            ,shape.STCentroid().STX x
+            ,shape.STCentroid().STY y
+        FROM
+            gis.landcore
+        WHERE
+            lu IN (
+                7207
+                ,7210
+                ,7211
+                ,7600
+                ,7601
+               ,7604
+                ,7605)
+    ##Index Column
+    index_col : park_id
+    indexes :
+        ix_parks_id: park_id
+    ##Output
+    out_table : parks
+    #Map columns
+    column_data_types :
+        park_id : !!python/name:sqlalchemy.Integer
+        x : !!python/name:sqlalchemy.Numeric
+        y : !!python/name:sqlalchemy.Numeric
+
+scheduled_development_event :
+    ##Input Query
+    in_query_non_spatial : >
+        SELECT
+            scheduled_development_event_id
+            ,parcel_id
+            ,development_type_id as building_type_id
+            ,year_built
+            ,sqft_per_unit
+            ,residential_units
+            ,non_residential_sqft
+            ,improvement_value
+            ,res_price_per_sqft
+            ,nonres_rent_per_sqft as non_residential_rent_per_sqft
+            ,COALESCE(stories,1) as stories
+        FROM
+            urbansim.scheduled_development_event
+    ##Index Column
+    index_col : scheduled_development_event_id
+    indexes :
+        ix_scheduled_development_event_id: scheduled_development_event_id
+        ix_scheduled_development_event_parcel_id: parcel_id
+    ##Output
+    out_table : scheduled_development_event
+    #Map columns
+    column_data_types :
+        scheduled_development_event_id : !!python/name:sqlalchemy.Integer
+        parcel_id : !!python/name:sqlalchemy.Integer
+        building_type_id : !!python/name:sqlalchemy.Integer
+        year_built : !!python/name:sqlalchemy.Integer
+        sqft_per_unit : !!python/name:sqlalchemy.Integer
+        residential_units : !!python/name:sqlalchemy.Integer
+        non_residential_sqft : !!python/name:sqlalchemy.Integer
+        improvement_value : !!python/name:sqlalchemy.Integer
+        res_price_per_sqft : !!python/name:sqlalchemy.Integer
+        non_residential_rent_per_sqft : !!python/name:sqlalchemy.Integer
+        stories : !!python/name:sqlalchemy.Integer
+
+schools :
+    ##Input Query
+    in_query_non_spatial : >
+        SELECT
+            objectID as id
+            ,Shape.STX as x
+            ,Shape.STY as y
+        FROM
+            gis.schools
+        WHERE
+            SOCType IN (
+                'Junior High Schools (Public)'
+                ,'K-12 Schools (Public)'
+                ,'Preschool'
+                ,'Elemen Schools In 1 School Dist. (Public)'
+                ,'Elementary Schools (Public)'
+                ,'Intermediate/Middle Schools (Public)'
+                ,'High Schools (Public)'
+                ,'Private')
+    ##Index Column
+    index_col : id
+    indexes :
+        ix_schools_id: id
+    ##Output
+    out_table : schools
+    #Map columns
+    column_data_types :
+        id : !!python/name:sqlalchemy.Integer
+        x : !!python/name:sqlalchemy.Numeric
+        y : !!python/name:sqlalchemy.Numeric
+
+transit :
+    ##Input Query
+    in_query_non_spatial : >
+        SELECT
+            stopnum
+            ,x
+            ,y
+        FROM
+            gis.transit_stops
+    ##Index Column
+    index_col : stopnum
+    indexes :
+        ix_transit_stopnum_id: stopnum
+    ##Output
+    out_table : transit
+    #Map columns
+    column_data_types :
+        stopnum : !!python/name:sqlalchemy.Integer
+        x : !!python/name:sqlalchemy.Numeric
+        y : !!python/name:sqlalchemy.Numeric
+
 zoning_allowed_use :
     ##Input Query
     in_query_non_spatial : >
@@ -362,27 +574,3 @@ zoning :
         review_by : !!python/name:sqlalchemy.String
         shape : !!python/object:geoalchemy2.Geography { geometry_type: 'MULTIPOLYGON', srid: 4326, spatial_index: True }
 
-household_controls :
-    in_query_non_spatial: >
-        SELECT
-            ROW_NUMBER() OVER (ORDER BY yr, hh_income_id) as household_control_id
-            ,yr
-            ,hh_income_id as income_quartile
-            ,hh as households
-        FROM
-            isam.defm.households
-        WHERE
-            dem_version = 'S0021'
-            and eco_version = '001' AND yr > 2010
-
-    index_col: household_control_id
-    indexes :
-        ix_household_ctrl_yr: yr
-    ##Output
-    out_table : household_controls
-    #Map columns
-    column_data_types :
-        household_control_id : !!python/name:sqlalchemy.Integer
-        yr : !!python/name:sqlalchemy.Integer
-        income_quartile : !!python/name:sqlalchemy.Integer
-        households: !!python/name:sqlalchemy.Integer
