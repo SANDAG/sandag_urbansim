@@ -150,7 +150,62 @@ ON wsb.subparcel_id = b.subParcel
 WHERE block_id IS NULL
 */
 
+/*################### ARBITRARILY ADD MORE SPACE FOR LEHD  ###########################*/
+/*
+
+WITH bldg AS (
+SELECT
+  wsb.building_id
+  ,deficit.block_id
+  ,deficit.deficit
+  ,deficit.deficit/ COUNT(*) OVER (PARTITION BY deficit.block_id) +
+     CASE 
+       WHEN ROW_NUMBER() OVER (PARTITION BY deficit.block_id ORDER BY wsb.job_spaces desc) <= (deficit.deficit % COUNT(*) OVER (PARTITION BY deficit.block_id)) THEN 1 
+       ELSE 0 
+	 END jobs
+FROM 
+  ws.dbo.buildings wsb 
+  INNER JOIN (SELECT bldg.block_id,  CAST(ROUND((jobs.jobs - bldg.spaces) * 1.5,0) as INT) deficit FROM
+				(SELECT block_id, COUNT(*) jobs FROM spacecore.input.jobs_wac_2013 GROUP BY block_id) jobs
+				FULL OUTER JOIN (SELECT block_id, SUM(job_spaces) spaces FROM ws.dbo.buildings GROUP BY block_id) bldg ON jobs.block_id = bldg.block_id
+				WHERE jobs.jobs > bldg.spaces) deficit ON wsb.block_id = deficit.block_id
+WHERE
+  wsb.job_spaces > 0
+)
+
+UPDATE wsb
+  SET wsb.job_spaces = wsb.job_spaces + jobs
+FROM
+  ws.dbo.buildings wsb INNER JOIN
+  bldg ON wsb.building_id = bldg.building_id
+
+WITH bldg AS (
+SELECT
+  wsb.building_id
+  ,deficit.block_id
+  ,deficit.deficit
+  ,deficit.deficit/ COUNT(*) OVER (PARTITION BY deficit.block_id) +
+     CASE 
+       WHEN ROW_NUMBER() OVER (PARTITION BY deficit.block_id ORDER BY wsb.job_spaces desc) <= (deficit.deficit % COUNT(*) OVER (PARTITION BY deficit.block_id)) THEN 1 
+       ELSE 0 
+	 END jobs
+FROM 
+  ws.dbo.buildings wsb 
+  INNER JOIN (SELECT bldg.block_id,  CAST(ROUND((jobs.jobs - bldg.spaces) * 1.5,0) as INT) deficit FROM
+				(SELECT block_id, COUNT(*) jobs FROM spacecore.input.jobs_wac_2013 GROUP BY block_id) jobs
+				FULL OUTER JOIN (SELECT block_id, SUM(job_spaces) spaces FROM ws.dbo.buildings GROUP BY block_id) bldg ON jobs.block_id = bldg.block_id
+				WHERE jobs.jobs > bldg.spaces) deficit ON wsb.block_id = deficit.block_id
+)
+
+UPDATE wsb
+  SET wsb.job_spaces = wsb.job_spaces + jobs
+FROM
+  ws.dbo.buildings wsb INNER JOIN
+  bldg ON wsb.building_id = bldg.building_id
+*/
+
 /*  */
+TRUNCATE TABLE spacecore.urbansim.jobs;
 WITH bldg as (
 SELECT
   ROW_NUMBER() OVER (PARTITION BY block_id ORDER BY building_id) idx
@@ -175,15 +230,17 @@ SELECT
 FROM
   spacecore.input.jobs_wac_2013
 )
+
+INSERT INTO spacecore.urbansim.jobs (job_id, sector_id, building_id)
 SELECT jobs.job_id
 	,jobs.sector_id
 	,bldg.building_id
-	,jobs.block_id
 FROM bldg
-RIGHT JOIN jobs
+INNER JOIN jobs
 ON bldg.block_id = jobs.block_id
 AND bldg.idx = jobs.idx
-WHERE job_id IS NULL
+
+
 
 
 

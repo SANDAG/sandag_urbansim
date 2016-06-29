@@ -39,6 +39,8 @@ buildings :
             ,year_built
             ,data_source
             ,luz_id
+            ,subparcel_assignment
+            ,block_id
         FROM
             spacecore.urbansim.buildings
     ##Index Column
@@ -73,8 +75,10 @@ buildings :
         year_built : !!python/name:sqlalchemy.Integer
         data_source : !!python/name:sqlalchemy.String
         luz_id: !!python/name:sqlalchemy.Integer
-        shape : !!python/object:geoalchemy2.Geography { geometry_type: 'POLYGON', srid: 4326, spatial_index: True }
+        shape : !!python/object:geoalchemy2.Geography { geometry_type: 'GEOMETRY', srid: 4326, spatial_index: True }
         centroid : !!python/object:geoalchemy2.Geography { geometry_type: 'POINT', srid: 4326, spatial_index: True }
+        subparcel_assignment : !!python/name:sqlalchemy.String
+        block_id : !!python/name:sqlalchemy.String
 
 development_type :
     ##Input Query
