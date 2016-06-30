@@ -10,17 +10,24 @@ with open('urbansim_datasets.yml') as y:
 
 ##SELECT DATASETS TO LOAD FROM yaml
 selected = [
+    #'assessor_transactions',
     #'building_sqft_per_job',
     #'buildings',
     #'development_type',
     #'edges',
-    'households',
+    #'employment_controls',
+    #'fee_schedule',
+    #'household_controls'
+    #'households',
     #'jobs',
     #'nodes',
     #'parcels',
+    #'parks',
+    #'scheduled_development_event',
+    #'schools',
+    #'transit',
     #'zoning_allowed_use',
     #'zoning',
-    #'household_controls'
 ]
 
 sql_in_engine = create_engine(get_connection_string("dbconfig.yml", 'in_db'))
