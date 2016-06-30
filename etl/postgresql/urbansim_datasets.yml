@@ -139,8 +139,6 @@ households :
             ,cars
         FROM
             spacecore.urbansim.households
-        WHERE
-            building_id IN (SELECT building_id FROM urbansim.buildings)
     ##Index Column
     index_col : household_id
     indexes :
