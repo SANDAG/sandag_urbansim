@@ -1,0 +1,526 @@
+name: rsh
+
+
+model_type: segmented_regression
+
+
+segmentation_col: building_type_id
+
+
+fit_filters:
+- res_price_per_sqft > 0
+- building_type_id in [19,20,21]
+- residential_units > 0
+- year_built > 1000
+- year_built < 2020
+
+
+predict_filters:
+- residential_units > 0
+- building_type_id in [19]
+
+
+min_segment_size: 10
+
+
+default_config:
+    model_expression: np.log1p(res_price_per_sqft) ~  I(luz_id==62) + I(luz_id==63)
+        + I(luz_id==60) + I(luz_id==61) + I(luz_id==67) + I(luz_id==64) + I(luz_id==68)
+        + I(luz_id==69) + I(luz_id==219) + I(luz_id==218) + I(year_built < 1950) +
+        I(luz_id==170) + I(luz_id==174) + I(luz_id==175) + I(luz_id==57) + I(luz_id==56)
+        + I(luz_id==52) + I(luz_id==51) + I(luz_id==50) + I(luz_id==59) + I(luz_id==58)
+        + ave_age_of_head_5000ft + I(luz_id==106) + I(luz_id==101) + I(luz_id==100)
+        + I(luz_id==70) + I(luz_id==119) + I(luz_id==116) + I(luz_id==114) + I(luz_id==115)
+        + I(luz_id==112) + I(luz_id==113) + I(luz_id==110) + I(luz_id==111) + I(luz_id==32)
+        + jobs_5000ft + I(luz_id==48) + I(luz_id==122) + I(luz_id==120) + I(luz_id==127)
+        + I(luz_id==125) + I(luz_id==124) + I(luz_id==40) + I(luz_id==41) + I(luz_id==129)
+        + I(luz_id==128) + I(luz_id==44) + I(luz_id==45) + I(luz_id==46) + I(luz_id==47)
+        + I(luz_id==141) + I(luz_id==140) + I(luz_id==143) + I(luz_id==142) + I(luz_id==145)
+        + I(luz_id==144) + I(luz_id==147) + I(luz_id==146) + I(luz_id==162) + I(luz_id==135)
+        + I(luz_id==134) + distance_to_coast_mi + I(luz_id==136) + I(luz_id==137) + I(luz_id==39)
+        + I(luz_id==229) + I(luz_id==132) + I(luz_id==35) + I(luz_id==34) + I(luz_id==37)
+        + I(luz_id==36) + I(luz_id==220) + I(luz_id==221) + I(luz_id==222) + I(luz_id==38)
+        + I(luz_id==99) + I(luz_id==93) + I(luz_id==92) + I(luz_id==91) + I(luz_id==90)
+        + I(luz_id==96) + I(luz_id==95) + I(luz_id==94) + np.log1p(parcel_size) +
+        distance_to_transit + I(luz_id==83) + I(luz_id==138) + I(luz_id==30) + I(luz_id==33)
+        + I(luz_id==28) + I(luz_id==29) + I(luz_id==26) + I(luz_id==27) + I(luz_id==24)
+        + I(luz_id==25) + I(luz_id==22) + I(luz_id==23) + I(luz_id==20) + I(luz_id==21)
+        + I(luz_id==88) + I(luz_id==89) + I(luz_id==84) + I(luz_id==86) + I(luz_id==87)
+        + I(luz_id==80) + I(luz_id==81) + I(luz_id==169) + I(luz_id==168) + I(luz_id==31)
+        + I(luz_id==123) + I(luz_id==13) + I(luz_id==12) + I(luz_id==11) + I(luz_id==10)
+        + I(luz_id==17) + I(luz_id==16) + I(luz_id==15) + I(luz_id==14) + I(luz_id==19)
+        + I(luz_id==18) + distance_to_onramp_mi+ I(luz_id==73) + I(luz_id==75) + I(luz_id==74)
+        + I(luz_id==77) + I(luz_id==76) + I(luz_id==79) + I(luz_id==78) + ave_income
+        + structure_age + I(luz_id==42) + ave_children_5000ft + I(luz_id==43) + I(luz_id==4)
+        + I(luz_id==5) + I(luz_id==6) + I(luz_id==7) + I(luz_id==2) + I(luz_id==3)
+        + I(luz_id==8) + I(luz_id==9)
+    ytransform: np.exp
+
+
+models:
+    &id001 !!python/long '19':
+        fit_parameters:
+            Coefficient:
+                I(luz_id == 10)[T.True]: 0.061233284836642865
+                I(luz_id == 100)[T.True]: 0.06010067311572641
+                I(luz_id == 101)[T.True]: 0.19003285249930302
+                I(luz_id == 106)[T.True]: 0.3911950236601489
+                I(luz_id == 11)[T.True]: 0.5007097770868061
+                I(luz_id == 110)[T.True]: -0.22137201915861854
+                I(luz_id == 111)[T.True]: -0.2693198342338375
+                I(luz_id == 112)[T.True]: -0.2367630232503841
+                I(luz_id == 113)[T.True]: -0.41687211304499694
+                I(luz_id == 114)[T.True]: -0.7836387898571373
+                I(luz_id == 115)[T.True]: -0.5828945015035889
+                I(luz_id == 116)[T.True]: 0.7040934981805049
+                I(luz_id == 119)[T.True]: -0.3547828512519071
+                I(luz_id == 12)[T.True]: -0.002880911690676082
+                I(luz_id == 120)[T.True]: -0.2237710671190431
+                I(luz_id == 122)[T.True]: -0.2891414690255938
+                I(luz_id == 123)[T.True]: -0.2913617545031165
+                I(luz_id == 124)[T.True]: -0.2957557698579609
+                I(luz_id == 125)[T.True]: -0.2756340341405913
+                I(luz_id == 127)[T.True]: -0.011025689421888094
+                I(luz_id == 128)[T.True]: -0.3765571554626572
+                I(luz_id == 129)[T.True]: -0.21891675685077963
+                I(luz_id == 13)[T.True]: 0.1506038507699062
+                I(luz_id == 132)[T.True]: 0.6242358788743233
+                I(luz_id == 134)[T.True]: -0.343969839761181
+                I(luz_id == 135)[T.True]: 0.2417190559787761
+                I(luz_id == 136)[T.True]: -0.10722634145422338
+                I(luz_id == 137)[T.True]: -0.05368063271472227
+                I(luz_id == 138)[T.True]: 0.014828267425496092
+                I(luz_id == 14)[T.True]: 0.07035992644832494
+                I(luz_id == 140)[T.True]: -0.031024924233751108
+                I(luz_id == 141)[T.True]: -0.08531992454606518
+                I(luz_id == 142)[T.True]: -0.5714481975993693
+                I(luz_id == 143)[T.True]: -0.12537490925647812
+                I(luz_id == 144)[T.True]: -0.15422139778686056
+                I(luz_id == 145)[T.True]: -0.07333706518017619
+                I(luz_id == 146)[T.True]: -0.05945811499755174
+                I(luz_id == 147)[T.True]: -0.05143409460910585
+                I(luz_id == 15)[T.True]: 0.07696116692462211
+                I(luz_id == 16)[T.True]: 0.0402132955296739
+                I(luz_id == 162)[T.True]: -0.10277187529918339
+                I(luz_id == 168)[T.True]: -0.24865927447068065
+                I(luz_id == 169)[T.True]: -0.2131238166508444
+                I(luz_id == 17)[T.True]: -0.10645104911619556
+                I(luz_id == 170)[T.True]: -0.12604369004716234
+                I(luz_id == 174)[T.True]: -0.03639238735228724
+                I(luz_id == 175)[T.True]: 0.004020134382415212
+                I(luz_id == 18)[T.True]: -0.20716019587753298
+                I(luz_id == 19)[T.True]: -0.3162018691238802
+                I(luz_id == 2)[T.True]: -0.2216596242517141
+                I(luz_id == 20)[T.True]: 0.02646080917193796
+                I(luz_id == 21)[T.True]: -0.24493714421655702
+                I(luz_id == 218)[T.True]: 0.41288602728790663
+                I(luz_id == 219)[T.True]: 0.12026411094507672
+                I(luz_id == 22)[T.True]: -0.2290743657349904
+                I(luz_id == 220)[T.True]: 0.39666377948547094
+                I(luz_id == 221)[T.True]: 0.4507484170297745
+                I(luz_id == 222)[T.True]: 0.5971266494785927
+                I(luz_id == 229)[T.True]: -0.07379635624369212
+                I(luz_id == 23)[T.True]: 0.04674929859478384
+                I(luz_id == 24)[T.True]: -0.13679920438704632
+                I(luz_id == 25)[T.True]: -0.3932518388927363
+                I(luz_id == 26)[T.True]: -0.2267826829357074
+                I(luz_id == 27)[T.True]: -0.17850059322107162
+                I(luz_id == 28)[T.True]: -0.19477098551587915
+                I(luz_id == 29)[T.True]: 0.2057217611837739
+                I(luz_id == 3)[T.True]: -0.2174906788511565
+                I(luz_id == 30)[T.True]: 0.26568950675324965
+                I(luz_id == 31)[T.True]: 0.3009635804288359
+                I(luz_id == 32)[T.True]: 0.14723363518278615
+                I(luz_id == 33)[T.True]: 0.36350263113063525
+                I(luz_id == 34)[T.True]: 1.070097875590839
+                I(luz_id == 35)[T.True]: 0.04441125755488618
+                I(luz_id == 36)[T.True]: 0.014957859371407896
+                I(luz_id == 37)[T.True]: 0.00016578340216697775
+                I(luz_id == 38)[T.True]: -0.0010384781048289413
+                I(luz_id == 39)[T.True]: -0.15536094046075433
+                I(luz_id == 4)[T.True]: -0.1639497576171212
+                I(luz_id == 40)[T.True]: 0.023961712646795866
+                I(luz_id == 41)[T.True]: 0.024614406254238483
+                I(luz_id == 42)[T.True]: -0.022905978043398688
+                I(luz_id == 43)[T.True]: 0.2245540406105253
+                I(luz_id == 44)[T.True]: 0.1645772111409635
+                I(luz_id == 45)[T.True]: 0.1153530854925008
+                I(luz_id == 46)[T.True]: 0.10901477534922527
+                I(luz_id == 47)[T.True]: 0.5501674877212418
+                I(luz_id == 48)[T.True]: 0.20289263409756358
+                I(luz_id == 5)[T.True]: -0.17129394261301142
+                I(luz_id == 50)[T.True]: 0.31080477401238116
+                I(luz_id == 51)[T.True]: 0.2599249917151902
+                I(luz_id == 52)[T.True]: 0.37266432158814555
+                I(luz_id == 56)[T.True]: 0.4600189094339218
+                I(luz_id == 57)[T.True]: 0.373559337294641
+                I(luz_id == 58)[T.True]: 0.14238775756005093
+                I(luz_id == 59)[T.True]: -0.05067643441000604
+                I(luz_id == 6)[T.True]: -0.15762537362801907
+                I(luz_id == 60)[T.True]: -0.1008514713455905
+                I(luz_id == 61)[T.True]: 0.0008494691421026285
+                I(luz_id == 62)[T.True]: 0.055593119486143594
+                I(luz_id == 63)[T.True]: 0.13202341756718583
+                I(luz_id == 64)[T.True]: 0.07559455522294492
+                I(luz_id == 67)[T.True]: 0.06386442389285288
+                I(luz_id == 68)[T.True]: 0.7770085876506386
+                I(luz_id == 69)[T.True]: 0.66326527563018
+                I(luz_id == 7)[T.True]: -0.24204407024213764
+                I(luz_id == 70)[T.True]: 0.36033593399037395
+                I(luz_id == 73)[T.True]: 0.1512281317125471
+                I(luz_id == 74)[T.True]: 0.07120772574947679
+                I(luz_id == 75)[T.True]: 0.07662068553730067
+                I(luz_id == 76)[T.True]: 0.04369275491143948
+                I(luz_id == 77)[T.True]: -0.13778981365186227
+                I(luz_id == 78)[T.True]: -0.0025034104348984274
+                I(luz_id == 79)[T.True]: 0.2662209857011095
+                I(luz_id == 8)[T.True]: -0.13782215160137862
+                I(luz_id == 80)[T.True]: 0.050333841212761174
+                I(luz_id == 81)[T.True]: 0.04729110754447217
+                I(luz_id == 83)[T.True]: -0.06777273740030326
+                I(luz_id == 84)[T.True]: -0.03184731867412626
+                I(luz_id == 86)[T.True]: -0.08985518332127064
+                I(luz_id == 87)[T.True]: -0.132066433494225
+                I(luz_id == 88)[T.True]: -0.18344073509528888
+                I(luz_id == 89)[T.True]: 0.28239113081898826
+                I(luz_id == 9)[T.True]: -0.31260549410919325
+                I(luz_id == 90)[T.True]: 0.33839564327920935
+                I(luz_id == 91)[T.True]: 0.08789774144417288
+                I(luz_id == 92)[T.True]: 0.26534763549956225
+                I(luz_id == 93)[T.True]: 0.4076553538262808
+                I(luz_id == 94)[T.True]: 0.5393495712029153
+                I(luz_id == 95)[T.True]: 0.39286893197090905
+                I(luz_id == 96)[T.True]: 0.31678444839764003
+                I(luz_id == 99)[T.True]: 0.48515990048390273
+                I(year_built < 1950)[T.True]: 0.0998430947112321
+                Intercept: 4.832912943401529
+                ave_age_of_head_5000ft: 0.003894350415169591
+                ave_children_5000ft: -0.03533145657768957
+                ave_income: 0.08817043829141248
+                distance_to_coast_mi: -0.11791886738220009
+                distance_to_onramp_mi: 0.44700631624935216
+                distance_to_transit_mi: 0.03872138355837681
+                jobs_5000ft: 0.004267104902787828
+                np.log1p(parcel_size): -0.057056475431374716
+                structure_age: 0.0025287565430079156
+            Std. Error:
+                I(luz_id == 10)[T.True]: 0.21884559831633738
+                I(luz_id == 100)[T.True]: 0.07039647298333983
+                I(luz_id == 101)[T.True]: 0.0610784623799719
+                I(luz_id == 106)[T.True]: 0.11267677341887544
+                I(luz_id == 11)[T.True]: 0.11418376415923878
+                I(luz_id == 110)[T.True]: 0.06988925270945262
+                I(luz_id == 111)[T.True]: 0.07308195406426893
+                I(luz_id == 112)[T.True]: 0.07956814243205461
+                I(luz_id == 113)[T.True]: 0.0783132972645399
+                I(luz_id == 114)[T.True]: 0.3024798180206276
+                I(luz_id == 115)[T.True]: 0.30335994809695704
+                I(luz_id == 116)[T.True]: 0.21788856012408161
+                I(luz_id == 119)[T.True]: 0.0779307769038713
+                I(luz_id == 12)[T.True]: 0.0870902641322822
+                I(luz_id == 120)[T.True]: 0.11082419004562387
+                I(luz_id == 122)[T.True]: 0.08485143261050646
+                I(luz_id == 123)[T.True]: 0.109946509786979
+                I(luz_id == 124)[T.True]: 0.07783157931103354
+                I(luz_id == 125)[T.True]: 0.08056540830180477
+                I(luz_id == 127)[T.True]: 0.1566695120295287
+                I(luz_id == 128)[T.True]: 0.14123680127588792
+                I(luz_id == 129)[T.True]: 0.09055033332668336
+                I(luz_id == 13)[T.True]: 0.09648039037952023
+                I(luz_id == 132)[T.True]: 0.07872184749775936
+                I(luz_id == 134)[T.True]: 0.3035630558581467
+                I(luz_id == 135)[T.True]: 0.30315250320088233
+                I(luz_id == 136)[T.True]: 0.06730382014763744
+                I(luz_id == 137)[T.True]: 0.07212783707637221
+                I(luz_id == 138)[T.True]: 0.21831936892817896
+                I(luz_id == 14)[T.True]: 0.08132694841418231
+                I(luz_id == 140)[T.True]: 0.30373965673289494
+                I(luz_id == 141)[T.True]: 0.30374466547757073
+                I(luz_id == 142)[T.True]: 0.2187681837502476
+                I(luz_id == 143)[T.True]: 0.08773724197226891
+                I(luz_id == 144)[T.True]: 0.07789806951904442
+                I(luz_id == 145)[T.True]: 0.07826985581672047
+                I(luz_id == 146)[T.True]: 0.08737305811628615
+                I(luz_id == 147)[T.True]: 0.1160435667448903
+                I(luz_id == 15)[T.True]: 0.0926114278382725
+                I(luz_id == 16)[T.True]: 0.1210270580329318
+                I(luz_id == 162)[T.True]: 0.3035412665138329
+                I(luz_id == 168)[T.True]: 0.1611300977321574
+                I(luz_id == 169)[T.True]: 0.21876595324931486
+                I(luz_id == 17)[T.True]: 0.1169975539036782
+                I(luz_id == 170)[T.True]: 0.12192032244752936
+                I(luz_id == 174)[T.True]: 0.13610412757741028
+                I(luz_id == 175)[T.True]: 0.11268054003894665
+                I(luz_id == 18)[T.True]: 0.08707778674193035
+                I(luz_id == 19)[T.True]: 0.11189097181168385
+                I(luz_id == 2)[T.True]: 0.0642677418700136
+                I(luz_id == 20)[T.True]: 0.30400797217337977
+                I(luz_id == 21)[T.True]: 0.07740554218475795
+                I(luz_id == 218)[T.True]: 0.15887977221012708
+                I(luz_id == 219)[T.True]: 0.1325949797736854
+                I(luz_id == 22)[T.True]: 0.07817332728961057
+                I(luz_id == 220)[T.True]: 0.07522341883433137
+                I(luz_id == 221)[T.True]: 0.12428615936645078
+                I(luz_id == 222)[T.True]: 0.10940198137396584
+                I(luz_id == 229)[T.True]: 0.13816639650663615
+                I(luz_id == 23)[T.True]: 0.3038629434885505
+                I(luz_id == 24)[T.True]: 0.12408969847161379
+                I(luz_id == 25)[T.True]: 0.08006394129333068
+                I(luz_id == 26)[T.True]: 0.0689626396062123
+                I(luz_id == 27)[T.True]: 0.08207191606137589
+                I(luz_id == 28)[T.True]: 0.10855304185729042
+                I(luz_id == 29)[T.True]: 0.07153618035054292
+                I(luz_id == 3)[T.True]: 0.06659762262301039
+                I(luz_id == 30)[T.True]: 0.08089464701428639
+                I(luz_id == 31)[T.True]: 0.154080180748637
+                I(luz_id == 32)[T.True]: 0.08119435565368875
+                I(luz_id == 33)[T.True]: 0.10744473428821583
+                I(luz_id == 34)[T.True]: 0.3016353427114061
+                I(luz_id == 35)[T.True]: 0.07624430884084268
+                I(luz_id == 36)[T.True]: 0.0857221307069658
+                I(luz_id == 37)[T.True]: 0.10333395735317957
+                I(luz_id == 38)[T.True]: 0.11656251792043953
+                I(luz_id == 39)[T.True]: 0.2198752958189352
+                I(luz_id == 4)[T.True]: 0.06722841696800304
+                I(luz_id == 40)[T.True]: 0.0890457657508858
+                I(luz_id == 41)[T.True]: 0.0788260411105665
+                I(luz_id == 42)[T.True]: 0.08066485132812175
+                I(luz_id == 43)[T.True]: 0.09696566957302907
+                I(luz_id == 44)[T.True]: 0.09931999120508131
+                I(luz_id == 45)[T.True]: 0.07558804864880767
+                I(luz_id == 46)[T.True]: 0.08094380054359578
+                I(luz_id == 47)[T.True]: 0.16918324498899356
+                I(luz_id == 48)[T.True]: 0.09134002176160484
+                I(luz_id == 5)[T.True]: 0.07690836181686893
+                I(luz_id == 50)[T.True]: 0.07898846550325611
+                I(luz_id == 51)[T.True]: 0.1434492214079314
+                I(luz_id == 52)[T.True]: 0.09129067423699867
+                I(luz_id == 56)[T.True]: 0.1505706993278954
+                I(luz_id == 57)[T.True]: 0.304780527531103
+                I(luz_id == 58)[T.True]: 0.08277330752028357
+                I(luz_id == 59)[T.True]: 0.08354645867494638
+                I(luz_id == 6)[T.True]: 0.07748925954324622
+                I(luz_id == 60)[T.True]: 0.09121182113638027
+                I(luz_id == 61)[T.True]: 0.08773630919060067
+                I(luz_id == 62)[T.True]: 0.08498937447379018
+                I(luz_id == 63)[T.True]: 0.08877835267277541
+                I(luz_id == 64)[T.True]: 0.08258719380895677
+                I(luz_id == 67)[T.True]: 0.09643039713990038
+                I(luz_id == 68)[T.True]: 0.2200568691127795
+                I(luz_id == 69)[T.True]: 0.06349818288869748
+                I(luz_id == 7)[T.True]: 0.07487684876014805
+                I(luz_id == 70)[T.True]: 0.06911338797330048
+                I(luz_id == 73)[T.True]: 0.06998666800334218
+                I(luz_id == 74)[T.True]: 0.0752570754170362
+                I(luz_id == 75)[T.True]: 0.06046556361544873
+                I(luz_id == 76)[T.True]: 0.08638532951112156
+                I(luz_id == 77)[T.True]: 0.09739935272774011
+                I(luz_id == 78)[T.True]: 0.08924972962001419
+                I(luz_id == 79)[T.True]: 0.3036701608258431
+                I(luz_id == 8)[T.True]: 0.07765353319338544
+                I(luz_id == 80)[T.True]: 0.07530546002121312
+                I(luz_id == 81)[T.True]: 0.07911212421688973
+                I(luz_id == 83)[T.True]: 0.07494533618573641
+                I(luz_id == 84)[T.True]: 0.069584868777616
+                I(luz_id == 86)[T.True]: 0.07379293977071964
+                I(luz_id == 87)[T.True]: 0.06983189234922707
+                I(luz_id == 88)[T.True]: 0.07768007442124053
+                I(luz_id == 89)[T.True]: 0.08066287606345106
+                I(luz_id == 9)[T.True]: 0.08588670555508153
+                I(luz_id == 90)[T.True]: 0.09040117242429972
+                I(luz_id == 91)[T.True]: 0.157775097825388
+                I(luz_id == 92)[T.True]: 0.07348383557315734
+                I(luz_id == 93)[T.True]: 0.07790409632438379
+                I(luz_id == 94)[T.True]: 0.137154245066411
+                I(luz_id == 95)[T.True]: 0.08107454387160445
+                I(luz_id == 96)[T.True]: 0.11086509739461146
+                I(luz_id == 99)[T.True]: 0.10733074326550984
+                I(year_built < 1950)[T.True]: 0.02422659723876126
+                Intercept: 0.6925636220767286
+                ave_age_of_head_5000ft: 0.0030304317800630754
+                ave_children_5000ft: 0.04117866300445141
+                ave_income: 0.059941557656501984
+                distance_to_coast_mi: 0.027856357700932876
+                distance_to_onramp_mi: 0.08231387332612074
+                distance_to_transit_mi: 0.036179737227207735
+                jobs_5000ft: 0.004034420774263611
+                np.log1p(parcel_size): 0.012607455909301584
+                structure_age: 0.00038607659366293224
+            T-Score:
+                I(luz_id == 10)[T.True]: 0.27980130881193804
+                I(luz_id == 100)[T.True]: 0.8537455154883961
+                I(luz_id == 101)[T.True]: 3.111290708615092
+                I(luz_id == 106)[T.True]: 3.471833739912688
+                I(luz_id == 11)[T.True]: 4.385122357575501
+                I(luz_id == 110)[T.True]: -3.167468681900467
+                I(luz_id == 111)[T.True]: -3.6851756043221724
+                I(luz_id == 112)[T.True]: -2.975600736847193
+                I(luz_id == 113)[T.True]: -5.323133204784059
+                I(luz_id == 114)[T.True]: -2.590714299503106
+                I(luz_id == 115)[T.True]: -1.9214616338122845
+                I(luz_id == 116)[T.True]: 3.231438574744552
+                I(luz_id == 119)[T.True]: -4.5525383596462365
+                I(luz_id == 12)[T.True]: -0.033079606766380214
+                I(luz_id == 120)[T.True]: -2.0191536435043784
+                I(luz_id == 122)[T.True]: -3.4076203563095975
+                I(luz_id == 123)[T.True]: -2.6500318661104294
+                I(luz_id == 124)[T.True]: -3.7999456322998455
+                I(luz_id == 125)[T.True]: -3.4212454197221107
+                I(luz_id == 127)[T.True]: -0.07037546283931745
+                I(luz_id == 128)[T.True]: -2.6661404963930133
+                I(luz_id == 129)[T.True]: -2.4176250799760366
+                I(luz_id == 13)[T.True]: 1.56097887018785
+                I(luz_id == 132)[T.True]: 7.929639594549541
+                I(luz_id == 134)[T.True]: -1.1331083711382723
+                I(luz_id == 135)[T.True]: 0.7973513443779889
+                I(luz_id == 136)[T.True]: -1.5931687268124162
+                I(luz_id == 137)[T.True]: -0.7442429288137782
+                I(luz_id == 138)[T.True]: 0.0679200727736355
+                I(luz_id == 14)[T.True]: 0.8651489797698486
+                I(luz_id == 140)[T.True]: -0.10214314642830474
+                I(luz_id == 141)[T.True]: -0.28089357359385597
+                I(luz_id == 142)[T.True]: -2.612117483462549
+                I(luz_id == 143)[T.True]: -1.4289816552029906
+                I(luz_id == 144)[T.True]: -1.9797845920835908
+                I(luz_id == 145)[T.True]: -0.9369771339799695
+                I(luz_id == 146)[T.True]: -0.6805085718576774
+                I(luz_id == 147)[T.True]: -0.44323090070282267
+                I(luz_id == 15)[T.True]: 0.8310115578718809
+                I(luz_id == 16)[T.True]: 0.3322669837907796
+                I(luz_id == 162)[T.True]: -0.3385762880926106
+                I(luz_id == 168)[T.True]: -1.5432205278247946
+                I(luz_id == 169)[T.True]: -0.9742092564465895
+                I(luz_id == 17)[T.True]: -0.9098570488391118
+                I(luz_id == 170)[T.True]: -1.0338201828608808
+                I(luz_id == 174)[T.True]: -0.26738636072288685
+                I(luz_id == 175)[T.True]: 0.035677272943719494
+                I(luz_id == 18)[T.True]: -2.379024589720993
+                I(luz_id == 19)[T.True]: -2.825981971593367
+                I(luz_id == 2)[T.True]: -3.4490028403368758
+                I(luz_id == 20)[T.True]: 0.08703985287874953
+                I(luz_id == 21)[T.True]: -3.164336006224474
+                I(luz_id == 218)[T.True]: 2.5987324978150306
+                I(luz_id == 219)[T.True]: 0.9070035015680448
+                I(luz_id == 22)[T.True]: -2.9303392049097923
+                I(luz_id == 220)[T.True]: 5.273142136215122
+                I(luz_id == 221)[T.True]: 3.6266984137853036
+                I(luz_id == 222)[T.True]: 5.458097211580207
+                I(luz_id == 229)[T.True]: -0.5341121872578306
+                I(luz_id == 23)[T.True]: 0.15384994977693076
+                I(luz_id == 24)[T.True]: -1.1024219260097559
+                I(luz_id == 25)[T.True]: -4.911722212774631
+                I(luz_id == 26)[T.True]: -3.2884861169855566
+                I(luz_id == 27)[T.True]: -2.1749290352571204
+                I(luz_id == 28)[T.True]: -1.7942471457588025
+                I(luz_id == 29)[T.True]: 2.8757722340736156
+                I(luz_id == 3)[T.True]: -3.2657423836629644
+                I(luz_id == 30)[T.True]: 3.2843892217778956
+                I(luz_id == 31)[T.True]: 1.9532919741301529
+                I(luz_id == 32)[T.True]: 1.8133481569922054
+                I(luz_id == 33)[T.True]: 3.3831591053643937
+                I(luz_id == 34)[T.True]: 3.547654150775927
+                I(luz_id == 35)[T.True]: 0.5824861977251722
+                I(luz_id == 36)[T.True]: 0.1744923889320966
+                I(luz_id == 37)[T.True]: 0.0016043458163549817
+                I(luz_id == 38)[T.True]: -0.008909194167697724
+                I(luz_id == 39)[T.True]: -0.7065866125710288
+                I(luz_id == 4)[T.True]: -2.4386972802758704
+                I(luz_id == 40)[T.True]: 0.26909435215404953
+                I(luz_id == 41)[T.True]: 0.3122623679617847
+                I(luz_id == 42)[T.True]: -0.28396479589633983
+                I(luz_id == 43)[T.True]: 2.315809725228617
+                I(luz_id == 44)[T.True]: 1.6570401300291653
+                I(luz_id == 45)[T.True]: 1.5260757163933003
+                I(luz_id == 46)[T.True]: 1.3467958585724011
+                I(luz_id == 47)[T.True]: 3.251902916018863
+                I(luz_id == 48)[T.True]: 2.2212895309693295
+                I(luz_id == 5)[T.True]: -2.227247318320076
+                I(luz_id == 50)[T.True]: 3.9348121530423827
+                I(luz_id == 51)[T.True]: 1.8119651620557262
+                I(luz_id == 52)[T.True]: 4.08217295690769
+                I(luz_id == 56)[T.True]: 3.0551688441862517
+                I(luz_id == 57)[T.True]: 1.2256666799571672
+                I(luz_id == 58)[T.True]: 1.7202134580058777
+                I(luz_id == 59)[T.True]: -0.6065659180980069
+                I(luz_id == 6)[T.True]: -2.0341576956229583
+                I(luz_id == 60)[T.True]: -1.105684220412582
+                I(luz_id == 61)[T.True]: 0.009682070626623003
+                I(luz_id == 62)[T.True]: 0.654118468695024
+                I(luz_id == 63)[T.True]: 1.487112720527781
+                I(luz_id == 64)[T.True]: 0.9153302314377283
+                I(luz_id == 67)[T.True]: 0.6622851900132583
+                I(luz_id == 68)[T.True]: 3.5309444816849616
+                I(luz_id == 69)[T.True]: 10.445421356273798
+                I(luz_id == 7)[T.True]: -3.2325621904505355
+                I(luz_id == 70)[T.True]: 5.213692231808648
+                I(luz_id == 73)[T.True]: 2.160813423855602
+                I(luz_id == 74)[T.True]: 0.9461931035039564
+                I(luz_id == 75)[T.True]: 1.2671788858960435
+                I(luz_id == 76)[T.True]: 0.5057890634753476
+                I(luz_id == 77)[T.True]: -1.4146892129460593
+                I(luz_id == 78)[T.True]: -0.028049501612574513
+                I(luz_id == 79)[T.True]: 0.8766781200270417
+                I(luz_id == 8)[T.True]: -1.7748342661775802
+                I(luz_id == 80)[T.True]: 0.6683956408815831
+                I(luz_id == 81)[T.True]: 0.5977731986417315
+                I(luz_id == 83)[T.True]: -0.9042955952901811
+                I(luz_id == 84)[T.True]: -0.4576759176755232
+                I(luz_id == 86)[T.True]: -1.2176664000710316
+                I(luz_id == 87)[T.True]: -1.8912051363833158
+                I(luz_id == 88)[T.True]: -2.3614902079075453
+                I(luz_id == 89)[T.True]: 3.5008810074767687
+                I(luz_id == 9)[T.True]: -3.6397425199725544
+                I(luz_id == 90)[T.True]: 3.743266090520846
+                I(luz_id == 91)[T.True]: 0.5571078240841948
+                I(luz_id == 92)[T.True]: 3.610966050287258
+                I(luz_id == 93)[T.True]: 5.2327845782184585
+                I(luz_id == 94)[T.True]: 3.93243075299462
+                I(luz_id == 95)[T.True]: 4.8457741876794875
+                I(luz_id == 96)[T.True]: 2.857386642344998
+                I(luz_id == 99)[T.True]: 4.520232374462707
+                I(year_built < 1950)[T.True]: 4.121218251463251
+                Intercept: 6.978294541243019
+                ave_age_of_head_5000ft: 1.285081037227155
+                ave_children_5000ft: -0.8580039758423007
+                ave_income: 1.4709400579257128
+                distance_to_coast_mi: -4.23310429339623
+                distance_to_onramp_mi: 5.430510048753875
+                distance_to_transit_mi: 1.07025054701773
+                jobs_5000ft: 1.0576747299162637
+                np.log1p(parcel_size): -4.52561371951968
+                structure_age: 6.549883065989931
+        fit_rsquared: 0.26386213899155664
+        fit_rsquared_adj: 0.2621440640086523
+        fitted: true
+        model_expression: np.log1p(res_price_per_sqft) ~  I(luz_id==62) + I(luz_id==63)
+            + I(luz_id==60) + I(luz_id==61) + I(luz_id==67) + I(luz_id==64) + I(luz_id==68)
+            + I(luz_id==69) + I(luz_id==219) + I(luz_id==218) + I(year_built < 1950)
+            + I(luz_id==170) + I(luz_id==174) + I(luz_id==175) + I(luz_id==57) + I(luz_id==56)
+            + I(luz_id==52) + I(luz_id==51) + I(luz_id==50) + I(luz_id==59) + I(luz_id==58)
+            + ave_age_of_head_5000ft + I(luz_id==106) + I(luz_id==101) + I(luz_id==100)
+            + I(luz_id==70) + I(luz_id==119) + I(luz_id==116) + I(luz_id==114) + I(luz_id==115)
+            + I(luz_id==112) + I(luz_id==113) + I(luz_id==110) + I(luz_id==111) +
+            I(luz_id==32) + jobs_5000ft + I(luz_id==48) + I(luz_id==122) + I(luz_id==120)
+            + I(luz_id==127) + I(luz_id==125) + I(luz_id==124) + I(luz_id==40) + I(luz_id==41)
+            + I(luz_id==129) + I(luz_id==128) + I(luz_id==44) + I(luz_id==45) + I(luz_id==46)
+            + I(luz_id==47) + I(luz_id==141) + I(luz_id==140) + I(luz_id==143) + I(luz_id==142)
+            + I(luz_id==145) + I(luz_id==144) + I(luz_id==147) + I(luz_id==146) +
+            I(luz_id==162) + I(luz_id==135) + I(luz_id==134) + distance_to_coast_mi +
+            I(luz_id==136) + I(luz_id==137) + I(luz_id==39) + I(luz_id==229) + I(luz_id==132)
+            + I(luz_id==35) + I(luz_id==34) + I(luz_id==37) + I(luz_id==36) + I(luz_id==220)
+            + I(luz_id==221) + I(luz_id==222) + I(luz_id==38) + I(luz_id==99) + I(luz_id==93)
+            + I(luz_id==92) + I(luz_id==91) + I(luz_id==90) + I(luz_id==96) + I(luz_id==95)
+            + I(luz_id==94) + np.log1p(parcel_size) + distance_to_transit_mi + I(luz_id==83)
+            + I(luz_id==138) + I(luz_id==30) + I(luz_id==33) + I(luz_id==28) + I(luz_id==29)
+            + I(luz_id==26) + I(luz_id==27) + I(luz_id==24) + I(luz_id==25) + I(luz_id==22)
+            + I(luz_id==23) + I(luz_id==20) + I(luz_id==21) + I(luz_id==88) + I(luz_id==89)
+            + I(luz_id==84) + I(luz_id==86) + I(luz_id==87) + I(luz_id==80) + I(luz_id==81)
+            + I(luz_id==169) + I(luz_id==168) + I(luz_id==31) + I(luz_id==123) + I(luz_id==13)
+            + I(luz_id==12) + I(luz_id==11) + I(luz_id==10) + I(luz_id==17) + I(luz_id==16)
+            + I(luz_id==15) + I(luz_id==14) + I(luz_id==19) + I(luz_id==18) + distance_to_onramp_mi
+            + I(luz_id==73) + I(luz_id==75) + I(luz_id==74) + I(luz_id==77) + I(luz_id==76)
+            + I(luz_id==79) + I(luz_id==78) + ave_income + structure_age + I(luz_id==42)
+            + ave_children_5000ft + I(luz_id==43) + I(luz_id==4) + I(luz_id==5) +
+            I(luz_id==6) + I(luz_id==7) + I(luz_id==2) + I(luz_id==3) + I(luz_id==8)
+            + I(luz_id==9)
+        name: *id001
