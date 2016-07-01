@@ -8,22 +8,22 @@ urbansim_engine = create_engine(get_connection_string("configs/dbconfig.yml", 'u
 nodes_sql = 'SELECT node as node_id, x, y, on_ramp FROM urbansim.nodes'
 # Necessary to duplicate nodes in order to generate built environment variables for the regessions
 intersection_sql = 'SELECT node as intersection_id, x, y FROM urbansim.nodes'
-edges_sql = 'SELECT from_node as [from], to_node as [to], distance as [weight] FROM urbansim.edges'
-parcels_sql = 'SELECT parcel_id, development_type_id, luz_id, parcel_acres as acres, zoning_id, centroid.STX as x, centroid.STY as y, distance_to_coast, distance_to_freeway FROM urbansim.parcels'
-buildings_sql = 'SELECT building_id, parcel_id, development_type_id as building_type_id, COALESCE(residential_units, 0) as residential_units, COALESCE(residential_sqft, 0) as residential_sqft, COALESCE(non_residential_sqft,0) as non_residential_sqft, 0 as non_residential_rent_per_sqft, COALESCE(year_built, -1) year_built, COALESCE(stories, 1) as stories FROM urbansim.buildings'
+edges_sql = 'SELECT from_node as from, to_node as to, distance as weight FROM urbansim.edges'
+parcels_sql = 'SELECT parcel_id, development_type_id, luz_id, parcel_acres as acres, zoning_id, ST_X(ST_AsText(centroid)) as x, ST_Y(ST_AsText(centroid)) as y, distance_to_coast, distance_to_freeway FROM urbansim.parcels'
+buildings_sql = 'SELECT building_id, parcel_id, COALESCE(development_type_id,0) as building_type_id, COALESCE(residential_units, 0) as residential_units, COALESCE(residential_sqft, 0) as residential_sqft, COALESCE(non_residential_sqft,0) as non_residential_sqft, 0 as non_residential_rent_per_sqft, COALESCE(year_built, -1) year_built, COALESCE(stories, 1) as stories FROM urbansim.buildings'
 households_sql = 'SELECT household_id, building_id, persons, age_of_head, income, children FROM urbansim.households'
 jobs_sql = 'SELECT job_id, building_id, sector_id FROM urbansim.jobs'
 building_sqft_per_job_sql = 'SELECT luz_id, development_type_id, sqft_per_emp FROM urbansim.building_sqft_per_job'
 scheduled_development_events_sql = """SELECT
-                                         scheduled_development_event_id, parcel_id, development_type_id as building_type_id
+                                         scheduled_development_event_id, parcel_id, building_type_id
                                          ,year_built, sqft_per_unit, residential_units, non_residential_sqft
-                                         ,improvement_value, res_price_per_sqft, nonres_rent_per_sqft as non_residential_rent_per_sqft
+                                         ,improvement_value, res_price_per_sqft, non_residential_rent_per_sqft
                                          ,COALESCE(stories,1) as stories FROM urbansim.scheduled_development_event"""
-schools_sql = """SELECT objectID as id, Shape.STX as x ,Shape.STY as y FROM gis.schools WHERE SOCType IN ('Junior High Schools (Public)','K-12 Schools (Public)','Preschool','Elemen Schools In 1 School Dist. (Public)','Elementary Schools (Public)','Intermediate/Middle Schools (Public)','High Schools (Public)','Private')"""
-parks_sql = """SELECT subparcel as park_id, shape.STCentroid().STX x, shape.STCentroid().STY y FROM gis.landcore WHERE lu IN (7207,7210,7211,7600,7601,7604,7605)"""
-transit_sql = 'SELECT x, y, stopnum FROM gis.transit_stops'
-household_controls_sql = """SELECT yr as [year], hh_income_id as income_quartile, hh FROM isam.defm.households WHERE dem_version = 'S0021' and eco_version = '001' AND yr >= 2015"""
-employment_controls_sql = """SELECT yr as [year], jobs as number_of_jobs, sector_id FROM isam.defm.jobs WHERE dem_version = 'S0021' and eco_version = '001' AND yr >= 2015"""
+schools_sql = """SELECT id, x ,y FROM urbansim.schools"""
+parks_sql = """SELECT park_id,  x, y FROM urbansim.parks"""
+transit_sql = 'SELECT x, y, stopnum FROM urbansim.transit'
+household_controls_sql = """SELECT yr as year, income_quartile, households as hh FROM urbansim.household_controls"""
+employment_controls_sql = """SELECT yr as year, number_of_jobs, sector_id FROM urbansim.employment_controls"""
 zoning_allowed_uses_sql = """SELECT development_type_id, zoning_id FROM urbansim.zoning_allowed_use ORDER BY development_type_id, zoning_id"""
 fee_schedule_sql = """SELECT development_type_id, development_fee_per_unit_space_initial FROM urbansim.fee_schedule"""
 zoning_sql = """SELECT zoning_id, max_dua, max_building_height as max_height, max_far FROM urbansim.zoning"""
@@ -46,14 +46,19 @@ household_controls_df = pd.read_sql(household_controls_sql, urbansim_engine, ind
 employment_controls_df = pd.read_sql(employment_controls_sql, urbansim_engine, index_col='year')
 zoning_allowed_uses_df = pd.read_sql(zoning_allowed_uses_sql, urbansim_engine, index_col='development_type_id')
 fee_schedule_df = pd.read_sql(fee_schedule_sql, urbansim_engine, index_col='development_type_id')
-zoning_df = pd.read_sql(zoning_sql, urbansim_engine, index_col='zoning_id')
-assessor_transactions_df = pd.read_sql(assessor_transactions_sql, urbansim_engine)
+zoning_df = pd.read_sql(zoning_sql, urbansim_engine)
+#assessor_transactions_df = pd.read_sql(assessor_transactions_sql, urbansim_engine)
 
 building_sqft_per_job_df.sort_values(['luz_id', 'development_type_id'], inplace=True)
 building_sqft_per_job_df.set_index(['luz_id', 'development_type_id'], inplace=True)
 
 edges_df.sort_values(['from', 'to'], inplace=True)
 #edges_df.set_index(['from', 'to'], inplace=True)
+# convert unicode 'zoning_id' to str (needed for HDFStore in python 2)
+parcels_df['zoning_id'] = parcels_df['zoning_id'].astype(str)
+zoning_allowed_uses_df['zoning_id'] = zoning_allowed_uses_df['zoning_id'].astype(str)
+zoning_df['zoning_id'] = zoning_df['zoning_id'].astype(str)
+zoning_df = zoning_df.set_index('zoning_id')
 
 with pd.HDFStore('data/urbansim.h5', mode='w') as store:
     store.put('nodes', nodes_df, format='t')
@@ -73,4 +78,4 @@ with pd.HDFStore('data/urbansim.h5', mode='w') as store:
     store.put('zoning_allowed_uses', zoning_allowed_uses_df, format='t')
     store.put('fee_schedule', fee_schedule_df, format='t')
     store.put('zoning', zoning_df, format='t')
-    store.put('assessor_transactions', assessor_transactions_df, format='t')
+    #store.put('assessor_transactions', assessor_transactions_df, format='t')
