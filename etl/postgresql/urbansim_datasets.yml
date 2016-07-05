@@ -49,9 +49,12 @@ buildings :
     in_query_non_spatial : >
         SELECT
             building_id
-            ,development_type_id
-            ,parcel_id
             ,subparcel_id
+            ,parcel_id
+            ,block_id
+            ,mgra_id
+            ,luz_id
+            ,development_type_id
             ,improvement_value
             ,residential_units
             ,residential_sqft
@@ -62,9 +65,8 @@ buildings :
             ,stories
             ,year_built
             ,data_source
-            ,luz_id
             ,subparcel_assignment
-            ,block_id
+
         FROM
             spacecore.urbansim.buildings
     ##Index Column
@@ -85,9 +87,12 @@ buildings :
     #Map columns --> Notice special geometry column
     column_data_types :
         building_id : !!python/name:sqlalchemy.Integer
-        development_type_id : !!python/name:sqlalchemy.Integer
-        parcel_id : !!python/name:sqlalchemy.Integer
         subparcel_id : !!python/name:sqlalchemy.Integer
+        parcel_id : !!python/name:sqlalchemy.Integer
+        block_id : !!python/name:sqlalchemy.String
+        mgra_id: !!python/name:sqlalchemy.Integer
+        luz_id: !!python/name:sqlalchemy.Integer
+        development_type_id : !!python/name:sqlalchemy.Integer
         improvement_value : !!python/name:sqlalchemy.Float
         residential_units : !!python/name:sqlalchemy.Integer
         residential_sqft :  !!python/name:sqlalchemy.Integer
@@ -98,11 +103,9 @@ buildings :
         stories : !!python/name:sqlalchemy.Integer
         year_built : !!python/name:sqlalchemy.Integer
         data_source : !!python/name:sqlalchemy.String
-        luz_id: !!python/name:sqlalchemy.Integer
+        subparcel_assignment : !!python/name:sqlalchemy.String
         shape : !!python/object:geoalchemy2.Geography { geometry_type: 'GEOMETRY', srid: 4326, spatial_index: True }
         centroid : !!python/object:geoalchemy2.Geography { geometry_type: 'POINT', srid: 4326, spatial_index: True }
-        subparcel_assignment : !!python/name:sqlalchemy.String
-        block_id : !!python/name:sqlalchemy.String
 
 development_type :
     ##Input Query
@@ -317,14 +320,14 @@ parcels :
         SELECT
             parcel_id
             ,block_id
-            ,development_type_id
-            ,zoning_id
-            ,land_value
-            ,parcel_acres
-            ,region_id
             ,mgra_id
+            ,zoning_id
             ,luz_id
             ,msa_id
+            ,region_id
+            ,development_type_id
+            ,land_value
+            ,parcel_acres
             ,proportion_undevelopable
             ,tax_exempt_status
             ,distance_to_freeway
@@ -352,14 +355,14 @@ parcels :
     column_data_types :
         parcel_id : !!python/name:sqlalchemy.Integer
         block_id : !!python/name:sqlalchemy.String
-        development_type_id : !!python/name:sqlalchemy.Integer
-        zoning_id : !!python/name:sqlalchemy.String
-        land_value : !!python/name:sqlalchemy.Integer
-        parcel_acres : !!python/name:sqlalchemy.Float
-        region_id : !!python/name:sqlalchemy.Integer
         mgra_id : !!python/name:sqlalchemy.Integer
+        zoning_id : !!python/name:sqlalchemy.String
         luz_id : !!python/name:sqlalchemy.Integer
         msa_id : !!python/name:sqlalchemy.Integer
+        region_id : !!python/name:sqlalchemy.Integer
+        development_type_id : !!python/name:sqlalchemy.Integer
+        land_value : !!python/name:sqlalchemy.Integer
+        parcel_acres : !!python/name:sqlalchemy.Float
         proportion_undevelopable : !!python/name:sqlalchemy.Numeric
         tax_exempt_status : !!python/name:sqlalchemy.String
         distance_to_freeway : !!python/name:sqlalchemy.Float
@@ -567,7 +570,7 @@ zoning :
         max_res_units: !!python/name:sqlalchemy.Integer
         max_building_height : !!python/name:sqlalchemy.Integer
         zone_code_link : !!python/name:sqlalchemy.String
-        notes : !!python/name:sqlalchemy.String
+        notes : !!python/name:sqlalchemy.Text
         review_date : !!python/name:sqlalchemy.DateTime
         review_by : !!python/name:sqlalchemy.String
         shape : !!python/object:geoalchemy2.Geography { geometry_type: 'MULTIPOLYGON', srid: 4326, spatial_index: True }
