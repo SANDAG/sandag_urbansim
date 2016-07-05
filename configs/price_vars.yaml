@@ -17,32 +17,32 @@ variable_definitions:
     radius: 2000
     varname: residential_price
 
--   aggregation: average
-    dataframe: buildings
-    decay: flat
-    filters:
-    - general_type == "Retail"
-    name: retail
-    radius: 2000
-    varname: non_residential_price
-
--   aggregation: average
-    dataframe: buildings
-    decay: flat
-    filters:
-    - general_type == "Office"
-    name: office
-    radius: 2000
-    varname: non_residential_price
-
--   aggregation: average
-    dataframe: buildings
-    decay: flat
-    filters:
-    - general_type == "Industrial"
-    name: industrial
-    radius: 2000
-    varname: non_residential_price
+#-   aggregation: average
+#    dataframe: buildings
+#    decay: flat
+#    filters:
+#    - general_type == "Retail"
+#    name: retail
+#    radius: 2000
+#    varname: non_residential_price
+#
+#-   aggregation: average
+#    dataframe: buildings
+#    decay: flat
+#    filters:
+#    - general_type == "Office"
+#    name: office
+#    radius: 2000
+#    varname: non_residential_price
+#
+#-   aggregation: average
+#    dataframe: buildings
+#    decay: flat
+#    filters:
+#    - general_type == "Industrial"
+#    name: industrial
+#    radius: 2000
+#    varname: non_residential_price
     
 -   name: ave_sqft_per_unit
     dataframe: buildings
