@@ -149,7 +149,7 @@ def year_built_1980to1990(buildings):
 @orca.column('households', 'income_quartile', cache=True)
 def income_quartile(households):
     hh_inc = households.to_frame(['household_id', 'income'])
-    bins = [hh_inc.income.min()-1, 30000, 59999, 99999, 149999, hh_inc.max()+1]
+    bins = [hh_inc.income.min()-1, 30000, 59999, 99999, 149999, hh_inc.income.max()+1]
     group_names = range(1,6)
     return pd.cut(hh_inc.income, bins, labels=group_names).astype('int64')
 
