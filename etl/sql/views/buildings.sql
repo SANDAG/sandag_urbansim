@@ -3,10 +3,13 @@ IF OBJECT_ID('urbansim.buildings') IS NOT NULL
     DROP TABLE urbansim.buildings
 GO
 CREATE TABLE urbansim.buildings(
-	building_id int NOT NULL
+	building_id int IDENTITY(1,1) NOT NULL
 	,development_type_id smallint
 	,subparcel_id int NOT NULL
 	,parcel_id int NOT NULL
+	,block_id int
+	,mgra_id int
+	,luz_id int
 	,improvement_value float
 	,residential_units smallint
 	,residential_sqft int
@@ -19,6 +22,7 @@ CREATE TABLE urbansim.buildings(
 	,shape geometry
 	,centroid geometry
 	,data_source nvarchar(50)
+	,subparcel_assignment nvarchar(50)
 )
 INSERT INTO urbansim.buildings WITH (TABLOCK) (
 	building_id
@@ -60,12 +64,24 @@ CREATE SPATIAL INDEX [ix_spatial_urbansim_buildings_centroid] ON urbansim.buildi
     WITH (BOUNDING_BOX =(6152300, 1775400, 6613100, 2129400), GRIDS =(LEVEL_1 = MEDIUM,LEVEL_2 = MEDIUM,LEVEL_3 = MEDIUM,LEVEL_4 = MEDIUM), 
     CELLS_PER_OBJECT = 16, PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
 
+--GET BLOCK_ID
+UPDATE
+	usb
+SET
+	usb.block_id = b.BLOCKID10
+FROM
+	urbansim.buildings usb
+JOIN ref.blocks b 
+ON b.Shape.STContains(usb.shape) = 1
+
+
 /** LANDCORE DATA **/
 --GET LANDCORE DATA: PARCEL_ID, DEV_TYPE
 UPDATE
 	usb
 SET
 	usb.parcel_ID = lc.parcelID
+	,usb.mgra_id = lc.mgra
 	,usb.development_type_id = dev.development_type_id
 FROM
 	urbansim.buildings usb
