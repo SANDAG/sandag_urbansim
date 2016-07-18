@@ -23,6 +23,7 @@ CREATE TABLE urbansim.buildings(
 	,centroid geometry
 	,data_source nvarchar(50)
 	,subparcel_assignment nvarchar(50)
+	,floorspace_source nvarchar(50)
 )
 INSERT INTO urbansim.buildings WITH (TABLOCK) (
 	building_id
@@ -71,8 +72,8 @@ SET
 	usb.block_id = b.BLOCKID10
 FROM
 	urbansim.buildings usb
-JOIN ref.blocks b 
-ON b.Shape.STContains(usb.shape) = 1
+JOIN ref.blocks b
+ON b.Shape.STContains(usb.shape.STCentroid()) = 1
 
 
 /** LANDCORE DATA **/
@@ -186,27 +187,4 @@ FROM
 	ON usb.parcel_id = c.parcel_id
 
 
-
-<<<<<<< HEAD
-
-
-
-
-=======
-/** Use the COSTAR data to set the values for job_spaces **/
-/**
-TODO: There are missing records on both inner joins. 
-      parcel and sqft_per_job_by_devtype both need to
-      be updated.
-**/
-UPDATE
-    usb
-SET
-    --If the data is ***BAD(???)*** replace with 40 as the minimum
-    usb.job_spaces = CEILING(usb.non_residential_sqft / CAST(CASE WHEN ISNULL(sq.sqft_per_emp,0) < 40 THEN 40 ELSE sq.sqft_per_emp END as FLOAT))
-    ,usb.non_residential_rent_per_sqft = 0
-FROM
-    urbansim.buildings usb
-    INNER JOIN urbansim.parcels p ON usb.parcel_id = p.parcel_id
-    INNER JOIN urbansim.building_sqft_per_job sq ON usb.development_type_id = sq.development_type_id AND p.luz_id = sq.luz_id
->>>>>>> ea548a1ef74e00dea6b16b8fadca53d50c152d20
+/*#################### START RES AND EMP  SPACE ####################*/
