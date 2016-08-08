@@ -2,13 +2,28 @@
 from sqlalchemy import create_engine
 from pysandag.database import get_connection_string
 import pandas as pd
+import os
 
 urbansim_engine = create_engine(get_connection_string("configs/dbconfig.yml", 'urbansim_database'))
 
-nodes_sql = 'SELECT node as node_id, x, y, on_ramp FROM urbansim.nodes'
-# Necessary to duplicate nodes in order to generate built environment variables for the regessions
+#nodes_sql = 'SELECT node as node_id, x, y, on_ramp FROM urbansim.nodes'
+
+nodes_sql = 'SELECT node as node_id, x, y, on_ramp FROM urbansim.nodes ' \
+            'WHERE x between 6219937 and 6268194 and y between 1964616 and 2014714'
+
 intersection_sql = 'SELECT node as intersection_id, x, y FROM urbansim.nodes'
+
 edges_sql = 'SELECT from_node as from, to_node as to, distance as weight FROM urbansim.edges'
+
+# Necessary to duplicate nodes in order to generate built environment variables for the regessions
+intersection_sql = 'SELECT node as intersection_id, x, y FROM urbansim.nodes ' \
+                   'WHERE x between 6219937 and 6268194 and y between 1964616 and 2014714'
+
+edges_sql = 'SELECT from_node as from, to_node as to, distance as weight FROM urbansim.edges ' \
+            'WHERE from_node IN  (select node from urbansim.nodes ' \
+            'WHERE x between 6219937 and 6268194 and y between 1964616 and 2014714) AND to_node ' \
+            'IN (select node from urbansim.nodes WHERE x between 6219937 and 6268194 and y between 1964616 and 2014714)'
+
 parcels_sql = 'SELECT parcel_id, development_type_id, luz_id, parcel_acres as acres, zoning_id, ST_X(ST_AsText(centroid)) as x, ST_Y(ST_AsText(centroid)) as y, distance_to_coast, distance_to_freeway FROM urbansim.parcels'
 parcels_sql = 'SELECT parcel_id, development_type_id, luz_id, parcel_acres as acres, zoning_id, ST_X(ST_Transform(centroid::geometry, 2230)) as x, ST_Y(ST_Transform(centroid::geometry, 2230))  as y, ' \
               'distance_to_coast, distance_to_freeway FROM urbansim.parcels where jurisdiction_id = 1'
@@ -116,6 +131,8 @@ household_controls_df['hh'] = (household_controls_df.hh * household_controls_df.
 del household_controls_df['scale_factor']
 del household_controls_df['hh_original']
 
+if not os.path.exists('data'):
+    os.makedirs('data')
 
 with pd.HDFStore('data/urbansim.h5', mode='w') as store:
     store.put('nodes', nodes_df, format='t')
