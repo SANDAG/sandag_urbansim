@@ -333,28 +333,28 @@ def feasibility2(parcels, settings,
     config.parcel_sizes = settings["sqftproforma_config"]["parcel_size"]
     config.fars = settings["sqftproforma_config"]["fars"]
 
-  ##config.uses = info["sqftproforma_config"]["uses"]
-    ## config.residential_uses = info["sqftproforma_config"]["residential_uses"]
+  ##config.uses = settings["sqftproforma_config"]["uses"]
+    ## config.residential_uses = settings["sqftproforma_config"]["residential_uses"]
     config.forms = {
    #   'retail': {
-   #       "retail": info["sqftproforma_config"]["forms"]["retail"]
+   #       "retail": settings["sqftproforma_config"]["forms"]["retail"]
    #   },
    #   'industrial': {
-   #       "industrial": info["sqftproforma_config"]["forms"]["industrial"]
+   #       "industrial": settings["sqftproforma_config"]["forms"]["industrial"]
    #   },
    #   'office': {
-   #       "office": info["sqftproforma_config"]["forms"]["office"]
+   #       "office": settings["sqftproforma_config"]["forms"]["office"]
    #   },
       'residential': {
           "residential": settings["sqftproforma_config"]["forms"]["residential"]
       }
    ##  , 'mixedresidential': {
-   ##       "retail": info["sqftproforma_config"]["forms"]["mixedresidential"]["retail"],
-   ##       "residential": info["sqftproforma_config"]["forms"]["mixedresidential"]["residential"]
+   ##       "retail": settings["sqftproforma_config"]["forms"]["mixedresidential"]["retail"],
+   ##       "residential": settings["sqftproforma_config"]["forms"]["mixedresidential"]["residential"]
    ##   },
    ##   'mixedoffice': {
-   ##  ##     "office": info["sqftproforma_config"]["forms"]["mixedoffice"]["office"],
-   ##       "residential": info["sqftproforma_config"]["forms"]["mixedoffice"]["residential"]
+   ##  ##     "office": settings["sqftproforma_config"]["forms"]["mixedoffice"]["office"],
+   ##       "residential": settings["sqftproforma_config"]["forms"]["mixedoffice"]["residential"]
    ##   }
   }
 
@@ -364,17 +364,17 @@ def feasibility2(parcels, settings,
     config.cap_rate = settings["sqftproforma_config"]["cap_rate"]
 
     config.parking_rates = {
-       #"retail": info["sqftproforma_config"]["parking_rates"]["retail"],
-       #"industrial": info["sqftproforma_config"]["parking_rates"]["industrial"],
-       #"office": info["sqftproforma_config"]["parking_rates"]["office"],
+       #"retail": settings["sqftproforma_config"]["parking_rates"]["retail"],
+       #"industrial": settings["sqftproforma_config"]["parking_rates"]["industrial"],
+       #"office": settings["sqftproforma_config"]["parking_rates"]["office"],
         "residential": settings["sqftproforma_config"]["parking_rates"]["residential"]
     }
     config.sqft_per_rate = settings["sqftproforma_config"]["sqft_per_rate"]
 
     config.costs = {
-       # "retail": info["sqftproforma_config"]["cost"]["retail"],
-       # "industrial": info["sqftproforma_config"]["cost"]["industrial"],
-       # "office": info["sqftproforma_config"]["cost"]["office"],
+       # "retail": settings["sqftproforma_config"]["cost"]["retail"],
+       # "industrial": settings["sqftproforma_config"]["cost"]["industrial"],
+       # "office": settings["sqftproforma_config"]["cost"]["office"],
         "residential": settings["sqftproforma_config"]["cost"]["residential"]
     }
 
@@ -391,8 +391,8 @@ def feasibility2(parcels, settings,
     }
 
     config.height_per_story = settings["sqftproforma_config"]["height_per_story"]
-   #config.max_retail_height = info["sqftproforma_config"]["max_retail_height"]
-   #config.max_ind#ustrial_height = info["sqftproforma_config"]["max_industrial_height"]
+   #config.max_retail_height = settings["sqftproforma_config"]["max_retail_height"]
+   #config.max_ind#ustrial_height = settings["sqftproforma_config"]["max_industrial_height"]
 
     utils.run_feasibility(parcels,
                           parcel_sales_price_sqft_func,
