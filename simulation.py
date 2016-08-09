@@ -15,7 +15,7 @@ orca.run([#'scheduled_development_events',
           'households_transition',
           "hlcm_simulate",
           "price_vars",
-          "feasibility",
+          "feasibility2",
           "residential_developer"
           ], iter_vars=range(2015,2050),data_out='data\\results.h5', out_interval=1)
 
@@ -28,9 +28,6 @@ orca.get_table('parcels').to_frame().to_csv('data/parcels.csv')
 
 # sys.stdout = orig_stdout
 # f.close()
-
-
-
 
 
 

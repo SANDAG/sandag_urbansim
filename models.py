@@ -318,3 +318,88 @@ def scheduled_development_events(scheduled_development_events, buildings):
         b = buildings.to_frame(buildings.local_columns)
         all_buildings = merge(b,sched_dev[b.columns])
         orca.add_table("buildings", all_buildings)
+
+
+@orca.step('feasibility2')
+def feasibility2(parcels, settings,
+                parcel_sales_price_sqft_func,
+                parcel_is_allowed_func):
+    kwargs = settings['feasibility']
+    import yaml
+    from urbansim.developer import sqftproforma
+
+    with open('configs/settings.yaml', 'r') as f:
+        info = yaml.load(f)
+
+    config = sqftproforma.SqFtProFormaConfig()
+
+
+    config.parcel_sizes = info["sqftproforma_config"]["parcel_size"]
+    config.fars = info["sqftproforma_config"]["fars"]
+
+  ##config.uses = info["sqftproforma_config"]["uses"]
+    ## config.residential_uses = info["sqftproforma_config"]["residential_uses"]
+    config.forms = {
+   #   'retail': {
+   #       "retail": info["sqftproforma_config"]["forms"]["retail"]
+   #   },
+   #   'industrial': {
+   #       "industrial": info["sqftproforma_config"]["forms"]["industrial"]
+   #   },
+   #   'office': {
+   #       "office": info["sqftproforma_config"]["forms"]["office"]
+   #   },
+      'residential': {
+          "residential": info["sqftproforma_config"]["forms"]["residential"]
+      }
+   ##  , 'mixedresidential': {
+   ##       "retail": info["sqftproforma_config"]["forms"]["mixedresidential"]["retail"],
+   ##       "residential": info["sqftproforma_config"]["forms"]["mixedresidential"]["residential"]
+   ##   },
+   ##   'mixedoffice': {
+   ##  ##     "office": info["sqftproforma_config"]["forms"]["mixedoffice"]["office"],
+   ##       "residential": info["sqftproforma_config"]["forms"]["mixedoffice"]["residential"]
+   ##   }
+  }
+
+    config.profit_factor = info["sqftproforma_config"]["profit_factor"]
+    config.building_efficiency = info["sqftproforma_config"]["building_efficiency"]
+    config.parcel_coverage = info["sqftproforma_config"]["parcel_coverage"]
+    config.cap_rate = info["sqftproforma_config"]["cap_rate"]
+
+    config.parking_rates = {
+       #"retail": info["sqftproforma_config"]["parking_rates"]["retail"],
+       #"industrial": info["sqftproforma_config"]["parking_rates"]["industrial"],
+       #"office": info["sqftproforma_config"]["parking_rates"]["office"],
+        "residential": info["sqftproforma_config"]["parking_rates"]["residential"]
+    }
+    config.sqft_per_rate = info["sqftproforma_config"]["sqft_per_rate"]
+
+    config.costs = {
+       # "retail": info["sqftproforma_config"]["cost"]["retail"],
+       # "industrial": info["sqftproforma_config"]["cost"]["industrial"],
+       # "office": info["sqftproforma_config"]["cost"]["office"],
+        "residential": info["sqftproforma_config"]["cost"]["residential"]
+    }
+
+
+    config.parking_sqft_d = {
+        'surface': info["sqftproforma_config"]["parking_sqft_d"]["surface"],
+        'deck': info["sqftproforma_config"]["parking_sqft_d"]["deck"],
+        'underground': info["sqftproforma_config"]["parking_sqft_d"]["underground"]
+    }
+    config.parking_cost_d = {
+        'surface': info["sqftproforma_config"]["parking_cost_d"]["surface"],
+        'deck': info["sqftproforma_config"]["parking_cost_d"]["deck"],
+        'underground': info["sqftproforma_config"]["parking_cost_d"]["underground"]
+    }
+
+    config.height_per_story = info["sqftproforma_config"]["height_per_story"]
+   #config.max_retail_height = info["sqftproforma_config"]["max_retail_height"]
+   #config.max_ind#ustrial_height = info["sqftproforma_config"]["max_industrial_height"]
+
+    utils.run_feasibility(parcels,
+                          parcel_sales_price_sqft_func,
+                          parcel_is_allowed_func, only_built=True,
+                          config=config,
+                          **kwargs)
