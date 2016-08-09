@@ -325,17 +325,13 @@ def feasibility2(parcels, settings,
                 parcel_sales_price_sqft_func,
                 parcel_is_allowed_func):
     kwargs = settings['feasibility']
-    import yaml
-    from urbansim.developer import sqftproforma
 
-    with open('configs/settings.yaml', 'r') as f:
-        info = yaml.load(f)
+    from urbansim.developer import sqftproforma
 
     config = sqftproforma.SqFtProFormaConfig()
 
-
-    config.parcel_sizes = info["sqftproforma_config"]["parcel_size"]
-    config.fars = info["sqftproforma_config"]["fars"]
+    config.parcel_sizes = settings["sqftproforma_config"]["parcel_size"]
+    config.fars = settings["sqftproforma_config"]["fars"]
 
   ##config.uses = info["sqftproforma_config"]["uses"]
     ## config.residential_uses = info["sqftproforma_config"]["residential_uses"]
@@ -350,7 +346,7 @@ def feasibility2(parcels, settings,
    #       "office": info["sqftproforma_config"]["forms"]["office"]
    #   },
       'residential': {
-          "residential": info["sqftproforma_config"]["forms"]["residential"]
+          "residential": settings["sqftproforma_config"]["forms"]["residential"]
       }
    ##  , 'mixedresidential': {
    ##       "retail": info["sqftproforma_config"]["forms"]["mixedresidential"]["retail"],
@@ -362,39 +358,39 @@ def feasibility2(parcels, settings,
    ##   }
   }
 
-    config.profit_factor = info["sqftproforma_config"]["profit_factor"]
-    config.building_efficiency = info["sqftproforma_config"]["building_efficiency"]
-    config.parcel_coverage = info["sqftproforma_config"]["parcel_coverage"]
-    config.cap_rate = info["sqftproforma_config"]["cap_rate"]
+    config.profit_factor = settings["sqftproforma_config"]["profit_factor"]
+    config.building_efficiency = settings["sqftproforma_config"]["building_efficiency"]
+    config.parcel_coverage = settings["sqftproforma_config"]["parcel_coverage"]
+    config.cap_rate = settings["sqftproforma_config"]["cap_rate"]
 
     config.parking_rates = {
        #"retail": info["sqftproforma_config"]["parking_rates"]["retail"],
        #"industrial": info["sqftproforma_config"]["parking_rates"]["industrial"],
        #"office": info["sqftproforma_config"]["parking_rates"]["office"],
-        "residential": info["sqftproforma_config"]["parking_rates"]["residential"]
+        "residential": settings["sqftproforma_config"]["parking_rates"]["residential"]
     }
-    config.sqft_per_rate = info["sqftproforma_config"]["sqft_per_rate"]
+    config.sqft_per_rate = settings["sqftproforma_config"]["sqft_per_rate"]
 
     config.costs = {
        # "retail": info["sqftproforma_config"]["cost"]["retail"],
        # "industrial": info["sqftproforma_config"]["cost"]["industrial"],
        # "office": info["sqftproforma_config"]["cost"]["office"],
-        "residential": info["sqftproforma_config"]["cost"]["residential"]
+        "residential": settings["sqftproforma_config"]["cost"]["residential"]
     }
 
 
     config.parking_sqft_d = {
-        'surface': info["sqftproforma_config"]["parking_sqft_d"]["surface"],
-        'deck': info["sqftproforma_config"]["parking_sqft_d"]["deck"],
-        'underground': info["sqftproforma_config"]["parking_sqft_d"]["underground"]
+        'surface': settings["sqftproforma_config"]["parking_sqft_d"]["surface"],
+        'deck': settings["sqftproforma_config"]["parking_sqft_d"]["deck"],
+        'underground': settings["sqftproforma_config"]["parking_sqft_d"]["underground"]
     }
     config.parking_cost_d = {
-        'surface': info["sqftproforma_config"]["parking_cost_d"]["surface"],
-        'deck': info["sqftproforma_config"]["parking_cost_d"]["deck"],
-        'underground': info["sqftproforma_config"]["parking_cost_d"]["underground"]
+        'surface': settings["sqftproforma_config"]["parking_cost_d"]["surface"],
+        'deck': settings["sqftproforma_config"]["parking_cost_d"]["deck"],
+        'underground': settings["sqftproforma_config"]["parking_cost_d"]["underground"]
     }
 
-    config.height_per_story = info["sqftproforma_config"]["height_per_story"]
+    config.height_per_story = settings["sqftproforma_config"]["height_per_story"]
    #config.max_retail_height = info["sqftproforma_config"]["max_retail_height"]
    #config.max_ind#ustrial_height = info["sqftproforma_config"]["max_industrial_height"]
 
