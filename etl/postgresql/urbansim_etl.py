@@ -24,6 +24,7 @@ selected = [
     #'parcels',
     #'parks',
     #'scheduled_development_event',
+    'scheduled_development',
     #'schools',
     #'transit',
     #'zoning_allowed_use',

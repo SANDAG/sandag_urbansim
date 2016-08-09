@@ -402,12 +402,91 @@ parks :
         x : !!python/name:sqlalchemy.Numeric
         y : !!python/name:sqlalchemy.Numeric
 
+scheduled_development :
+    ##Input Query
+    in_query_non_spatial : >
+        SELECT
+            OBJECTID
+            ,parcel_id
+        	,development_type_id
+            ,siteID
+            ,siteName
+            ,totalSqft
+            ,empDen
+            ,civEmp
+            ,milEmp
+            ,sfu
+            ,mfu
+            ,mhu
+            ,civGq
+            ,milGq
+            ,source
+            ,infoDate
+            ,spaceSqFt
+            ,startDate
+            ,compDate
+            ,resSqft
+            ,nResSqft
+            ,created_user
+            ,created_date
+            ,last_edited_user
+            ,last_edited_date
+            ,devTypeID
+            ,SHAPE_Length
+            ,SHAPE_Area
+        FROM
+            spacecore.urbansim.scheduled_development
+    ##Index Column
+    index_col : siteID
+    indexes :
+        ix_scheduled_development_parcel_id: parcel_id
+    ##Input Query Spatial
+    in_query_spatial : >
+        SELECT
+            siteID
+            ,shape.STAsText() AS shape
+        FROM
+            spacecore.urbansim.scheduled_development
+    ##Output
+    out_table : scheduled_development
+    #Map columns --> Notice special geometry column
+    column_data_types :
+        OBJECTID : !!python/name:sqlalchemy.Integer
+        siteID : !!python/name:sqlalchemy.Integer
+        parcel_id : !!python/name:sqlalchemy.Integer
+        development_type_id : !!python/name:sqlalchemy.Integer
+        siteName : !!python/name:sqlalchemy.String
+        totalSqft : !!python/name:sqlalchemy.Integer
+        empDen : !!python/name:sqlalchemy.Float
+        civEmp : !!python/name:sqlalchemy.Integer
+        milEmp : !!python/name:sqlalchemy.Integer
+        sfu : !!python/name:sqlalchemy.Integer
+        mfu : !!python/name:sqlalchemy.Integer
+        mhu : !!python/name:sqlalchemy.Integer
+        civGq : !!python/name:sqlalchemy.Integer
+        milGq : !!python/name:sqlalchemy.Integer
+        source : !!python/name:sqlalchemy.String
+        infoDate : !!python/name:sqlalchemy.Date
+        spaceSqFt : !!python/name:sqlalchemy.Integer
+        startDate : !!python/name:sqlalchemy.Date
+        compDate : !!python/name:sqlalchemy.Date
+        resSqft : !!python/name:sqlalchemy.Integer
+        nResSqft : !!python/name:sqlalchemy.Integer
+        created_user : !!python/name:sqlalchemy.String
+        created_date : !!python/name:sqlalchemy.Date
+        last_edited_user : !!python/name:sqlalchemy.String
+        last_edited_date : !!python/name:sqlalchemy.Date
+        devTypeID : !!python/name:sqlalchemy.Integer
+        SHAPE_Length : !!python/name:sqlalchemy.Float
+        SHAPE_Area : !!python/name:sqlalchemy.Float
+        shape : !!python/object:geoalchemy2.Geography { geometry_type: 'GEOMETRY', srid: 4326, spatial_index: True }
+
 scheduled_development_event :
     ##Input Query
     in_query_non_spatial : >
         SELECT
             scheduled_development_event_id
-            ,parcel_id
+        parcel_id
             ,development_type_id as building_type_id
             ,year_built
             ,sqft_per_unit
@@ -519,59 +598,18 @@ zoning :
     in_query_non_spatial : >
         SELECT
             zoning_id
-            ,jurisdiction_id
-            ,zone_code
-            ,region_id
-            ,min_lot_size
-            ,min_far
-            ,max_far
-            ,min_front_setback
-            ,max_front_setback
-            ,rear_setback
-            ,side_setback
-            ,min_dua
-            ,max_dua
-            ,max_res_units
-            ,max_building_height
-            ,zone_code_link
             ,notes
-            ,review_date
-            ,review_by
         FROM
             spacecore.urbansim.zoning
     ##Index Column
     index_col : zoning_id
     indexes :
-        ix_zoning_jurisdiction_id: jurisdiction_id
-    ##Input Query Spatial
-    in_query_spatial : >
-        SELECT
-            zoning_id
-            ,shape.STAsText() as shape
-        FROM spacecore.urbansim.zoning
-        WHERE shape IS NOT NULL
+        ix_zoning_jurisdiction_id: zoning_id
     ##Output
     out_table : zoning
     #Map columns --> Notice special geometry column
     column_data_types :
         zoning_id : !!python/name:sqlalchemy.String
-        jurisdiction_id : !!python/name:sqlalchemy.Integer
-        zone_code : !!python/name:sqlalchemy.String
-        min_lot_size: !!python/name:sqlalchemy.Integer
-        region_id : !!python/name:sqlalchemy.Integer
-        min_far : !!python/name:sqlalchemy.Numeric
-        max_far : !!python/name:sqlalchemy.Numeric
-        min_front_setback : !!python/name:sqlalchemy.Numeric
-        max_front_setback : !!python/name:sqlalchemy.Numeric
-        rear_setback : !!python/name:sqlalchemy.Numeric
-        side_setback : !!python/name:sqlalchemy.Numeric
-        min_dua : !!python/name:sqlalchemy.Numeric
-        max_dua : !!python/name:sqlalchemy.Numeric
-        max_res_units: !!python/name:sqlalchemy.Integer
-        max_building_height : !!python/name:sqlalchemy.Integer
-        zone_code_link : !!python/name:sqlalchemy.String
         notes : !!python/name:sqlalchemy.Text
-        review_date : !!python/name:sqlalchemy.DateTime
-        review_by : !!python/name:sqlalchemy.String
-        shape : !!python/object:geoalchemy2.Geography { geometry_type: 'MULTIPOLYGON', srid: 4326, spatial_index: True }
+
 
