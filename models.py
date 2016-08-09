@@ -318,3 +318,33 @@ def scheduled_development_events(scheduled_development_events, buildings):
         b = buildings.to_frame(buildings.local_columns)
         all_buildings = merge(b,sched_dev[b.columns])
         orca.add_table("buildings", all_buildings)
+
+
+@orca.step('feasibility2')
+def feasibility2(parcels, settings,
+                parcel_sales_price_sqft_func,
+                parcel_is_allowed_func):
+    kwargs = settings['feasibility']
+
+    from urbansim.developer import sqftproforma
+
+    config = sqftproforma.SqFtProFormaConfig()
+
+    attr = ['parcel_size', 'fars', 'profit_factor', 'building_efficiency', 'parcel_coverage',
+            'cap_rate', 'height_per_story', "sqft_per_rate", "uses", "residential_uses",
+            "parking_cost_d", "parking_sqft_d", "cost", "parking_rates"]
+
+    # add max retail height and industrial height when nrh is included in the model
+    # change yaml file when running nrh
+
+    for x in attr:
+        setattr(config, x, settings["sqftproforma_config"][x])
+
+    # Add other forms while running nrh
+    setattr(config, 'forms', {'residential': settings["sqftproforma_config"]['forms']['residential']})
+
+    utils.run_feasibility(parcels,
+                          parcel_sales_price_sqft_func,
+                          parcel_is_allowed_func, only_built=True,
+                          config=config,
+                          **kwargs)

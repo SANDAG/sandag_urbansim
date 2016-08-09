@@ -214,10 +214,15 @@ def parcel_land_cost(settings, parcels):
     return parcels.building_purchase_price + parcels.parcel_size * settings['default_land_cost']
 
 
-@orca.column('parcels', 'max_dua', cache=True)
+@orca.column('parcels', 'max_dua_zoning', cache=True)
 def parcel_max_dua(parcels, zoning):
     sr = misc.reindex(zoning.max_dua, parcels.zoning_id)
     return sr.apply(np.floor).fillna(0).astype('int32')
+
+@orca.column('parcels', 'zoned_du', cache=True)
+def zoned_du(parcels):
+    return (parcels.max_dua_zoning * parcels.parcel_acres).\
+        reindex(parcels.index).fillna(0).round().astype('int')
 
 
 @orca.column('parcels', 'max_far', cache=True)
@@ -324,6 +329,8 @@ def parcel_is_allowed(form):
         allowed = zoning_allowed_uses[4]
     elif form == 'retail':
         allowed = zoning_allowed_uses[5]
+    elif form == 'residential':
+        allowed = zoning_allowed_uses[19] | zoning_allowed_uses[20] | zoning_allowed_uses[21]
     else:
         df = pd.DataFrame(index=parcels.index)
         df['allowed'] = True
