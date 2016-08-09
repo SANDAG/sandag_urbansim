@@ -330,69 +330,18 @@ def feasibility2(parcels, settings,
 
     config = sqftproforma.SqFtProFormaConfig()
 
-    config.parcel_sizes = settings["sqftproforma_config"]["parcel_size"]
-    config.fars = settings["sqftproforma_config"]["fars"]
+    attr = ['parcel_size', 'fars', 'profit_factor', 'building_efficiency', 'parcel_coverage',
+            'cap_rate', 'height_per_story', "sqft_per_rate", "uses", "residential_uses",
+            "parking_cost_d", "parking_sqft_d", "cost", "parking_rates"]
 
-  ##config.uses = settings["sqftproforma_config"]["uses"]
-    ## config.residential_uses = settings["sqftproforma_config"]["residential_uses"]
-    config.forms = {
-   #   'retail': {
-   #       "retail": settings["sqftproforma_config"]["forms"]["retail"]
-   #   },
-   #   'industrial': {
-   #       "industrial": settings["sqftproforma_config"]["forms"]["industrial"]
-   #   },
-   #   'office': {
-   #       "office": settings["sqftproforma_config"]["forms"]["office"]
-   #   },
-      'residential': {
-          "residential": settings["sqftproforma_config"]["forms"]["residential"]
-      }
-   ##  , 'mixedresidential': {
-   ##       "retail": settings["sqftproforma_config"]["forms"]["mixedresidential"]["retail"],
-   ##       "residential": settings["sqftproforma_config"]["forms"]["mixedresidential"]["residential"]
-   ##   },
-   ##   'mixedoffice': {
-   ##  ##     "office": settings["sqftproforma_config"]["forms"]["mixedoffice"]["office"],
-   ##       "residential": settings["sqftproforma_config"]["forms"]["mixedoffice"]["residential"]
-   ##   }
-  }
+    # add max retail height and industrial height when nrh is included in the model
+    # change yaml file when running nrh
 
-    config.profit_factor = settings["sqftproforma_config"]["profit_factor"]
-    config.building_efficiency = settings["sqftproforma_config"]["building_efficiency"]
-    config.parcel_coverage = settings["sqftproforma_config"]["parcel_coverage"]
-    config.cap_rate = settings["sqftproforma_config"]["cap_rate"]
+    for x in attr:
+        setattr(config, x, settings["sqftproforma_config"][x])
 
-    config.parking_rates = {
-       #"retail": settings["sqftproforma_config"]["parking_rates"]["retail"],
-       #"industrial": settings["sqftproforma_config"]["parking_rates"]["industrial"],
-       #"office": settings["sqftproforma_config"]["parking_rates"]["office"],
-        "residential": settings["sqftproforma_config"]["parking_rates"]["residential"]
-    }
-    config.sqft_per_rate = settings["sqftproforma_config"]["sqft_per_rate"]
-
-    config.costs = {
-       # "retail": settings["sqftproforma_config"]["cost"]["retail"],
-       # "industrial": settings["sqftproforma_config"]["cost"]["industrial"],
-       # "office": settings["sqftproforma_config"]["cost"]["office"],
-        "residential": settings["sqftproforma_config"]["cost"]["residential"]
-    }
-
-
-    config.parking_sqft_d = {
-        'surface': settings["sqftproforma_config"]["parking_sqft_d"]["surface"],
-        'deck': settings["sqftproforma_config"]["parking_sqft_d"]["deck"],
-        'underground': settings["sqftproforma_config"]["parking_sqft_d"]["underground"]
-    }
-    config.parking_cost_d = {
-        'surface': settings["sqftproforma_config"]["parking_cost_d"]["surface"],
-        'deck': settings["sqftproforma_config"]["parking_cost_d"]["deck"],
-        'underground': settings["sqftproforma_config"]["parking_cost_d"]["underground"]
-    }
-
-    config.height_per_story = settings["sqftproforma_config"]["height_per_story"]
-   #config.max_retail_height = settings["sqftproforma_config"]["max_retail_height"]
-   #config.max_ind#ustrial_height = settings["sqftproforma_config"]["max_industrial_height"]
+    # Add other forms while running nrh
+    setattr(config, 'forms', {'residential': settings["sqftproforma_config"]['forms']['residential']})
 
     utils.run_feasibility(parcels,
                           parcel_sales_price_sqft_func,
