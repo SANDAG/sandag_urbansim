@@ -33,8 +33,8 @@ INSERT INTO urbansim.buildings_updated WITH (TABLOCK) (
 	,centroid
 	,data_source
 	)
-SELECT 
-	bldgID
+SELECT
+	bldgid						--bldgID
 	,subparcel_					--subparcelID
 	,parcel_id					--parcelID
 	,ogr_geometry				--shape
@@ -186,7 +186,9 @@ FROM
 	ON usb.parcel_id = c.parcel_id
 
 
-/*#################### START RES AND EMP  SPACE ####################*/
+/*#################### START RES AND EMP SPACE ####################*/
+
+/*#################### RES PROCESSING ####################*/
 
 /*################## STEP 6: FOR SUB-PARCELS WITH NO BUILDINGS STILL AND DU, ASSIGN FAKE BUILDING POINT  ###################*/
 INSERT INTO urbansim.buildings_updated (building_id, subparcel_id, parcel_id, shape, data_source, subparcel_assignment)
@@ -196,7 +198,7 @@ SELECT
 	,parcelID
 	,lc.Shape.STPointOnSurface().STBuffer(1)
 	,'PLACEHOLDER'
-	,'PLACEHOLDER'
+	,'PLACEHOLDER_RES'
 FROM 
 	spacecore.gis.landcore lc
 	LEFT JOIN urbansim.buildings_updated wsb ON lc.subParcel = wsb.subparcel_id
@@ -388,3 +390,256 @@ SELECT * FROM
 (SELECT COUNT(*) hh, mgra FROM urbansim.households_updated GROUP BY mgra) as hh
 INNER JOIN (SELECT SUM(residential_units) units, mgra FROM urbansim.buildings_updated INNER JOIN spacecore.gis.landcore ON subParcel = subparcel_id GROUP BY mgra) bldg ON hh.mgra = bldg.mgra
 WHERE hh > units
+
+/*#################### EMP SPACE PROCESSING ####################*/
+DECLARE @employment_vacancy float = 0.3;
+
+/* ##### INSERT PLACEHOLDER BUILDINGS FOR EMP ##### */
+INSERT INTO urbansim.buildings_updated(
+	development_type_id
+	,building_id
+	,parcel_id
+	,improvement_value
+	,residential_units
+	,residential_sqft
+	,non_residential_sqft
+	,job_spaces
+	,non_residential_rent_per_sqft
+	,price_per_sqft
+	,stories
+	,year_built
+	,shape
+	,data_source
+	,subparcel_assignment
+	,subparcel_id
+	,centroid
+	,luz_id
+	--,mgra
+	)
+SELECT
+	NULL AS development_type_id
+	,lc.subParcel + 4000000 AS building_id
+	,lc.parcelID
+	,NULL AS improvement_value
+	,0 AS residential_units
+	,0 AS residential_sqft
+	,NULL AS non_residential_sqft
+	,emp.emp_adj AS job_spaces
+	,NULL AS non_residential_rent_per_sqft
+	,NULL AS price_per_sqft
+	,NULL AS stories
+	,NULL AS year_built
+	,lc.Shape.STPointOnSurface().STBuffer(1) AS shape
+	,'PLACEHOLDER' AS data_source
+	,'PLACEHOLDER_EMP' AS subparcel_assignment
+	,lc.subParcel
+	,NULL AS centroid
+	,NULL AS luz_id
+	--,lc.mgra as mgra
+FROM gis.landcore lc
+INNER JOIN (SELECT lc.subparcel, SUM(emp.emp_adj) emp_adj		--GROUP BY SUBPARCEL FOR UNIQUE BUILDING_ID
+			FROM socioec_data.ca_edd.emp_2013 emp
+			JOIN gis.landcore lc 
+			ON lc.Shape.STContains(emp.shape) = 1
+			GROUP BY lc.subparcel) emp
+ON lc.subparcel = emp.subparcel
+LEFT JOIN (SELECT subparcel_id FROM urbansim.buildings_updated GROUP BY subparcel_id) wsb
+ON lc.subParcel = wsb.subparcel_id
+WHERE emp.emp_adj IS NOT NULL
+AND wsb.subparcel_id IS NULL
+
+/* ##### CREATE CENTROIDS FOR ALL PLACEHOLDER BUILDINGS ##### */
+UPDATE urbansim.buildings_updated
+SET centroid = shape.STPointOnSurface()
+WHERE centroid IS NULL
+AND data_source = 'PLACEHOLDER'
+
+/*#################### ASSIGN JOBS ####################*/
+--DECLARE @employment_vacancy float = 0.3;
+/* ##### ASSIGN JOBS TO SINGLE BUILDING SUBPARCELS ##### */
+WITH single_bldg_jobs AS (
+	SELECT lc.subParcel AS subparcel_id
+		,SUM(CAST(ROUND(emp_adj*(1+@employment_vacancy),0)AS int)) emp
+	FROM gis.landcore lc
+	INNER JOIN socioec_data.ca_edd.emp_2013 emp 
+	ON lc.Shape.STContains(emp.shape) = 1
+	INNER JOIN (SELECT subparcel_id FROM urbansim.buildings_updated GROUP BY subparcel_id HAVING COUNT(*) = 1) single_bldg
+	ON lc.subParcel = single_bldg.subparcel_id
+	WHERE emp.emp_adj IS NOT NULL
+	GROUP BY lc.subParcel
+	)
+UPDATE 
+	wsb
+SET 
+	wsb.job_spaces = sb.emp
+FROM 
+urbansim.buildings_updated wsb
+JOIN single_bldg_jobs sb
+ON wsb.subparcel_id = sb.subparcel_id
+;
+
+/* ##### ASSIGN JOBS TO MULTIPLE BUILDING SUBPARCELS ##### */
+--DECLARE @employment_vacancy float = 0.3;
+-----MAY WANT TO THINK ABOUT EXCLUDING REALLY SMALL BUILDINGS FROM THIS QUERY
+WITH bldgs AS (
+  SELECT
+    wsb.subparcel_id
+   ,wsb.building_id
+   ,lc.emp/ COUNT(*) OVER (PARTITION BY wsb.subparcel_id) +
+     CASE 
+       WHEN ROW_NUMBER() OVER (PARTITION BY wsb.subparcel_id ORDER BY wsb.shape.STArea()) <= (lc.emp % COUNT(*) OVER (PARTITION BY wsb.subparcel_id)) THEN 1 
+       ELSE 0 
+	 END jobs
+  FROM
+    urbansim.buildings_updated wsb
+    INNER JOIN (SELECT subParcel, SUM(CAST(ROUND(emp_adj*(1+@employment_vacancy),0)AS int)) emp
+		FROM gis.landcore lc
+		INNER JOIN socioec_data.ca_edd.emp_2013 emp 
+		ON lc.Shape.STContains(emp.shape) = 1
+		WHERE emp.emp_adj IS NOT NULL
+		GROUP BY lc.subParcel) lc
+	ON wsb.subparcel_id = lc.subParcel
+  WHERE
+    wsb.subparcel_id IN (SELECT subparcel_id FROM urbansim.buildings_updated wsb GROUP BY subparcel_id HAVING count(*) > 1)
+	)
+
+
+UPDATE wsb
+  SET wsb.job_spaces = bldgs.jobs
+FROM
+	urbansim.buildings_updated wsb
+	INNER JOIN bldgs ON wsb.building_id = bldgs.building_id
+;
+
+/* ##### ASSIGN BLOCK ID ##### */
+UPDATE
+	wsb
+SET
+	wsb.block_id = b.blockid10
+FROM
+	urbansim.buildings_updated wsb
+JOIN ref.blocks b
+ON b.Shape.STContains(wsb.shape.STCentroid()) = 1
+WHERE wsb.block_id IS NULL 
+
+UPDATE
+	wsb
+SET
+	wsb.block_id = b.blockid10
+FROM
+	urbansim.buildings_updated wsb
+INNER JOIN
+	(SELECT lc.subParcel
+		,b.BLOCKID10
+	FROM gis.landcore lc
+	JOIN [spacecore].[ref].[blocks]b
+	ON b.Shape.STContains(lc.shape.STBuffer(-200).STPointOnSurface()) = 1
+	WHERE lc.subParcel IN (SELECT subparcel_id FROM urbansim.buildings_updated WHERE block_id IS NULL)
+	) b
+ON wsb.subparcel_id = b.subParcel
+WHERE block_id IS NULL
+
+/*################### ARBITRARILY ADD MORE SPACE FOR LEHD  ###########################*/
+
+WITH bldg AS (
+SELECT
+  wsb.building_id
+  ,deficit.block_id
+  ,deficit.deficit
+  ,deficit.deficit/ COUNT(*) OVER (PARTITION BY deficit.block_id) +
+     CASE 
+       WHEN ROW_NUMBER() OVER (PARTITION BY deficit.block_id ORDER BY wsb.job_spaces desc) <= (deficit.deficit % COUNT(*) OVER (PARTITION BY deficit.block_id)) THEN 1 
+       ELSE 0 
+	 END jobs
+FROM 
+  urbansim.buildings_updated wsb 
+  INNER JOIN (SELECT bldg.block_id,  CAST(ROUND((jobs.jobs - bldg.spaces) * 1.5,0) as INT) deficit FROM
+				(SELECT block_id, COUNT(*) jobs FROM spacecore.input.jobs_wac_2013 GROUP BY block_id) jobs
+				FULL OUTER JOIN (SELECT block_id, SUM(job_spaces) spaces FROM urbansim.buildings_updated GROUP BY block_id) bldg ON jobs.block_id = bldg.block_id
+				WHERE jobs.jobs > bldg.spaces) deficit ON wsb.block_id = deficit.block_id
+WHERE
+  wsb.job_spaces > 0
+)
+
+UPDATE wsb
+  SET wsb.job_spaces = wsb.job_spaces + jobs
+FROM
+  urbansim.buildings_updated wsb INNER JOIN
+  bldg ON wsb.building_id = bldg.building_id
+
+WITH bldg AS (
+SELECT
+  wsb.building_id
+  ,deficit.block_id
+  ,deficit.deficit
+  ,deficit.deficit/ COUNT(*) OVER (PARTITION BY deficit.block_id) +
+     CASE 
+       WHEN ROW_NUMBER() OVER (PARTITION BY deficit.block_id ORDER BY wsb.job_spaces desc) <= (deficit.deficit % COUNT(*) OVER (PARTITION BY deficit.block_id)) THEN 1 
+       ELSE 0 
+	 END jobs
+FROM 
+  urbansim.buildings_updated wsb 
+  INNER JOIN (SELECT bldg.block_id,  CAST(ROUND((jobs.jobs - bldg.spaces) * 1.5,0) as INT) deficit FROM
+				(SELECT block_id, COUNT(*) jobs FROM spacecore.input.jobs_wac_2013 GROUP BY block_id) jobs
+				FULL OUTER JOIN (SELECT block_id, SUM(job_spaces) spaces FROM urbansim.buildings_updated GROUP BY block_id) bldg ON jobs.block_id = bldg.block_id
+				WHERE jobs.jobs > bldg.spaces) deficit ON wsb.block_id = deficit.block_id
+)
+
+UPDATE wsb
+  SET wsb.job_spaces = wsb.job_spaces + jobs
+FROM
+  urbansim.buildings_updated wsb INNER JOIN
+  bldg ON wsb.building_id = bldg.building_id
+
+/*  */
+TRUNCATE TABLE spacecore.urbansim.jobs_updated;
+WITH bldg as (
+SELECT
+  ROW_NUMBER() OVER (PARTITION BY block_id ORDER BY building_id) idx
+  ,building_id
+  ,block_id
+FROM
+(SELECT
+  building_id
+  ,subparcel_id
+  ,job_spaces
+  ,block_id
+FROM
+urbansim.buildings_updated,spacecore.ref.numbers n
+WHERE n.numbers <= job_spaces) bldgs
+),
+jobs AS (
+SELECT 
+  ROW_NUMBER() OVER (PARTITION BY block_id ORDER BY job_id) idx
+  ,job_id
+  ,block_id
+  ,sector_id
+FROM
+  spacecore.input.jobs_wac_2013
+)
+
+INSERT INTO spacecore.urbansim.jobs_updated (job_id, sector_id, building_id)
+SELECT jobs.job_id
+	,jobs.sector_id
+	,bldg.building_id
+FROM bldg
+INNER JOIN jobs
+ON bldg.block_id = jobs.block_id
+AND bldg.idx = jobs.idx
+
+
+
+
+
+/* CHECKS */
+SELECT SUM(emp_adj)
+FROM socioec_data.ca_edd.emp_2013
+
+SELECT SUM(job_spaces)
+FROM urbansim.buildings
+
+SELECT SUM(job_spaces)
+FROM urbansim.buildings_updated
+
+SELECT COUNT(*)
+FROM spacecore.input.jobs_wac_2013
