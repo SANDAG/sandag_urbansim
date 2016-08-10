@@ -302,7 +302,7 @@ WHERE
 
 /*################ STEP 14: LOAD HOUSEHOLD TABLE ######################*/
 /*
-INSERT INTO urbansim.buildings_updated (
+INSERT INTO urbansim.households_updated (
 	scenario_id, 
 	mgra, 
 	tenure, 
@@ -327,8 +327,11 @@ SELECT
 	cars 
 FROM spacecore.input.vi_households
 */
+SELECT *
+INTO urbansim.households_updated
+FROM spacecore.input.vi_households
+
 /*################ STEP 15: THIS IS A 2010 HH FILE WITH 2015 BUILDINGS, SHAVE OFF HH WHERE BUILDINGS WERE DEMOLISHED SINCE 2010 ######################*/
-/*
 WITH hh AS (
 SELECT
   hh.mgra
@@ -336,16 +339,16 @@ SELECT
   ,ROW_NUMBER() OVER (PARTITION BY hh.mgra ORDER BY household_id) idx
   ,bldgs.housing_units
 FROM
-  urbansim.buildings_updated hh
+  urbansim.households_updated hh
   INNER JOIN (SELECT MGRA, SUM(residential_units) housing_units FROM urbansim.buildings_updated wsb INNER JOIN spacecore.gis.landcore lc ON wsb.subparcel_id = lc.subParcel GROUP BY MGRA) bldgs
-    ON hh.mgra = bldgs.MGRA)
+    ON hh.mgra = bldgs.MGRA
+)
 
-SELECT * FROM urbansim.buildings_updated WHERE household_id IN (SELECT household_id FROM hh WHERE idx > housing_units)
-DELETE FROM urbansim.buildings_updated WHERE household_id IN (SELECT household_id FROM hh WHERE idx > housing_units)
-*/
+SELECT * FROM urbansim.households_updated WHERE household_id IN (SELECT household_id FROM hh WHERE idx > housing_units)
+DELETE FROM urbansim.households_updated WHERE household_id IN (SELECT household_id FROM hh WHERE idx > housing_units)
+
 
 /*################ STEP 16: EVENLY DISTRIBUTE HOUSEHOLDS ONTO BUILDINGS BY MGRA ######################*/
-/*
 WITH bldg as (
 SELECT
   ROW_NUMBER() OVER (PARTITION BY mgra ORDER BY building_id) idx
@@ -357,7 +360,8 @@ FROM
   ,subparcel_id
   ,residential_units
 FROM
-urbansim.buildings_updated,spacecore.ref.numbers n
+urbansim.buildings_updated
+,ref.numbers n
 WHERE n.numbers <= residential_units) bldgs
 INNER JOIN spacecore.gis.landcore lc ON lc.subParcel = bldgs.subparcel_id),
 hh AS (
@@ -366,24 +370,21 @@ SELECT
   ,household_id
   ,mgra
 FROM
-  urbansim.buildings_updated
+  urbansim.households_updated
 )
 
 UPDATE h
  SET h.building_id = bldg.building_id
 
 FROM
-  urbansim.buildings_updated h
+  urbansim.households_updated h
   INNER JOIN hh ON h.household_id = hh.household_id
   INNER JOIN bldg ON bldg.MGRA = hh.mgra AND bldg.idx = hh.idx
-*/
 
 /*################ STEP 17: SOME MORE FINAL CHECKS TO ENSURE MGRA AND REGIONAL UNIT CONSISTENCY ######################*/
-/*
-SELECT COUNT(*) FROM urbansim.buildings_updated WHERE building_id = 0
+SELECT COUNT(*) FROM urbansim.households_updated WHERE building_id = 0
 
 SELECT * FROM
-(SELECT COUNT(*) hh, mgra FROM urbansim.buildings_updated GROUP BY mgra) as hh
+(SELECT COUNT(*) hh, mgra FROM urbansim.households_updated GROUP BY mgra) as hh
 INNER JOIN (SELECT SUM(residential_units) units, mgra FROM urbansim.buildings_updated INNER JOIN spacecore.gis.landcore ON subParcel = subparcel_id GROUP BY mgra) bldg ON hh.mgra = bldg.mgra
 WHERE hh > units
-*/
