@@ -19,6 +19,7 @@ fit_filters:
 predict_filters:
 - residential_units > 0
 - building_type_id in [19]
+- year_built > 0
 
 
 min_segment_size: 10

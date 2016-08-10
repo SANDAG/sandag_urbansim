@@ -10,7 +10,7 @@ build_networks:
 aggregation_tables:
   - nodes
 
-rsh_yaml: rsh_luz_plus_20160610.yaml
+rsh_yaml: rsh_w_luz_rco.yaml
 
 households_transition:
   add_columns:
