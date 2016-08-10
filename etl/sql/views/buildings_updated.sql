@@ -201,102 +201,102 @@ SELECT
 	,'PLACEHOLDER_RES'
 FROM 
 	spacecore.gis.landcore lc
-	LEFT JOIN urbansim.buildings_updated wsb ON lc.subParcel = wsb.subparcel_id
+	LEFT JOIN urbansim.buildings_updated usb ON lc.subParcel = usb.subparcel_id
 WHERE 
 	du > 0
-	AND wsb.subparcel_id is null
+	AND usb.subparcel_id is null
 
 /*################## STEP 7: VERIFY THAT ALL SUB-PARCEL WITH DU HAVE A BUILDING  ###################*/
 SELECT COUNT(*) missing_res_building FROM 
 	spacecore.gis.landcore lc
-	LEFT JOIN urbansim.buildings_updated wsb ON lc.subParcel = wsb.subparcel_id
+	LEFT JOIN urbansim.buildings_updated usb ON lc.subParcel = usb.subparcel_id
 WHERE 
 	du > 0
-	AND wsb.subparcel_id is null
+	AND usb.subparcel_id is null
 
 /*###### STEP 8: SET BUILDING'S RESIDENTIAL UNITS ON SUBPARCELS WITH ONLY ONE BUILDING #####*/
-UPDATE wsb
-  SET wsb.residential_units = lc.du
+UPDATE usb
+  SET usb.residential_units = lc.du
 FROM
-  urbansim.buildings_updated wsb
-  INNER JOIN spacecore.gis.landcore lc ON lc.subParcel = wsb.subparcel_id
+  urbansim.buildings_updated usb
+  INNER JOIN spacecore.gis.landcore lc ON lc.subParcel = usb.subparcel_id
 WHERE
-  wsb.subparcel_id IN (SELECT subparcel_id FROM urbansim.buildings_updated wsb GROUP BY subparcel_id HAVING count(*) = 1)
+  usb.subparcel_id IN (SELECT subparcel_id FROM urbansim.buildings_updated usb GROUP BY subparcel_id HAVING count(*) = 1)
 
 /*###### STEP 9: SET BUILDINGS W/ SUB-PARCELS WITH NO RESIDENTIAL UNITS TO ZERO #####*/
-UPDATE wsb
-  SET wsb.residential_units = lc.du
+UPDATE usb
+  SET usb.residential_units = lc.du
 FROM
-  urbansim.buildings_updated wsb
-  INNER JOIN spacecore.gis.landcore lc ON lc.subParcel = wsb.subparcel_id
+  urbansim.buildings_updated usb
+  INNER JOIN spacecore.gis.landcore lc ON lc.subParcel = usb.subparcel_id
 WHERE
-  wsb.subparcel_id IN (SELECT subparcel_id FROM urbansim.buildings_updated wsb GROUP BY subparcel_id HAVING count(*) > 1)
+  usb.subparcel_id IN (SELECT subparcel_id FROM urbansim.buildings_updated usb GROUP BY subparcel_id HAVING count(*) > 1)
   AND lc.du = 0
 
 /*########### STEP 10: EVENLY DISTRIBUTE RESIDENTIAL UNITS ON BLDG SIZE WHERE BLDG COUNT > 1 ON SUBPARCEL ############*/
 -----MAY WANT TO THINK ABOUT EXCLUDING REALLY SMALL BUILDINGS FROM THIS QUERY
 WITH bldgs AS (
   SELECT
-    wsb.subparcel_id
-   ,wsb.building_id
+    usb.subparcel_id
+   ,usb.building_id
    ,lc.du/ COUNT(*) OVER (PARTITION BY subparcel_id) +
      CASE 
-       WHEN ROW_NUMBER() OVER (PARTITION BY subparcel_id ORDER BY wsb.shape.STArea()) <= (lc.du % COUNT(*) OVER (PARTITION BY subparcel_id)) THEN 1 
+       WHEN ROW_NUMBER() OVER (PARTITION BY subparcel_id ORDER BY usb.shape.STArea()) <= (lc.du % COUNT(*) OVER (PARTITION BY subparcel_id)) THEN 1 
        ELSE 0 
 	 END units
   FROM
-    urbansim.buildings_updated wsb
-    INNER JOIN spacecore.gis.landcore lc ON wsb.subparcel_id = lc.subParcel
+    urbansim.buildings_updated usb
+    INNER JOIN spacecore.gis.landcore lc ON usb.subparcel_id = lc.subParcel
   WHERE
-    subparcel_id IN (SELECT subparcel_id FROM urbansim.buildings_updated wsb WHERE wsb.residential_units is null GROUP BY subparcel_id HAVING count(*) > 1))
+    subparcel_id IN (SELECT subparcel_id FROM urbansim.buildings_updated usb WHERE usb.residential_units is null GROUP BY subparcel_id HAVING count(*) > 1))
 
 
-UPDATE wsb
-  SET wsb.residential_units = bldgs.units
+UPDATE usb
+  SET usb.residential_units = bldgs.units
 FROM
-	urbansim.buildings_updated wsb
-	INNER JOIN bldgs ON wsb.building_id = bldgs.building_id
+	urbansim.buildings_updated usb
+	INNER JOIN bldgs ON usb.building_id = bldgs.building_id
 
 /*################ STEP 11: SOME FINAL CHECKS TO ENSURE MGRA AND REGIONAL UNIT CONSISTENCY ######################*/
 SELECT SUM(residential_units) bldg_units FROM urbansim.buildings_updated
 SELECT SUM(du) lc_units FROM spacecore.gis.landcore
 
 SELECT 
-  wsb.subparcel_id
+  usb.subparcel_id
   ,lc.du lc_units
   ,SUM(residential_units) bldg_units
 FROM 
-  urbansim.buildings_updated wsb
-  INNER JOIN spacecore.gis.landcore lc ON wsb.subparcel_id = lc.subParcel
+  urbansim.buildings_updated usb
+  INNER JOIN spacecore.gis.landcore lc ON usb.subparcel_id = lc.subParcel
 GROUP BY
-  wsb.subparcel_id
+  usb.subparcel_id
   ,lc.du
 HAVING lc.du <> SUM(residential_units)
 
 
 /*############ STEP 12: UPDATE RESIDENTIAL SQ FT WHERE DATA AVAILABLE ###### */
-UPDATE wsb
-  SET wsb.residential_sqft = wsb.residential_units * asr_units.avg_unit_size
+UPDATE usb
+  SET usb.residential_sqft = usb.residential_units * asr_units.avg_unit_size
 FROM
-  urbansim.buildings_updated wsb
-  INNER JOIN spacecore.gis.landcore lc ON wsb.subparcel_id = lc.subParcel
+  urbansim.buildings_updated usb
+  INNER JOIN spacecore.gis.landcore lc ON usb.subparcel_id = lc.subParcel
   INNER JOIN
     (SELECT
       p.PARCELID
 	  ,CAST(TOTAL_LVG_AREA as float) / bldgs.res_units avg_unit_size
     FROM
       (SELECT PARCELID, SUM(TOTAL_LVG_AREA) TOTAL_LVG_AREA FROM spacecore.gis.parcels GROUP BY PARCELID) p
-       INNER JOIN (SELECT lc.parcelID, SUM(residential_units) res_units FROM urbansim.buildings_updated wsb INNER JOIN spacecore.gis.landcore lc ON wsb.subparcel_id = lc.subParcel GROUP BY lc.parcelID HAVING SUM(residential_units) > 0) bldgs
+       INNER JOIN (SELECT lc.parcelID, SUM(residential_units) res_units FROM urbansim.buildings_updated usb INNER JOIN spacecore.gis.landcore lc ON usb.subparcel_id = lc.subParcel GROUP BY lc.parcelID HAVING SUM(residential_units) > 0) bldgs
          ON p.PARCELID = bldgs.parcelID
 	   WHERE TOTAL_LVG_AREA IS NOT NULL AND TOTAL_LVG_AREA > 0) asr_units ON lc.parcelID = asr_units.PARCELID
 
 
 /*################ STEP 13: SOME MORE FINAL CHECKS TO ENSURE MGRA AND REGIONAL UNIT CONSISTENCY ######################*/
-SELECT building_id, residential_units, residential_sqft FROM urbansim.buildings_updated wsb WHERE residential_units > 0 AND residential_sqft <= 0
+SELECT building_id, residential_units, residential_sqft FROM urbansim.buildings_updated usb WHERE residential_units > 0 AND residential_sqft <= 0
 
 SELECT * 
 FROM
-  (SELECT MGRA, SUM(residential_units) housing_units FROM urbansim.buildings_updated wsb INNER JOIN spacecore.gis.landcore lc ON wsb.subparcel_id = lc.subParcel GROUP BY MGRA) urbansim
+  (SELECT MGRA, SUM(residential_units) housing_units FROM urbansim.buildings_updated usb INNER JOIN spacecore.gis.landcore lc ON usb.subparcel_id = lc.subParcel GROUP BY MGRA) urbansim
   INNER JOIN (SELECT mgra_id % 1300000 mgra, SUM(units) housing_units, SUM(occupied) housholds FROM demographic_warehouse.fact.housing WHERE datasource_id = 19 GROUP BY mgra_id) estimates
     ON urbansim.MGRA = estimates.mgra
 WHERE
@@ -342,7 +342,7 @@ SELECT
   ,bldgs.housing_units
 FROM
   urbansim.households_updated hh
-  INNER JOIN (SELECT MGRA, SUM(residential_units) housing_units FROM urbansim.buildings_updated wsb INNER JOIN spacecore.gis.landcore lc ON wsb.subparcel_id = lc.subParcel GROUP BY MGRA) bldgs
+  INNER JOIN (SELECT MGRA, SUM(residential_units) housing_units FROM urbansim.buildings_updated usb INNER JOIN spacecore.gis.landcore lc ON usb.subparcel_id = lc.subParcel GROUP BY MGRA) bldgs
     ON hh.mgra = bldgs.MGRA
 )
 
@@ -443,10 +443,10 @@ INNER JOIN (SELECT lc.subparcel, SUM(emp.emp_adj) emp_adj		--GROUP BY SUBPARCEL 
 			ON lc.Shape.STContains(emp.shape) = 1
 			GROUP BY lc.subparcel) emp
 ON lc.subparcel = emp.subparcel
-LEFT JOIN (SELECT subparcel_id FROM urbansim.buildings_updated GROUP BY subparcel_id) wsb
-ON lc.subParcel = wsb.subparcel_id
+LEFT JOIN (SELECT subparcel_id FROM urbansim.buildings_updated GROUP BY subparcel_id) usb
+ON lc.subParcel = usb.subparcel_id
 WHERE emp.emp_adj IS NOT NULL
-AND wsb.subparcel_id IS NULL
+AND usb.subparcel_id IS NULL
 
 /* ##### CREATE CENTROIDS FOR ALL PLACEHOLDER BUILDINGS ##### */
 UPDATE urbansim.buildings_updated
@@ -469,13 +469,13 @@ WITH single_bldg_jobs AS (
 	GROUP BY lc.subParcel
 	)
 UPDATE 
-	wsb
+	usb
 SET 
-	wsb.job_spaces = sb.emp
+	usb.job_spaces = sb.emp
 FROM 
-urbansim.buildings_updated wsb
+urbansim.buildings_updated usb
 JOIN single_bldg_jobs sb
-ON wsb.subparcel_id = sb.subparcel_id
+ON usb.subparcel_id = sb.subparcel_id
 ;
 
 /* ##### ASSIGN JOBS TO MULTIPLE BUILDING SUBPARCELS ##### */
@@ -483,51 +483,51 @@ ON wsb.subparcel_id = sb.subparcel_id
 -----MAY WANT TO THINK ABOUT EXCLUDING REALLY SMALL BUILDINGS FROM THIS QUERY
 WITH bldgs AS (
   SELECT
-    wsb.subparcel_id
-   ,wsb.building_id
-   ,lc.emp/ COUNT(*) OVER (PARTITION BY wsb.subparcel_id) +
+    usb.subparcel_id
+   ,usb.building_id
+   ,lc.emp/ COUNT(*) OVER (PARTITION BY usb.subparcel_id) +
      CASE 
-       WHEN ROW_NUMBER() OVER (PARTITION BY wsb.subparcel_id ORDER BY wsb.shape.STArea()) <= (lc.emp % COUNT(*) OVER (PARTITION BY wsb.subparcel_id)) THEN 1 
+       WHEN ROW_NUMBER() OVER (PARTITION BY usb.subparcel_id ORDER BY usb.shape.STArea()) <= (lc.emp % COUNT(*) OVER (PARTITION BY usb.subparcel_id)) THEN 1 
        ELSE 0 
 	 END jobs
   FROM
-    urbansim.buildings_updated wsb
+    urbansim.buildings_updated usb
     INNER JOIN (SELECT subParcel, SUM(CAST(ROUND(emp_adj*(1+@employment_vacancy),0)AS int)) emp
 		FROM gis.landcore lc
 		INNER JOIN socioec_data.ca_edd.emp_2013 emp 
 		ON lc.Shape.STContains(emp.shape) = 1
 		WHERE emp.emp_adj IS NOT NULL
 		GROUP BY lc.subParcel) lc
-	ON wsb.subparcel_id = lc.subParcel
+	ON usb.subparcel_id = lc.subParcel
   WHERE
-    wsb.subparcel_id IN (SELECT subparcel_id FROM urbansim.buildings_updated wsb GROUP BY subparcel_id HAVING count(*) > 1)
+    usb.subparcel_id IN (SELECT subparcel_id FROM urbansim.buildings_updated usb GROUP BY subparcel_id HAVING count(*) > 1)
 	)
 
 
-UPDATE wsb
-  SET wsb.job_spaces = bldgs.jobs
+UPDATE usb
+  SET usb.job_spaces = bldgs.jobs
 FROM
-	urbansim.buildings_updated wsb
-	INNER JOIN bldgs ON wsb.building_id = bldgs.building_id
+	urbansim.buildings_updated usb
+	INNER JOIN bldgs ON usb.building_id = bldgs.building_id
 ;
 
 /* ##### ASSIGN BLOCK ID ##### */
 UPDATE
-	wsb
+	usb
 SET
-	wsb.block_id = b.blockid10
+	usb.block_id = b.blockid10
 FROM
-	urbansim.buildings_updated wsb
+	urbansim.buildings_updated usb
 JOIN ref.blocks b
-ON b.Shape.STContains(wsb.shape.STCentroid()) = 1
-WHERE wsb.block_id IS NULL 
+ON b.Shape.STContains(usb.shape.STCentroid()) = 1
+WHERE usb.block_id IS NULL 
 
 UPDATE
-	wsb
+	usb
 SET
-	wsb.block_id = b.blockid10
+	usb.block_id = b.blockid10
 FROM
-	urbansim.buildings_updated wsb
+	urbansim.buildings_updated usb
 INNER JOIN
 	(SELECT lc.subParcel
 		,b.BLOCKID10
@@ -536,60 +536,60 @@ INNER JOIN
 	ON b.Shape.STContains(lc.shape.STBuffer(-200).STPointOnSurface()) = 1
 	WHERE lc.subParcel IN (SELECT subparcel_id FROM urbansim.buildings_updated WHERE block_id IS NULL)
 	) b
-ON wsb.subparcel_id = b.subParcel
+ON usb.subparcel_id = b.subParcel
 WHERE block_id IS NULL
 
 /*################### ARBITRARILY ADD MORE SPACE FOR LEHD  ###########################*/
 
 WITH bldg AS (
 SELECT
-  wsb.building_id
+  usb.building_id
   ,deficit.block_id
   ,deficit.deficit
   ,deficit.deficit/ COUNT(*) OVER (PARTITION BY deficit.block_id) +
      CASE 
-       WHEN ROW_NUMBER() OVER (PARTITION BY deficit.block_id ORDER BY wsb.job_spaces desc) <= (deficit.deficit % COUNT(*) OVER (PARTITION BY deficit.block_id)) THEN 1 
+       WHEN ROW_NUMBER() OVER (PARTITION BY deficit.block_id ORDER BY usb.job_spaces desc) <= (deficit.deficit % COUNT(*) OVER (PARTITION BY deficit.block_id)) THEN 1 
        ELSE 0 
 	 END jobs
 FROM 
-  urbansim.buildings_updated wsb 
+  urbansim.buildings_updated usb 
   INNER JOIN (SELECT bldg.block_id,  CAST(ROUND((jobs.jobs - bldg.spaces) * 1.5,0) as INT) deficit FROM
 				(SELECT block_id, COUNT(*) jobs FROM spacecore.input.jobs_wac_2013 GROUP BY block_id) jobs
 				FULL OUTER JOIN (SELECT block_id, SUM(job_spaces) spaces FROM urbansim.buildings_updated GROUP BY block_id) bldg ON jobs.block_id = bldg.block_id
-				WHERE jobs.jobs > bldg.spaces) deficit ON wsb.block_id = deficit.block_id
+				WHERE jobs.jobs > bldg.spaces) deficit ON usb.block_id = deficit.block_id
 WHERE
-  wsb.job_spaces > 0
+  usb.job_spaces > 0
 )
 
-UPDATE wsb
-  SET wsb.job_spaces = wsb.job_spaces + jobs
+UPDATE usb
+  SET usb.job_spaces = usb.job_spaces + jobs
 FROM
-  urbansim.buildings_updated wsb INNER JOIN
-  bldg ON wsb.building_id = bldg.building_id
+  urbansim.buildings_updated usb INNER JOIN
+  bldg ON usb.building_id = bldg.building_id
 
 WITH bldg AS (
 SELECT
-  wsb.building_id
+  usb.building_id
   ,deficit.block_id
   ,deficit.deficit
   ,deficit.deficit/ COUNT(*) OVER (PARTITION BY deficit.block_id) +
      CASE 
-       WHEN ROW_NUMBER() OVER (PARTITION BY deficit.block_id ORDER BY wsb.job_spaces desc) <= (deficit.deficit % COUNT(*) OVER (PARTITION BY deficit.block_id)) THEN 1 
+       WHEN ROW_NUMBER() OVER (PARTITION BY deficit.block_id ORDER BY usb.job_spaces desc) <= (deficit.deficit % COUNT(*) OVER (PARTITION BY deficit.block_id)) THEN 1 
        ELSE 0 
 	 END jobs
 FROM 
-  urbansim.buildings_updated wsb 
+  urbansim.buildings_updated usb 
   INNER JOIN (SELECT bldg.block_id,  CAST(ROUND((jobs.jobs - bldg.spaces) * 1.5,0) as INT) deficit FROM
 				(SELECT block_id, COUNT(*) jobs FROM spacecore.input.jobs_wac_2013 GROUP BY block_id) jobs
 				FULL OUTER JOIN (SELECT block_id, SUM(job_spaces) spaces FROM urbansim.buildings_updated GROUP BY block_id) bldg ON jobs.block_id = bldg.block_id
-				WHERE jobs.jobs > bldg.spaces) deficit ON wsb.block_id = deficit.block_id
+				WHERE jobs.jobs > bldg.spaces) deficit ON usb.block_id = deficit.block_id
 )
 
-UPDATE wsb
-  SET wsb.job_spaces = wsb.job_spaces + jobs
+UPDATE usb
+  SET usb.job_spaces = usb.job_spaces + jobs
 FROM
-  urbansim.buildings_updated wsb INNER JOIN
-  bldg ON wsb.building_id = bldg.building_id
+  urbansim.buildings_updated usb INNER JOIN
+  bldg ON usb.building_id = bldg.building_id
 
 /*  */
 TRUNCATE TABLE spacecore.urbansim.jobs_updated;
