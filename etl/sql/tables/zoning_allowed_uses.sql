@@ -6,6 +6,10 @@ CREATE TABLE input.zoning_allowed_uses(
 	zoning_id int NULL
 	,zoning_rules_code_name nvarchar(35) NULL
 	,development_type_id int NULL
+CONSTRAINT pk_zoning_allowed_uses UNIQUE NONCLUSTERED
+	(
+	zoning_id, development_type_id
+	)
 )
 GO
 
