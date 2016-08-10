@@ -42,6 +42,10 @@ SELECT
 	,data_sourc					--dataSource
 FROM gis.buildings_updated
 
+--CHECK FOR NULL SHAPES AND REMOVE
+DELETE FROM [spacecore].[urbansim].[buildings_updated]
+WHERE shape IS NULL
+
 --CREATE A PRIMARY KEY SO WE CAN CREATE A SPATIAL INDEX
 ALTER TABLE urbansim.buildings_updated ADD CONSTRAINT pk_urbansim_buildings_updated_building_id PRIMARY KEY CLUSTERED (building_id) 
 
