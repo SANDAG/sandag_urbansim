@@ -9,7 +9,7 @@ import sys
 orca.run(['build_networks'])
 
 # residential only
-orca.run([#'scheduled_development_events',
+orca.run(['scheduled_development_events',
           'neighborhood_vars',
           'rsh_simulate',
           'households_transition',

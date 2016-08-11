@@ -49,7 +49,8 @@ scheduled_development_events_sql = """SELECT
                                          scheduled_development_event_id, parcel_id, building_type_id
                                          ,year_built, sqft_per_unit, residential_units, non_residential_sqft
                                          ,improvement_value, res_price_per_sqft, non_residential_rent_per_sqft
-                                         ,COALESCE(stories,1) as stories FROM urbansim.scheduled_development_event"""
+                                         ,COALESCE(stories,1) as stories FROM urbansim.scheduled_development_event
+                                         WHERE parcel_id IN (select parcel_id from urbansim.parcels where jurisdiction_id = 1)"""
 schools_sql = """SELECT id, x ,y FROM urbansim.schools"""
 parks_sql = """SELECT park_id,  x, y FROM urbansim.parks"""
 transit_sql = 'SELECT x, y, stopnum FROM urbansim.transit'

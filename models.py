@@ -4,6 +4,7 @@ from urbansim.developer import sqftproforma
 import orca
 from urbansim_defaults import models
 from urbansim_defaults import utils
+import numpy as np
 
 ###  ESTIMATIONS  ##################################
 @orca.step('rsh_estimate')
