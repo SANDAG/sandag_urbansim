@@ -26,7 +26,7 @@ jurisdiction_id int
 ,assigned varchar
 ,max_dua_rev double precision
 ,max_units_rev double precision
-,notes text
+,notes_rev text
 );
 
 --CLEAN UP TABLE
@@ -53,7 +53,6 @@ SELECT
 	zoning_id
 	,jurisdiction_id
 	,max_dua
-	,notes
 	,ROW_NUMBER() OVER(PARTITION BY zoning_id ORDER BY jurisdiction_id) AS RowNumber
 FROM staging.zoning_review
 ORDER BY rownumber DESC, zoning_id 
@@ -67,40 +66,94 @@ INTO staging.zoning
 FROM urbansim.zoning
 
 --ADD TMP COLUMNS
-ALTER TABLE staging.zoning ADD COLUMN max_dua_tmp numeric
-ALTER TABLE staging.zoning ADD COLUMN max_res_units_tmp integer
-ALTER TABLE staging.zoning ADD COLUMN notes_tmp text
+ALTER TABLE staging.zoning ADD COLUMN max_dua_tmp numeric;
+ALTER TABLE staging.zoning ADD COLUMN max_res_units_tmp integer;
+ALTER TABLE staging.zoning ADD COLUMN notes_tmp text;
 
 --JOIN TABLES
 SELECT
 	z.zoning_id
 	,z.max_dua
-	,z.max_dua_tmp
+	--,z.max_dua_tmp
 	,z.max_res_units
-	,z.max_res_units_tmp
+	--,z.max_res_units_tmp
 	,c.max_dua_rev	
 	,c.max_units_rev
 	,z.notes
 	,z.tmp_notes
-	,c.notes
-	,z.notes_tmp
+	,c.notes_rev
+	--,z.notes_tmp
 	,c.assigned
+	,review_by
+	,review_date
 FROM staging.zoning z
 JOIN staging.zoning_review c
 ON z.zoning_id = c.zoning_id
+--WHERE z.max_dua > c.max_dua_rev
 
 --COPY DUA VALUES
 UPDATE staging.zoning z
-SET max_dua_tmp = c.max_dua_rev
-	,max_res_units_tmp = c.max_units_rev
-	,notes_tmp = CONCAT(z.notes , ' -ewe: ' , c.notes)
-FROM staging.zoning_conf c
-WHERE z.zoning_id = c.zoning_id
-AND 	--ADD FILTER HERE
+SET max_dua = r.max_dua_rev
+	,max_res_units = r.max_units_rev
+	--,review_date = 
+	--,review_by = 'eric.wendt@sandag.org'
+	,notes = CONCAT(z.notes , ' ewe: ' , r.notes_rev)
+FROM staging.zoning_review r
+WHERE z.zoning_id = r.zoning_id
+--AND 	--ADD FILTER HERE
 --RUN AGAIN, COPY TO ACTUAL COLUMNS
 
+--OOPS DELETE PRECEDING 
+UPDATE staging.zoning
+SET notes = RIGHT(notes, LENGTH(notes)-6)
+WHERE notes LIKE ' ewe: %'
+
+--FIND RECORDS THAT DID NOT JOIN
+SELECT zoning_id
+FROM staging.zoning_review
+WHERE zoning_id NOT IN (SELECT zoning_id FROM staging.zoning)
+
+--INSERT ADDITIONAL RECORDS
+INSERT INTO staging.zoning (
+	zoning_id
+	,max_dua
+	,max_res_units
+	,notes
+	--,review_date =
+	,review_by
+)
+SELECT
+	zoning_id
+	,max_dua_rev
+	,max_units_rev
+	,notes_rev
+	--,timestamp
+	,'eric.wendt@sandag.org' AS review_by
+FROM staging.zoning_review
+WHERE zoning_id NOT IN (SELECT zoning_id FROM staging.zoning)
+
+
+--LOOK AT FINAL TABLE
+SELECT
+	z.zoning_id
+	,z.max_dua
+	--,z.max_dua_tmp
+	,z.max_res_units
+	--,z.max_res_units_tmp
+	--,c.max_dua_rev	
+	--,c.max_units_rev
+	,z.notes
+	--,z.tmp_notes
+	--,c.notes
+	--,z.notes_tmp
+	--,c.assigned
+FROM staging.zoning z
+JOIN staging.zoning_review c
+ON z.zoning_id = c.zoning_id
+--WHERE z.max_dua > c.max_dua_rev
+
 --DROP TMP COLUMNS
-ALTER TABLE staging.zoning DROP COLUMN max_dua_tmp
-ALTER TABLE staging.zoning DROP COLUMN max_res_units_tmp
-ALTER TABLE staging.zoning DROP COLUMN notes_tmp
+ALTER TABLE staging.zoning DROP COLUMN max_dua_tmp;
+ALTER TABLE staging.zoning DROP COLUMN max_res_units_tmp;
+ALTER TABLE staging.zoning DROP COLUMN notes_tmp;
 
