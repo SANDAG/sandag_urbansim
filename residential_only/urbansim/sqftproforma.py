@@ -118,8 +118,10 @@ class SqFtProFormaConfig(object):
 
     def _reset_defaults(self):
         self.parcel_sizes = []
-        self.fars = []
-       # self.uses = ['retail', 'industrial', 'office', 'residential']
+
+
+        '''  self.fars = []
+        # self.uses = ['retail', 'industrial', 'office', 'residential']
         self.uses = []
 
         #self.residential_uses = [False, False, False, True]
@@ -129,8 +131,8 @@ class SqFtProFormaConfig(object):
 
         self.profit_factor = 0
         self.building_efficiency = 0
-        self.parcel_coverage = 0
-        self.cap_rate = 0
+        self.parcel_coverage = .8
+        self.cap_rate = .05
 
         self.parking_rates = {}
         self.sqft_per_rate = 0
@@ -146,6 +148,7 @@ class SqFtProFormaConfig(object):
         self.height_per_story = 0
         #self.max_retail_height = 2.0
         #self.max_industrial_height = 2.0
+        '''
 
     def _convert_types(self):
         """
