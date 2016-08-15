@@ -91,16 +91,34 @@ JOIN staging.zoning_review c
 ON z.zoning_id = c.zoning_id
 --WHERE z.max_dua > c.max_dua_rev
 
---COPY DUA VALUES
+--COPY DUA VALUES BY ASSIGNED
+--CHECK ASSIGNED
+SELECT assigned, COUNT(*)
+FROM staging.zoning_review
+GROUP BY assigned
+
+--ASSIGNED EWE
 UPDATE staging.zoning z
-SET max_dua = r.max_dua_rev
-	,max_res_units = r.max_units_rev
-	--,review_date = 
-	--,review_by = 'eric.wendt@sandag.org'
-	,notes = CONCAT(z.notes , ' ewe: ' , r.notes_rev)
+SET max_dua_tmp = r.max_dua_rev
+	,max_res_units_tmp = r.max_units_rev
+	,review_date = '2016-08-12 12:00:00.000' 
+	,review_by = 'eric.wendt@sandag.org'
+	,notes_tmp = CONCAT(z.notes , ' ewe: ' , r.notes_rev)
 FROM staging.zoning_review r
 WHERE z.zoning_id = r.zoning_id
---AND 	--ADD FILTER HERE
+AND assigned = 'EWE'
+--RUN AGAIN, COPY TO ACTUAL COLUMNS
+
+--ASSIGNED CDAN
+UPDATE staging.zoning z
+SET max_dua_tmp = r.max_dua_rev
+	,max_res_units_tmp = r.max_units_rev
+	,review_date = '2016-08-12 12:00:00.000'
+	,review_by = 'clint.daniels@sandag.org'
+	,notes_tmp = CONCAT(z.notes , ' cdan: ' , r.notes_rev)
+FROM staging.zoning_review r
+WHERE z.zoning_id = r.zoning_id
+AND assigned = 'CDAN'
 --RUN AGAIN, COPY TO ACTUAL COLUMNS
 
 --OOPS DELETE PRECEDING 
@@ -108,18 +126,24 @@ UPDATE staging.zoning
 SET notes = RIGHT(notes, LENGTH(notes)-6)
 WHERE notes LIKE ' ewe: %'
 
+--OOPS DELETE PRECEDING 
+UPDATE staging.zoning
+SET notes = RIGHT(notes, LENGTH(notes)-7)
+WHERE notes LIKE ' cdan: %'
+
+
 --FIND RECORDS THAT DID NOT JOIN
 SELECT zoning_id
 FROM staging.zoning_review
 WHERE zoning_id NOT IN (SELECT zoning_id FROM staging.zoning)
 
---INSERT ADDITIONAL RECORDS
+--INSERT ADDITIONAL RECORDS BY USER
 INSERT INTO staging.zoning (
 	zoning_id
 	,max_dua
 	,max_res_units
 	,notes
-	--,review_date =
+	,review_date
 	,review_by
 )
 SELECT
@@ -127,10 +151,32 @@ SELECT
 	,max_dua_rev
 	,max_units_rev
 	,notes_rev
-	--,timestamp
+	,'2016-08-12 12:00:00.000' AS review_date
 	,'eric.wendt@sandag.org' AS review_by
 FROM staging.zoning_review
 WHERE zoning_id NOT IN (SELECT zoning_id FROM staging.zoning)
+AND assigned = 'EWE'
+
+--INSERT ADDITIONAL RECORDS BY USER
+INSERT INTO staging.zoning (
+	zoning_id
+	,max_dua
+	,max_res_units
+	,notes
+	,review_date
+	,review_by
+)
+SELECT
+	zoning_id
+	,max_dua_rev
+	,max_units_rev
+	,notes_rev
+	,'2016-08-12 12:00:00.000' AS review_date
+	,'clint.daniels@sandag.org' AS review_by
+FROM staging.zoning_review
+WHERE zoning_id NOT IN (SELECT zoning_id FROM staging.zoning)
+AND assigned = 'CDAN'
+
 
 
 --LOOK AT FINAL TABLE
