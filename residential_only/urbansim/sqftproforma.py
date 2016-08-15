@@ -117,75 +117,33 @@ class SqFtProFormaConfig(object):
         self._reset_defaults()
 
     def _reset_defaults(self):
-        self.parcel_sizes = [10000.0]
-        self.fars = [.1, .25, .5, .75, 1.0, 1.5, 1.8, 2.0, 2.25, 2.5, 2.75,
-                     3.0, 3.25, 3.5, 3.75, 4.0, 4.5,
-                     5.0, 5.5, 6.0, 6.5, 7.0, 9.0, 11.0]
+        self.parcel_sizes = []
+        self.fars = []
        # self.uses = ['retail', 'industrial', 'office', 'residential']
-        self.uses = ['residential']
+        self.uses = []
 
         #self.residential_uses = [False, False, False, True]
-        self.residential_uses = [True]
+        self.residential_uses = []
 
-        self.forms = {
-          #  'retail': {
-           #     "retail": 1.0
-           # },
-           # 'industrial': {
-           #     "industrial": 1.0
-           # },
-           # 'office': {
-           #     "office": 1.0
-           # },
-            'residential': {
-                "residential": 1.0
-            },
-           # 'mixedresidential': {
-            #    "retail": .1,
-            #    "residential": .9
-           # },
-            #'mixedoffice': {
-            #    "office": 0.7,
-            #    "residential": 0.3
-           # }
-        }
+        self.forms = {}
 
-        self.profit_factor = 1.1
-        self.building_efficiency = .7
-        self.parcel_coverage = .8
-        self.cap_rate = .05
+        self.profit_factor = 0
+        self.building_efficiency = 0
+        self.parcel_coverage = 0
+        self.cap_rate = 0
 
-        self.parking_rates = {
-            #"retail": 2.0,
-            #"industrial": .6,
-            #"office": 1.0,
-            "residential": 1.0
-        }
-        self.sqft_per_rate = 1000.0
+        self.parking_rates = {}
+        self.sqft_per_rate = 0
 
-        self.parking_configs = ['surface', 'deck', 'underground']
+        self.parking_configs = []
 
-        self.costs = {
-           # "retail": [160.0, 175.0, 200.0, 230.0],
-           # "industrial": [140.0, 175.0, 200.0, 230.0],
-           # "office": [160.0, 175.0, 200.0, 230.0],
-            "residential": [170.0, 190.0, 210.0, 240.0]
-        }
+        self.costs = {}
+        self.heights_for_costs = []
 
-        self.heights_for_costs = [15, 55, 120, np.inf]
+        self.parking_sqft_d = {}
+        self.parking_cost_d = {}
 
-        self.parking_sqft_d = {
-            'surface': 300.0,
-            'deck': 250.0,
-            'underground': 250.0
-        }
-        self.parking_cost_d = {
-            'surface': 30,
-            'deck': 90,
-            'underground': 110
-        }
-
-        self.height_per_story = 12.0
+        self.height_per_story = 0
         #self.max_retail_height = 2.0
         #self.max_industrial_height = 2.0
 

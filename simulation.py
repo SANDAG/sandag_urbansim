@@ -17,7 +17,7 @@ orca.run(['scheduled_development_events',
           "price_vars",
           "feasibility2",
           "residential_developer"
-          ], iter_vars=range(2015,2050),data_out='data\\results.h5', out_interval=1)
+          ], iter_vars=range(2015,2016),data_out='data\\results.h5', out_interval=1)
 
 orca.get_table('nodes').to_frame().to_csv('data/nodes.csv')
 orca.get_table('buildings').to_frame().to_csv('data/buildings.csv')
@@ -29,5 +29,6 @@ orca.get_table('parcels').to_frame().to_csv('data/parcels.csv')
 # sys.stdout = orig_stdout
 # f.close()
 
-
-
+x = file('.git/refs/heads/residential')
+git_hash = 'Full Commit Hash  ' + x.read() 
+print git_hash
