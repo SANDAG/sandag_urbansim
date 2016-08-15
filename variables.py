@@ -150,7 +150,7 @@ def year_built_1980to1990(buildings):
 def income_quartile(households):
     hh_inc = households.to_frame(['household_id', 'income'])
     bins = [hh_inc.income.min()-1, 30000, 59999, 99999, 149999, hh_inc.income.max()+1]
-    group_names = range(1,6)
+    group_names = range(1,     6)
     return pd.cut(hh_inc.income, bins, labels=group_names).astype('int64')
 
 
@@ -173,8 +173,8 @@ def building_purchase_price(parcels):
 
 
 @orca.column('parcels', 'building_purchase_price_sqft')
-def building_purchase_price_sqft():
-    return parcel_average_price("residential") * .81
+def building_purchase_price_sqft(settings):
+    return parcel_average_price("residential") * settings['parcel_avg_pr_mult']
 
 
 @orca.column('parcels', 'distance_to_onramp')
@@ -294,11 +294,13 @@ def form_to_btype(row):
         return 19
 
 
-
 @orca.injectable('parcel_sales_price_sqft_func', autocall=False)
 def parcel_sales_price_sqft(use):
     s = parcel_average_price(use)
-    if use == "residential": s *= 1.2
+    import yaml
+    with open('configs/settings.yaml', 'r') as f:
+        settings = yaml.load(f)
+    if use == "residential": s *= settings['res_sales_price_multiplier']
     return s
 
 

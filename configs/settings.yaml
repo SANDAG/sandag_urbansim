@@ -158,3 +158,8 @@ sqftproforma_config:
   height_per_story: 12.0
   max_retail_height: 2.0
   max_industrial_height: 2.0
+
+#yaml values for hard code values in variables.py
+
+parcel_avg_pr_mult: .81
+res_sales_price_multiplier: 1.2
