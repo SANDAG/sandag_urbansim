@@ -58,7 +58,7 @@ household_controls_sql = """SELECT yr as year, income_quartile, households as hh
 employment_controls_sql = """SELECT yr as year, number_of_jobs, sector_id FROM urbansim.employment_controls"""
 zoning_allowed_uses_sql = """SELECT development_type_id, zoning_id FROM urbansim.zoning_allowed_use ORDER BY development_type_id, zoning_id"""
 fee_schedule_sql = """SELECT development_type_id, development_fee_per_unit_space_initial FROM urbansim.fee_schedule"""
-zoning_sql = """SELECT zoning_id, max_dua, max_building_height as max_height, max_far FROM urbansim.zoning"""
+zoning_sql = """SELECT zoning_id, max_dua, max_building_height as max_height, max_far, max_res_units FROM urbansim.zoning"""
 
 assessor_transactions_sql = """SELECT parcel_id, tx_price FROM (SELECT parcel_id, RANK() OVER (PARTITION BY parcel_id ORDER BY tx_date) as tx, tx_date, tx_price FROM estimation.assessor_par_transactions) x WHERE tx = 1"""
 

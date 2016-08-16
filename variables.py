@@ -236,6 +236,11 @@ def parcel_max_height(parcels, zoning):
     return misc.reindex(zoning.max_height, parcels.zoning_id).fillna(350)
 
 
+@orca.column('parcels', 'max_res_units', cache=True)
+def parcel_max_res_units(parcels, zoning):
+    return misc.reindex(zoning.max_res_units, parcels.zoning_id)
+
+
 @orca.column('parcels', 'newest_building')
 def newest_building(parcels, buildings):
     return buildings.year_built.groupby(buildings.parcel_id).max().\
