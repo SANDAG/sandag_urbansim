@@ -335,7 +335,8 @@ def feasibility2(parcels, settings,
 
     attr = ['parcel_sizes', 'fars', 'profit_factor', 'building_efficiency', 'parcel_coverage',
             'cap_rate', 'height_per_story', "sqft_per_rate", "uses", "residential_uses",
-            "parking_cost_d", "parking_sqft_d", "costs", "parking_rates", 'parking_configs', 'heights_for_costs']
+            "parking_cost_d", "parking_sqft_d", "costs", "parking_rates", 'parking_configs', 'heights_for_costs'
+            , 'max_retail_height', 'max_industrial_height']
 
     # add max retail height and industrial height when nrh is included in the model
     # change yaml file when running nrh
@@ -343,13 +344,17 @@ def feasibility2(parcels, settings,
     for x in attr:
         setattr(config, x, settings["sqftproforma_config"][x])
 
-    # Add other forms while running nrh
-    setattr(config, 'forms', {'residential': settings["sqftproforma_config"]['forms']['residential']})
+    types = {}
+    attr2 = ['residential', 'retail', 'industrial', 'office', 'mixedresidential', 'mixedoffice']
+    for x in attr2:
+            types.update({x: settings["sqftproforma_config"]['forms'][x]})
+
+    setattr(config, 'forms', types)
 
     utils.run_feasibility(parcels,
                           parcel_sales_price_sqft_func,
                           parcel_is_allowed_func, only_built=True,
-                          config=config,forms_to_test=['residential'],
+                          config=config, forms_to_test=['residential'],
                           **kwargs)
 
 

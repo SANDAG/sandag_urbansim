@@ -116,41 +116,34 @@ building_type_map:
 sqftproforma_config:
   parcel_sizes : [10000.0]
   fars: [.1, .25, .5, .75, 1.0, 1.5, 1.8, 2.0, 2.25, 2.5, 2.75, 3.0, 3.25, 3.5, 3.75, 4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0, 9.0, 11.0]
-  uses: [ 'residential']
-  residential_uses: [True]
+  uses: ['retail', 'industrial', 'office', 'residential']
+  residential_uses: [False, False, False, True]
 
   #add in the disctionary while running nrh
   forms:
     residential: {residential: 1.0}
-   ## retail: 1.0
-   ## industrial: 1.0
-   ## office: 1.0
-   ## residential: 1.0
-   ## mixedresidential:
-   ##   retail: .1
-   ##   residential: .9
-   ## mixedoffice:
-   ##   office: 0.7
-   ##   residential: 0.3
+    retail: {retail: 1.0}
+    industrial: {industrial: 1.0}
+    office: {office: 1.0}
+    mixedresidential: {retail: .1, residential: .9}
+    mixedoffice: {office: 0.7, residential: 0.3}
 
-  profit_factor : 1.1
-  building_efficiency : .7
-  parcel_coverage : .8
-  cap_rate : .05
+  profit_factor: 1.1
+  building_efficiency: .7
+  parcel_coverage: .8
+  cap_rate: .05
 
   #add the rest of the cost when running nhr
-  parking_rates: {'residential': 1.0}
-    ##retail: 2.0
-    ##industrial: .6
-    ##office: 1.0
+  parking_rates: {'retail': 2.0, 'industrial': .6, 'office': 1.0,  'residential': 1.0}
 
   sqft_per_rate: 1000.0
 
   #add the rest of the cost when running nhr
-  costs: {'residential': [170.0, 190.0, 210.0, 240.0]}
-    #retail: [160.0, 175.0, 200.0, 230.0]
-    #industrial: [140.0, 175.0, 200.0, 230.0]
-    #office: [160.0, 175.0, 200.0, 230.0]
+  costs: {'residential': [170.0, 190.0, 210.0, 240.0],
+          'retail': [160.0, 175.0, 200.0, 230.0],
+          'industrial': [140.0, 175.0, 200.0, 230.0],
+          'office': [160.0, 175.0, 200.0, 230.0]}
+
 
   parking_configs: ['surface', 'deck', 'underground']
   heights_for_costs: [15, 55, 120, .inf]
