@@ -123,3 +123,12 @@ FROM
 JOIN ref.development_type_lu_code dev 
 ON lc.lu = dev.lu_code
 WHERE usd.Shape.STCentroid().STWithin(lc.Shape) = 1
+
+
+
+/** FIX COMPLETION DATE **/
+--GET VALUES FROM PREVIOUS TABLE
+UPDATE urbansim.scheduled_development
+SET compdate = (CAST(CONVERT(NUMERIC, d.phase + 4) AS nvarchar) + '-12-31')
+FROM staging.scheduled_development2015 d
+WHERE siteid = d.site_id
