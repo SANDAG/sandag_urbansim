@@ -349,7 +349,7 @@ def feasibility2(parcels, settings,
     utils.run_feasibility(parcels,
                           parcel_sales_price_sqft_func,
                           parcel_is_allowed_func, only_built=True,
-                          config=config,
+                          config=config,forms_to_test=['residential'],
                           **kwargs)
 
 
