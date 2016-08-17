@@ -5,6 +5,8 @@ import orca
 from urbansim_defaults import models
 from urbansim_defaults import utils
 import numpy as np
+from pysandag.database import get_connection_string
+
 
 ###  ESTIMATIONS  ##################################
 @orca.step('rsh_estimate')
@@ -349,3 +351,30 @@ def feasibility2(parcels, settings,
                           parcel_is_allowed_func, only_built=True,
                           config=config,
                           **kwargs)
+
+
+def get_git_hash(model='residential'):
+    x = file('.git/refs/heads/' + model)
+    git_hash = x.read()
+    return git_hash
+
+
+def to_database(df_name=' ', urbansim_connection=get_connection_string("configs/dbconfig.yml", 'urbansim_database'),
+                year=2015, default_schema='urbansim_output'):
+    """ df_name:
+            Required parameter, is the name of the table that will be read from the H5 file,
+            Also first half of the table name to be stored in the database
+        urbansim_connection:
+            sql connection, default is for urbansim_database
+        year:
+            year of information to be caputured, should be pass the same range as simulation period
+            minus first and last year.
+        defalut_schema:
+            The schema name under which to save the data, default is urbansim_output
+    """
+    git = get_git_hash()
+    run_num = file('RUNNUM')
+    str1 = df_name + '_' + git[:6] + '_' + run_num.read()
+    df = pd.read_hdf('data\\results.h5', str(year) + '/' + df_name)
+    df['year'] = year
+    df.to_sql(str1, urbansim_connection, flavor='postgresql', schema=default_schema, if_exists='append')
