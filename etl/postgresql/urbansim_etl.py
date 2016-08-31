@@ -34,6 +34,7 @@ selected = [
 sql_in_engine = create_engine(get_connection_string("dbconfig.yml", 'in_db'))
 sql_out_engine = create_engine(get_connection_string("dbconfig.yml", 'out_db'))
 schema = datasets['schema']
+print 'Schema', schema
 
 metadata = MetaData(bind=sql_out_engine, schema=schema)
 
