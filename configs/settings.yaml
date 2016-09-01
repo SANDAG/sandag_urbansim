@@ -28,6 +28,7 @@ default_land_cost: 12.21
 feasibility:
   parcel_filter: newest_building < 2010
   residential_to_yearly: True
+  only_built: False # True to build only profitable buildings
 #  pass_through:
 #    - oldest_building
 #    - total_sqft
