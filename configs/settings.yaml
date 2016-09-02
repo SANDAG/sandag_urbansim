@@ -158,3 +158,5 @@ sqftproforma_config:
 
 parcel_avg_pr_mult: .81
 res_sales_price_multiplier: 1.2
+
+zoning_schedule_id: 2

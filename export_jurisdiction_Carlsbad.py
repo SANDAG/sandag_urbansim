@@ -1,8 +1,12 @@
-
 from sqlalchemy import create_engine
 from pysandag.database import get_connection_string
 import pandas as pd
 import os
+import models as md
+import yaml
+
+with open('configs/settings.yaml', 'r') as f:
+    settings = yaml.load(f)
 
 urbansim_engine = create_engine(get_connection_string("configs/dbconfig.yml", 'urbansim_database'))
 
@@ -91,6 +95,16 @@ parcels_df['zoning_id'] = parcels_df['zoning_id'].astype(str)
 zoning_allowed_uses_df['zoning_id'] = zoning_allowed_uses_df['zoning_id'].astype(str)
 zoning_df['zoning_id'] = zoning_df['zoning_id'].astype(str)
 zoning_df = zoning_df.set_index('zoning_id')
+
+###########################
+# parent data
+###########################
+zoning_schedule = """SELECT * FROM staging.zoning_schedule"""
+zoning_schedule_df = (zoning_schedule, urbansim_engine, index_col='zoning_id')
+
+zoning_df = md.get_parent_values(id1=settings['zoning_schedule_id'], id_name='zoning_schedule_id',
+                                 parent_name='parent_zoning_schedule_id',
+                                 column='max_dua', df_data=zoning_df, df_id=zoning_schedule_df)
 
 #########################################
 # scale household controls
