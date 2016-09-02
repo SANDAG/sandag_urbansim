@@ -10,7 +10,10 @@ import os
 # orig_stdout = sys.stdout
 # f = file('data\\stdout.txt', 'w')
 # sys.stdout = f
-os.remove('data\\results.h5')
+try:
+    os.remove('data/results.h5')
+except OSError:
+    pass
 
 rng = range(2015, 2020)
 scenario = 'Carlsbad Only'
@@ -23,7 +26,7 @@ orca.run(['scheduled_development_events',
           'households_transition',
           "hlcm_simulate",
           "price_vars",
-          "feasibility",
+          "feasibility2",
           "residential_developer"
           ], iter_vars=rng, data_out='data\\results.h5', out_interval=1)
 
