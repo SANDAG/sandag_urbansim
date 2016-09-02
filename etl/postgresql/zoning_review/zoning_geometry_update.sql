@@ -38,12 +38,23 @@ SELECT z.zoning_id AS zoning
 	,z.shape_review AS zoning_shape_review
 	--,z.geometry_old				--INCLUDE GEOMETRY 1/4
 	--,r.geometry_new				--INCLUDE GEOMETRY 2/4
+	,CASE
+		WHEN z.zoning_id IS  NULL AND r.zoneid IS NULL THEN '???'
+		WHEN z.zoning_id = r.zoneid AND z.SHAPE IS NULL THEN 'READY ADDED'
+		WHEN z.zoning_id = r.zoneid AND UPPER(notes) LIKE '%NOT FOUND%' THEN 'READY NOT FOUND'
+		WHEN z.zoning_id = r.zoneid THEN 'READY'
+		WHEN z.zoning_id IS NOT NULL AND UPPER(notes) LIKE '%NOT FOUND%' THEN 'NOT FOUND'
+		WHEN z.zoning_id IS NOT NULL AND z.SHAPE IS NULL AND r.zoneid IS NULL THEN 'HAVE ATT NEED SHAPE'
+		WHEN z.zoning_id IS NULL AND r.zoneid IS NOT NULL THEN 'HAVE SHAPE NEED ATT'
+		ELSE '--'
+	END AS review
 INTO staging.zoning_review_geo_join			--LOAD INTO NEW TABLE
 FROM
 (
 	SELECT zoning_id
 		,jurisdiction_id
 		,zone_code
+		,shape
 		--,shape AS geometry_old		--INCLUDE GEOMETRY 3/4
 		,notes
 		,CASE 
@@ -52,10 +63,14 @@ FROM
 		END AS shape_review
 	FROM staging.zoning
 ) AS z
-FULL OUTER JOIN (SELECT zoneid FROM staging.zoning_review_geo GROUP BY zoneid) AS r
+FULL OUTER JOIN (SELECT 
+		REPLACE(REPLACE(zoneid, '.', '_'), '/', '_') AS zoneid 
+		FROM staging.zoning_review_geo 
+		GROUP BY zoneid) AS r
 --FULL OUTER JOIN (SELECT zoneid, ST_Union(wkb_geometry) AS geometry_new FROM staging.zoning_review_geo GROUP BY zoneid) AS r	--INCLUDE GEOMETRY 3/4
 ON z.zoning_id = r.zoneid
-ORDER BY COALESCE(z.zoning_id, r.zoneid)
+ORDER BY 4,1,2
+--ORDER BY COALESCE(z.zoning_id, r.zoneid)
 
 --CHECK RESULTS
 SELECT *  FROM staging.zoning_review_geo_join
