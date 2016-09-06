@@ -70,7 +70,7 @@ assessor_transactions_sql = """SELECT parcel_id, tx_price FROM (SELECT parcel_id
 nodes_df = pd.read_sql(nodes_sql, urbansim_engine, index_col='node_id')
 intersection_df = pd.read_sql(intersection_sql, urbansim_engine, index_col='intersection_id')
 edges_df = pd.read_sql(edges_sql, urbansim_engine)
-parcels_df = pd.read_sql(parcels_sql, urbansim_engine, index_col='parcel_id')
+parcels_df = pd.read_sql(parcels_sql, urbansim_engine)
 buildings_df = pd.read_sql(buildings_sql, urbansim_engine, index_col='building_id')
 households_df = pd.read_sql(households_sql, urbansim_engine, index_col='household_id')
 jobs_df = pd.read_sql(jobs_sql, urbansim_engine, index_col='job_id')
@@ -118,7 +118,7 @@ parcel_zoning_schedule = """SELECT ps.zoning_schedule_id, ps.parcel_id, p.develo
                INNER JOIN urbansim.parcels as p
                on ps.parcel_id = p.parcel_id"""
 
-parcel_zoning_schedule_df = pd.read_sql(parcel_zoning_schedule, urbansim_engine, index_col='parcel_id')
+parcel_zoning_schedule_df = pd.read_sql(parcel_zoning_schedule, urbansim_engine)
 
 parcels_df['zoning_schedule_id'] = 1
 
@@ -126,8 +126,9 @@ parcels_df = parcels_df.append(parcel_zoning_schedule_df)
 
 parcels_df = md.get_parent_values(id1=settings['zoning_schedule_id'], id_name='zoning_schedule_id',
                                  parent_name='parent_zoning_schedule_id',
-                                 column='zoning_id', df_data=parcels_df, df_id=zoning_schedule_df)
+                                 column='parcel_id', df_data=parcels_df, df_id=zoning_schedule_df)
 
+parcel_df = parcels_df.set_index('parcel_id')
 parcels_df['zoning_id'] = parcels_df['zoning_id'].astype(str)
 
 
