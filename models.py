@@ -714,7 +714,7 @@ def update_scenario(scenario=' '):
         conn.commit()
 
 
-def get_parent_values(id1=1, id_name='id', parent_name='parent', column='year', df_data=pd.DataFrame()
+def get_parent_values(id1=1, id_name='zoning_schedule_id', parent_name='parent_zoning_schedule_id', column='zoning_id', df_data=pd.DataFrame()
                       , df_id=pd.DataFrame()):
 
     """
@@ -729,22 +729,21 @@ def get_parent_values(id1=1, id_name='id', parent_name='parent', column='year', 
     return: the definition returns a pandas df with index of the child id as
             and senior most parent indexed at length(df). This allows to pull zone id specification from df.
     """
-
+    import math
     parent = df_id[parent_name][df_id[id_name] == id1].values
+    p1 = parent[0]
 
-    if not parent:
+    if math.isnan(p1):
         df_data = df_data[df_data[id_name] == id1]
         return df_data
     else:
-        df_parent = get_parent_values(id1=parent[0], df_data=df_data, df_id=df_id)
-
+        df_parent = get_parent_values(id1=int(p1), id_name=id_name
+                                      , parent_name=parent_name, df_data=df_data, df_id=df_id, column=column)
         df_data = df_data[df_data[id_name] == id1]
         list1 = df_data[column]
-
         df_parent = df_parent[~df_parent[column].isin(list1)]
         df_data = df_data.append(df_parent)
-        # df_data['final_id'] = id1
-        return df_data.reset_index(drop=True)
+        return df_data
 
 
 def get_id(id_name='id', df_data=pd.DataFrame()):
@@ -769,7 +768,7 @@ def get_zoning_values(id1=1, id_name='zoning_schedule_id', parent_name='parent_z
     return: the definition returns a pandas df with index of the child id as
             and senior most parent indexed at length(df). This allows to pull zone id specification from df.
     """
-
+    import math
     parent = df_id[parent_name][df_id[id_name] == id1].values
 
     if math.isnan(parent):

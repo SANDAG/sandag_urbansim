@@ -98,7 +98,7 @@ zoning_df['zoning_id'] = zoning_df['zoning_id'].astype(str)
 zoning_df = zoning_df.set_index('zoning_id')
 
 ###########################
-# parent data
+# parent data zoning
 ###########################
 zoning_schedule_sql = """SELECT * FROM staging.zoning_schedule"""
 zoning_schedule_df = pd.read_sql(zoning_schedule_sql, urbansim_engine)
@@ -107,6 +107,29 @@ if (settings['zoning_schedule_id'] > 1) and (settings['zoning_schedule_id'] != m
     zoning_df = md.get_zoning_values(id1=settings['zoning_schedule_id'], id_name='zoning_schedule_id',
                                      parent_name='parent_zoning_schedule_id',
                                      df_data=zoning_df, df_id=zoning_schedule_df)
+
+###########################
+# parent data parcel
+###########################
+
+parcel_zoning_schedule = """SELECT ps.zoning_schedule_id, ps.parcel_id, p.development_type_id, p.luz_id, p.parcel_acres as acres, ps.zoning_id as zoning_id, ST_X(ST_Transform(centroid::geometry, 2230)) as x, ST_Y(ST_Transform(centroid::geometry, 2230)) as y,
+               p.distance_to_coast, p.distance_to_freeway
+               FROM staging.parcel_zoning_schedule as ps
+               INNER JOIN urbansim.parcels as p
+               on ps.parcel_id = p.parcel_id"""
+
+parcel_zoning_schedule_df = pd.read_sql(parcel_zoning_schedule, urbansim_engine, index_col='parcel_id')
+
+parcels_df['zoning_schedule_id'] = 1
+
+parcels_df = parcels_df.append(parcel_zoning_schedule_df)
+
+parcels_df = md.get_parent_values(id1=settings['zoning_schedule_id'], id_name='zoning_schedule_id',
+                                 parent_name='parent_zoning_schedule_id',
+                                 column='zoning_id', df_data=parcels_df, df_id=zoning_schedule_df)
+
+parcels_df['zoning_id'] = parcels_df['zoning_id'].astype(str)
+
 
 #########################################
 # scale household controls
