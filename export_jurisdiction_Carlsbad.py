@@ -62,7 +62,8 @@ household_controls_sql = """SELECT yr as year, income_quartile, households as hh
 employment_controls_sql = """SELECT yr as year, number_of_jobs, sector_id FROM urbansim.employment_controls"""
 zoning_allowed_uses_sql = """SELECT development_type_id, zoning_id FROM urbansim.zoning_allowed_use ORDER BY development_type_id, zoning_id"""
 fee_schedule_sql = """SELECT development_type_id, development_fee_per_unit_space_initial FROM urbansim.fee_schedule"""
-zoning_sql = """SELECT zoning_id, max_dua, max_building_height as max_height, max_far, max_res_units FROM urbansim.zoning"""
+zoning_sql = """SELECT zoning_schedule_id, zoning_id, max_dua, max_building_height as max_height, max_far, max_res_units FROM staging.zoning"""
+
 
 assessor_transactions_sql = """SELECT parcel_id, tx_price FROM (SELECT parcel_id, RANK() OVER (PARTITION BY parcel_id ORDER BY tx_date) as tx, tx_date, tx_price FROM estimation.assessor_par_transactions) x WHERE tx = 1"""
 
@@ -99,12 +100,13 @@ zoning_df = zoning_df.set_index('zoning_id')
 ###########################
 # parent data
 ###########################
-zoning_schedule = """SELECT * FROM staging.zoning_schedule"""
-zoning_schedule_df = (zoning_schedule, urbansim_engine, index_col='zoning_id')
+zoning_schedule_sql = """SELECT * FROM staging.zoning_schedule"""
+zoning_schedule_df = pd.read_sql(zoning_schedule_sql, urbansim_engine)
 
-zoning_df = md.get_parent_values(id1=settings['zoning_schedule_id'], id_name='zoning_schedule_id',
-                                 parent_name='parent_zoning_schedule_id',
-                                 column='max_dua', df_data=zoning_df, df_id=zoning_schedule_df)
+if (settings['zoning_schedule_id'] > 1) and (settings['zoning_schedule_id'] != max(zoning_df['zoning_schedule_id'])):
+    zoning_df = md.get_zoning_values(id1=settings['zoning_schedule_id'], id_name='zoning_schedule_id',
+                                     parent_name='parent_zoning_schedule_id',
+                                     df_data=zoning_df, df_id=zoning_schedule_df)
 
 #########################################
 # scale household controls
