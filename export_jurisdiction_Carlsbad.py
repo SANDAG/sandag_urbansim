@@ -4,6 +4,7 @@ import pandas as pd
 import os
 import models as md
 import yaml
+import math
 
 with open('configs/settings.yaml', 'r') as f:
     settings = yaml.load(f)
@@ -70,7 +71,7 @@ assessor_transactions_sql = """SELECT parcel_id, tx_price FROM (SELECT parcel_id
 nodes_df = pd.read_sql(nodes_sql, urbansim_engine, index_col='node_id')
 intersection_df = pd.read_sql(intersection_sql, urbansim_engine, index_col='intersection_id')
 edges_df = pd.read_sql(edges_sql, urbansim_engine)
-parcels_df = pd.read_sql(parcels_sql, urbansim_engine)
+parcels_df = pd.read_sql(parcels_sql, urbansim_engine,index_col='parcel_id')
 buildings_df = pd.read_sql(buildings_sql, urbansim_engine, index_col='building_id')
 households_df = pd.read_sql(households_sql, urbansim_engine, index_col='household_id')
 jobs_df = pd.read_sql(jobs_sql, urbansim_engine, index_col='job_id')
@@ -112,25 +113,49 @@ if (settings['zoning_schedule_id'] > 1) and (settings['zoning_schedule_id'] != m
 # parent data parcel
 ###########################
 
-parcel_zoning_schedule = """SELECT ps.zoning_schedule_id, ps.parcel_id, p.development_type_id, p.luz_id, p.parcel_acres as acres, ps.zoning_id as zoning_id, ST_X(ST_Transform(centroid::geometry, 2230)) as x, ST_Y(ST_Transform(centroid::geometry, 2230)) as y,
-               p.distance_to_coast, p.distance_to_freeway
-               FROM staging.parcel_zoning_schedule as ps
-               INNER JOIN urbansim.parcels as p
-               on ps.parcel_id = p.parcel_id"""
+# parcel_zoning_schedule = """SELECT ps.zoning_schedule_id, ps.parcel_id, p.development_type_id, p.luz_id, p.parcel_acres as acres, ps.zoning_id as zoning_id, ST_X(ST_Transform(centroid::geometry, 2230)) as x, ST_Y(ST_Transform(centroid::geometry, 2230)) as y,
+#                p.distance_to_coast, p.distance_to_freeway
+#                FROM staging.parcel_zoning_schedule as ps
+#                INNER JOIN urbansim.parcels as p
+#                on ps.parcel_id = p.parcel_id"""
+#
+# parcel_zoning_schedule_df = pd.read_sql(parcel_zoning_schedule, urbansim_engine)
+#
+# parcels_df['zoning_schedule_id'] = 1
+#
+# parcels_df = parcels_df.append(parcel_zoning_schedule_df)
+#
+# parcels_df = md.get_parent_values(id1=settings['zoning_schedule_id'], id_name='zoning_schedule_id',
+#                                  parent_name='parent_zoning_schedule_id',
+#                                  column='parcel_id', df_data=parcels_df, df_id=zoning_schedule_df)
+#
+# parcel_df = parcels_df.set_index('parcel_id')
+# parcels_df['zoning_id'] = parcels_df['zoning_id'].astype(str)
 
-parcel_zoning_schedule_df = pd.read_sql(parcel_zoning_schedule, urbansim_engine)
+# get dataframe from table with updated zoning for parcels
+parcel_updates_sql = 'SELECT zoning_schedule_id, parcel_id, zoning_id FROM staging.parcel_zoning_schedule'
+parcel_updates_df = pd.read_sql(parcel_updates_sql, urbansim_engine)
 
-parcels_df['zoning_schedule_id'] = 1
+parcels_df['zoning_schedule_id'] = 1 # to track which parcels have orig zoning
+parent = settings['zoning_schedule_id'] # zoning schedule id from settings.yaml
 
-parcels_df = parcels_df.append(parcel_zoning_schedule_df)
+# create list of zoning schedule ids w parent to each
+# e.g. [3, 2, 1] where 3 has parent 2 that has parent 1
+zoning_sched_ids = []
+while not math.isnan(parent):
+    zoning_sched_ids.append(parent)
+    parent = zoning_schedule_df['parent_zoning_schedule_id'][zoning_schedule_df['zoning_schedule_id'] == parent].values[0]
 
-parcels_df = md.get_parent_values(id1=settings['zoning_schedule_id'], id_name='zoning_schedule_id',
-                                 parent_name='parent_zoning_schedule_id',
-                                 column='parcel_id', df_data=parcels_df, df_id=zoning_schedule_df)
+zoning_sched_ids = zoning_sched_ids[:-1] # remove last parent id (i.e. 1), bc assuming parcel table is parent
 
-parcel_df = parcels_df.set_index('parcel_id')
-parcels_df['zoning_id'] = parcels_df['zoning_id'].astype(str)
+# replace parcel table zoning starting with lowest zoning schedule id to highest id
+# e.g. replace parcel table zoning with parcel zoning schedule id=2 and then with id=3
+for zsid in reversed(zoning_sched_ids):
+    parcel_update_zsid = parcel_updates_df[parcel_updates_df['zoning_schedule_id'] == zsid]
+    parcel_update_zsid = parcel_update_zsid.set_index(['parcel_id'])
+    parcels_df.loc[parcels_df.index.isin(parcel_update_zsid.index), ['zoning_id', 'zoning_schedule_id']] = parcel_update_zsid[['zoning_id', 'zoning_schedule_id']]
 
+parcels_df['zoning_id'] = parcels_df['zoning_id'].astype(str) # zoning as string for writng to .h5
 
 #########################################
 # scale household controls
