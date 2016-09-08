@@ -148,6 +148,7 @@ while not math.isnan(parent):
 
 zoning_sched_ids = zoning_sched_ids[:-1] # remove last parent id (i.e. 1), bc assuming parcel table is parent
 
+parcels_df['original_zoning_id'] = parcels_df['zoning_id']
 # replace parcel table zoning starting with lowest zoning schedule id to highest id
 # e.g. replace parcel table zoning with parcel zoning schedule id=2 and then with id=3
 for zsid in reversed(zoning_sched_ids):
