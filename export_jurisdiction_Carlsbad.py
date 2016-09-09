@@ -5,9 +5,8 @@ import os
 import models as md
 import yaml
 import math
+from urbansim_defaults import datasources
 
-with open('configs/settings.yaml', 'r') as f:
-    settings = yaml.load(f)
 
 urbansim_engine = create_engine(get_connection_string("configs/dbconfig.yml", 'urbansim_database'))
 
@@ -104,8 +103,8 @@ zoning_df = zoning_df.set_index('zoning_id')
 zoning_schedule_sql = """SELECT * FROM staging.zoning_schedule"""
 zoning_schedule_df = pd.read_sql(zoning_schedule_sql, urbansim_engine)
 
-if (settings['zoning_schedule_id'] > 1) and (settings['zoning_schedule_id'] != max(zoning_df['zoning_schedule_id'])):
-    zoning_df = md.get_zoning_values(id1=settings['zoning_schedule_id'], id_name='zoning_schedule_id',
+if (datasources.settings()['zoning_schedule_id'] > 1) and (datasources.settings()['zoning_schedule_id'] != max(zoning_df['zoning_schedule_id'])):
+    zoning_df = md.get_zoning_values(id1=datasources.settings()['zoning_schedule_id'], id_name='zoning_schedule_id',
                                      parent_name='parent_zoning_schedule_id',
                                      df_data=zoning_df, df_id=zoning_schedule_df)
 
@@ -137,7 +136,7 @@ parcel_updates_sql = 'SELECT zoning_schedule_id, parcel_id, zoning_id FROM stagi
 parcel_updates_df = pd.read_sql(parcel_updates_sql, urbansim_engine)
 
 parcels_df['zoning_schedule_id'] = 1 # to track which parcels have orig zoning
-parent = settings['zoning_schedule_id'] # zoning schedule id from settings.yaml
+parent = datasources.settings()['zoning_schedule_id'] # zoning schedule id from settings.yaml
 
 # create list of zoning schedule ids w parent to each
 # e.g. [3, 2, 1] where 3 has parent 2 that has parent 1
