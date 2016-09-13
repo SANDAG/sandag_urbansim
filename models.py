@@ -4,8 +4,10 @@ from urbansim.developer import sqftproforma
 import orca
 from urbansim_defaults import models
 from urbansim_defaults import utils
+from urbansim.developer import developer
 import numpy as np
 from pysandag.database import get_connection_string
+import math
 
 
 ###  ESTIMATIONS  ##################################
@@ -356,6 +358,242 @@ def feasibility2(parcels, settings,
                           parcel_is_allowed_func,
                           config=config, forms_to_test=['residential'],
                           **kwargs)
+
+
+def run_developer(forms, agents, buildings,supply_fname, parcel_size,
+                  ave_unit_size, total_units, feasibility,
+                  max_dua_zoning, max_res_units, year=None,
+                  target_vacancy=.1, form_to_btype_callback=None,
+                  add_more_columns_callback=None, max_parcel_size=2000000,
+                  residential=True, bldg_sqft_per_job=400.0,
+                  min_unit_size=400, remove_developed_buildings=True,
+                  unplace_agents=['households', 'jobs'],
+                  num_units_to_build=None, profit_to_prob_func=None):
+    """
+    Run the developer model to pick and build buildings
+
+    Parameters
+    ----------
+    forms : string or list of strings
+        Passed directly dev.pick
+    agents : DataFrame Wrapper
+        Used to compute the current demand for units/floorspace in the area
+    buildings : DataFrame Wrapper
+        Used to compute the current supply of units/floorspace in the area
+    supply_fname : string
+        Identifies the column in buildings which indicates the supply of
+        units/floorspace
+    parcel_size : Series
+        Passed directly to dev.pick
+    ave_unit_size : Series
+        Passed directly to dev.pick - average residential unit size
+    total_units : Series
+        Passed directly to dev.pick - total current residential_units /
+        job_spaces
+    feasibility : DataFrame Wrapper
+        The output from feasibility above (the table called 'feasibility')
+    year : int
+        The year of the simulation - will be assigned to 'year_built' on the
+        new buildings
+    target_vacancy : float
+        The target vacancy rate - used to determine how much to build
+    form_to_btype_callback : function
+        Will be used to convert the 'forms' in the pro forma to
+        'building_type_id' in the larger model
+    add_more_columns_callback : function
+        Takes a dataframe and returns a dataframe - is used to make custom
+        modifications to the new buildings that get added
+    max_parcel_size : float
+        Passed directly to dev.pick - max parcel size to consider
+    min_unit_size : float
+        Passed directly to dev.pick - min unit size that is valid
+    residential : boolean
+        Passed directly to dev.pick - switches between adding/computing
+        residential_units and job_spaces
+    bldg_sqft_per_job : float
+        Passed directly to dev.pick - specified the multiplier between
+        floor spaces and job spaces for this form (does not vary by parcel
+        as ave_unit_size does)
+    remove_redeveloped_buildings : optional, boolean (default True)
+        Remove all buildings on the parcels which are being developed on
+    unplace_agents : optional , list of strings (default ['households', 'jobs'])
+        For all tables in the list, will look for field building_id and set
+        it to -1 for buildings which are removed - only executed if
+        remove_developed_buildings is true
+    num_units_to_build: optional, int
+        If num_units_to_build is passed, build this many units rather than
+        computing it internally by using the length of agents adn the sum of
+        the relevant supply columin - this trusts the caller to know how to compute
+        this.
+    profit_to_prob_func: func
+        Passed directly to dev.pick
+
+    Returns
+    -------
+    Writes the result back to the buildings table and returns the new
+    buildings with available debugging information on each new building
+    """
+
+    dev = developer.Developer(feasibility.to_frame())
+
+    target_units = num_units_to_build or dev.\
+        compute_units_to_build(len(agents),
+                               buildings[supply_fname].sum(),
+                               target_vacancy)
+
+    print "{:,} feasible buildings before running developer".format(
+          len(dev.feasibility))
+
+
+    print dev.feasibility.head()
+
+    df = dev.feasibility['residential']
+
+    # in developer, the number of residential units allowed on a parcel equals
+    #                     residential sqft divided by ave_unit_size
+
+    # calculate ave_unit_size to be used in developer for each parcel
+
+    # based on zoning
+    # calculate the minimum allowed units from zoning
+    # where units = max_dua (from zoning) * parcel acres
+    # and units = max_res_units
+
+    df["parcel_size"] = parcel_size
+    df["ave_unit_size"] = ave_unit_size
+    df['current_units'] = total_units
+    df['max_dua_zoning'] = max_dua_zoning
+    df['max_res_units'] = max_res_units
+
+    df = df[df.parcel_size < max_parcel_size]
+
+    df.ave_unit_size[df.ave_unit_size < min_unit_size] = min_unit_size
+
+    df['max_dua_zoning'][df['max_dua_zoning'] == -1] = np.NaN  # -1 means no value
+
+    df['max_res_units'][df['max_res_units'] == -1] = np.NaN  # -1 means no value
+
+    df['max_units_from_ave_unit'] = (df.residential_sqft / df.ave_unit_size).round()
+
+    # max units from dua calculated from parcel acres
+    df['max_units_from_dua'] = (df.max_dua_zoning * (df.parcel_size / 43560)).round()
+
+    # use minimum value as
+    df['residential_units'] = df[['max_units_from_dua', 'max_res_units']].min(axis=1)
+    # if values not in zoning than use ave_unit_size from vicinity for max res units
+    df.residential_units.fillna(df.max_units_from_ave_unit, inplace=True)
+    # df.residential_units = df.max_units_from_ave_unit #for testing comparison
+    ave_unit_size = df.residential_sqft / df.residential_units
+
+    new_buildings = dev.pick(forms,
+                             target_units,
+                             parcel_size,
+                             ave_unit_size,
+                             total_units,
+                             max_parcel_size=max_parcel_size,
+                             min_unit_size=min_unit_size,
+                             drop_after_build=True,
+                             residential=residential,
+                             bldg_sqft_per_job=bldg_sqft_per_job,
+                             profit_to_prob_func=profit_to_prob_func)
+
+    orca.add_table("feasibility", dev.feasibility)
+
+    if new_buildings is None:
+        return
+
+    if len(new_buildings) == 0:
+        return new_buildings
+
+    if year is not None:
+        new_buildings["year_built"] = year
+
+    if not isinstance(forms, list):
+        # form gets set only if forms is a list
+        new_buildings["form"] = forms
+
+    if form_to_btype_callback is not None:
+        new_buildings["building_type_id"] = new_buildings.\
+            apply(form_to_btype_callback, axis=1)
+
+    new_buildings["stories"] = new_buildings.stories.apply(np.ceil)
+
+    ret_buildings = new_buildings
+    if add_more_columns_callback is not None:
+        new_buildings = add_more_columns_callback(new_buildings)
+
+    print "Adding {:,} buildings with {:,} {}".\
+        format(len(new_buildings),
+               int(new_buildings[supply_fname].sum()),
+               supply_fname)
+
+    print "{:,} feasible buildings after running developer".format(
+          len(dev.feasibility))
+
+    old_buildings = buildings.to_frame(buildings.local_columns)
+    new_buildings = new_buildings[buildings.local_columns]
+
+    if remove_developed_buildings:
+        old_buildings = \
+            utils._remove_developed_buildings(old_buildings, new_buildings, unplace_agents)
+
+    all_buildings, new_index = dev.merge(old_buildings, new_buildings,
+                                         return_index=True)
+    ret_buildings.index = new_index
+
+    orca.add_table("buildings", all_buildings)
+
+    if "residential_units" in orca.list_tables() and residential:
+        # need to add units to the units table as well
+        old_units = orca.get_table("residential_units")
+        old_units = old_units.to_frame(old_units.local_columns)
+        new_units = pd.DataFrame({
+            "unit_residential_price": 0,
+            "num_units": 1,
+            "deed_restricted": 0,
+            "unit_num": np.concatenate([np.arange(i) for i in \
+                                        new_buildings.residential_units.values]),
+            "building_id": np.repeat(new_buildings.index.values,
+                                     new_buildings.residential_units.\
+                                     astype('int32').values)
+        }).sort(columns=["building_id", "unit_num"]).reset_index(drop=True)
+
+        print "Adding {:,} units to the residential_units table".\
+            format(len(new_units))
+        all_units = dev.merge(old_units, new_units)
+        all_units.index.name = "unit_id"
+
+        orca.add_table("residential_units", all_units)
+
+        return ret_buildings
+        # pondered returning ret_buildings, new_units but users can get_table
+        # the units if they want them - better to avoid breaking the api
+
+    return ret_buildings
+
+
+@orca.step('residential_developer')
+def residential_developer(feasibility, households, buildings, parcels, year,
+                          settings, summary, form_to_btype_func,
+                          add_extra_columns_func):
+    kwargs = settings['residential_developer']
+    new_buildings = run_developer(
+        "residential",
+        households,
+        buildings,
+        "residential_units",
+        parcels.parcel_size,
+        parcels.ave_sqft_per_unit,
+        parcels.total_residential_units,
+        feasibility,
+        parcels.max_dua_zoning,
+        parcels.max_res_units,
+        year=year,
+        form_to_btype_callback=form_to_btype_func,
+        add_more_columns_callback=add_extra_columns_func,
+        **kwargs)
+
+    summary.add_parcel_output(new_buildings)
 
 
 def get_git_hash(model='residential'):
@@ -768,7 +1006,7 @@ def get_zoning_values(id1=1, id_name='zoning_schedule_id', parent_name='parent_z
     return: the definition returns a pandas df with index of the child id as
             and senior most parent indexed at length(df). This allows to pull zone id specification from df.
     """
-    import math
+
     parent = df_id[parent_name][df_id[id_name] == id1].values
 
     if math.isnan(parent):
