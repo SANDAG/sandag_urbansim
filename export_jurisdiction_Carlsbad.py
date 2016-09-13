@@ -103,34 +103,6 @@ zoning_df = zoning_df.set_index('zoning_id')
 zoning_schedule_sql = """SELECT * FROM staging.zoning_schedule"""
 zoning_schedule_df = pd.read_sql(zoning_schedule_sql, urbansim_engine)
 
-if (datasources.settings()['zoning_schedule_id'] > 1) and (datasources.settings()['zoning_schedule_id'] != max(zoning_df['zoning_schedule_id'])):
-    zoning_df = md.get_zoning_values(id1=datasources.settings()['zoning_schedule_id'], id_name='zoning_schedule_id',
-                                     parent_name='parent_zoning_schedule_id',
-                                     df_data=zoning_df, df_id=zoning_schedule_df)
-
-###########################
-# parent data parcel
-###########################
-
-# parcel_zoning_schedule = """SELECT ps.zoning_schedule_id, ps.parcel_id, p.development_type_id, p.luz_id, p.parcel_acres as acres, ps.zoning_id as zoning_id, ST_X(ST_Transform(centroid::geometry, 2230)) as x, ST_Y(ST_Transform(centroid::geometry, 2230)) as y,
-#                p.distance_to_coast, p.distance_to_freeway
-#                FROM staging.parcel_zoning_schedule as ps
-#                INNER JOIN urbansim.parcels as p
-#                on ps.parcel_id = p.parcel_id"""
-#
-# parcel_zoning_schedule_df = pd.read_sql(parcel_zoning_schedule, urbansim_engine)
-#
-# parcels_df['zoning_schedule_id'] = 1
-#
-# parcels_df = parcels_df.append(parcel_zoning_schedule_df)
-#
-# parcels_df = md.get_parent_values(id1=settings['zoning_schedule_id'], id_name='zoning_schedule_id',
-#                                  parent_name='parent_zoning_schedule_id',
-#                                  column='parcel_id', df_data=parcels_df, df_id=zoning_schedule_df)
-#
-# parcel_df = parcels_df.set_index('parcel_id')
-# parcels_df['zoning_id'] = parcels_df['zoning_id'].astype(str)
-
 # get dataframe from table with updated zoning for parcels
 parcel_updates_sql = 'SELECT zoning_schedule_id, parcel_id, zoning_id FROM staging.parcel_zoning_schedule'
 parcel_updates_df = pd.read_sql(parcel_updates_sql, urbansim_engine)
@@ -145,6 +117,7 @@ while not math.isnan(parent):
     zoning_sched_ids.append(parent)
     parent = zoning_schedule_df['parent_zoning_schedule_id'][zoning_schedule_df['zoning_schedule_id'] == parent].values[0]
 
+zoning_df_zsid = zoning_df[zoning_df['zoning_schedule_id'] == zoning_sched_ids[-1]] # zoning_df parent
 zoning_sched_ids = zoning_sched_ids[:-1] # remove last parent id (i.e. 1), bc assuming parcel table is parent
 
 parcels_df['original_zoning_id'] = parcels_df['zoning_id']
@@ -154,6 +127,7 @@ for zsid in reversed(zoning_sched_ids):
     parcel_update_zsid = parcel_updates_df[parcel_updates_df['zoning_schedule_id'] == zsid]
     parcel_update_zsid = parcel_update_zsid.set_index(['parcel_id'])
     parcels_df.loc[parcels_df.index.isin(parcel_update_zsid.index), ['zoning_id', 'zoning_schedule_id']] = parcel_update_zsid[['zoning_id', 'zoning_schedule_id']]
+    zoning_df_zsid = zoning_df_zsid.append(zoning_df[zoning_df['zoning_schedule_id'] == zsid])
 
 parcels_df['zoning_id'] = parcels_df['zoning_id'].astype(str) # zoning as string for writng to .h5
 
@@ -217,5 +191,5 @@ with pd.HDFStore('data/urbansim.h5', mode='w') as store:
     store.put('employment_controls', employment_controls_df, format='t')
     store.put('zoning_allowed_uses', zoning_allowed_uses_df, format='t')
     store.put('fee_schedule', fee_schedule_df, format='t')
-    store.put('zoning', zoning_df, format='t')
+    store.put('zoning', zoning_df_zsid, format='t')
     #store.put('assessor_transactions', assessor_transactions_df, format='t')
