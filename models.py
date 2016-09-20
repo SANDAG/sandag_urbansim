@@ -363,7 +363,8 @@ def feasibility2(parcels, settings,
 def run_developer(forms, agents, buildings,supply_fname, parcel_size,
                   ave_unit_size, total_units, feasibility,
                   max_dua_zoning, max_res_units, year=None,
-                  target_vacancy=.1, form_to_btype_callback=None,
+                  target_vacancy=.1, use_max_res_units=False,
+                  form_to_btype_callback=None,
                   add_more_columns_callback=None, max_parcel_size=2000000,
                   residential=True, bldg_sqft_per_job=400.0,
                   min_unit_size=400, remove_developed_buildings=True,
@@ -444,21 +445,14 @@ def run_developer(forms, agents, buildings,supply_fname, parcel_size,
     print "{:,} feasible buildings before running developer".format(
           len(dev.feasibility))
 
+    #df = dev.feasibility['residential']
 
-    print dev.feasibility.head()
+    df = dev.feasibility
+    df['residential','max_profit_orig'] = df['residential','max_profit']
+    df['residential', 'max_profit'].loc[df['residential','max_profit_orig'] < 0] = .001
+    orca.add_table("feasibility", df)
 
-    df = dev.feasibility['residential']
-
-    # in developer, the number of residential units allowed on a parcel equals
-    #                     residential sqft divided by ave_unit_size
-
-    # calculate ave_unit_size to be used in developer for each parcel
-
-    # based on zoning
-    # calculate the minimum allowed units from zoning
-    # where units = max_dua (from zoning) * parcel acres
-    # and units = max_res_units
-
+    df = df['residential']
     df["parcel_size"] = parcel_size
     df["ave_unit_size"] = ave_unit_size
     df['current_units'] = total_units
@@ -470,19 +464,24 @@ def run_developer(forms, agents, buildings,supply_fname, parcel_size,
     df.ave_unit_size[df.ave_unit_size < min_unit_size] = min_unit_size
 
     df['max_dua_zoning'][df['max_dua_zoning'] == -1] = np.NaN  # -1 means no value
-
     df['max_res_units'][df['max_res_units'] == -1] = np.NaN  # -1 means no value
 
-    df['max_units_from_ave_unit'] = (df.residential_sqft / df.ave_unit_size).round()
+    # 3 options for res units:
+    #   res units = residential sqft divided by ave_unit_size
+    #   res units = max_dua (from zoning) * parcel acres
+    #   res units = max_res_units
 
-    # max units from dua calculated from parcel acres
+    df['max_units_from_ave_unit'] = (df.residential_sqft / df.ave_unit_size).round()
     df['max_units_from_dua'] = (df.max_dua_zoning * (df.parcel_size / 43560)).round()
 
-    # use minimum value as
-    df['residential_units'] = df[['max_units_from_dua', 'max_res_units']].min(axis=1)
-    # if values not in zoning than use ave_unit_size from vicinity for max res units
-    df.residential_units.fillna(df.max_units_from_ave_unit, inplace=True)
-    # df.residential_units = df.max_units_from_ave_unit #for testing comparison
+    df['residential_units'] =  df['max_units_from_ave_unit'] # max res units and max dua are null
+    df.loc[~df['max_res_units'].isnull() & df['max_units_from_dua'].isnull(), 'residential_units'] = df['max_res_units']
+    df.loc[df['max_res_units'].isnull() & ~df['max_units_from_dua'].isnull(), 'residential_units'] = df['max_units_from_dua']
+    df.loc[~df['max_res_units'].isnull() & ~df['max_units_from_dua'].isnull(), 'residential_units'] = df[['max_units_from_dua', 'max_res_units']].min(axis=1)
+
+    if use_max_res_units:
+        df.loc[~df['max_res_units'].isnull() & ~df['max_units_from_dua'].isnull(), 'residential_units'] = df['max_res_units']
+
     ave_unit_size = df.residential_sqft / df.residential_units
 
     new_buildings = dev.pick(forms,
