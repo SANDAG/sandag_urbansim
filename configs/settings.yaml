@@ -70,6 +70,7 @@ residential_developer:
   target_vacancy: .08
   min_unit_size: 1000
   bldg_sqft_per_job: 400
+  use_max_res_units: True
 
 non_residential_developer:
   target_vacancy: .49
@@ -160,3 +161,5 @@ parcel_avg_pr_mult: .81
 res_sales_price_multiplier: 1.2
 
 zoning_schedule_id: 2
+
+jurisdiction: 1 # Carlsbad
