@@ -25,9 +25,6 @@ bounding_box_sql =  """SELECT name as CITY
 bounding_box_df = pd.read_sql(bounding_box_sql, data_cafe_engine)
 
 nodes_sql = 'SELECT node as node_id, x, y, on_ramp FROM urbansim.nodes ' \
-            'WHERE x between 6219937 and 6268194 and y between 1964616 and 2014714'
-
-nodes_sql = 'SELECT node as node_id, x, y, on_ramp FROM urbansim.nodes ' \
             'WHERE x between ' + str(bounding_box_df.iloc[0]['Left']) + ' and ' +  str(bounding_box_df.iloc[0]['Right']) + \
             'and y between ' + str(bounding_box_df.iloc[0]['Bottom']) + ' and ' +  str(bounding_box_df.iloc[0]['Top'])
 
@@ -52,7 +49,6 @@ parcels_sql = 'SELECT parcel_id, development_type_id, luz_id, parcel_acres as ac
               'zoning_id, ST_X(ST_Transform(centroid::geometry, 2230)) as x, ST_Y(ST_Transform(centroid::geometry, 2230))  as y, ' \
               'distance_to_coast, distance_to_freeway FROM urbansim.parcels where jurisdiction_id = ' + str(zone)
 
-#buildings_sql = 'SELECT building_id, parcel_id, COALESCE(development_type_id,0) as building_type_id, COALESCE(residential_units, 0) as residential_units, COALESCE(residential_sqft, 0) as residential_sqft, COALESCE(non_residential_sqft,0) as non_residential_sqft, 0 as non_residential_rent_per_sqft, COALESCE(year_built, -1) year_built, COALESCE(stories, 1) as stories FROM urbansim.buildings'
 
 buildings_sql = 'SELECT building_id, parcel_id, COALESCE(development_type_id,0) as building_type_id, COALESCE(residential_units, 0) as residential_units, ' \
                 'COALESCE(residential_sqft, 0) as residential_sqft, COALESCE(non_residential_sqft,0) as non_residential_sqft, ' \
