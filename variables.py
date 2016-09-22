@@ -225,16 +225,41 @@ def zoned_du(parcels):
         reindex(parcels.index).fillna(0).round().astype('int')
 
 
-@orca.column('parcels', 'max_far', cache=True)
+@orca.column('parcels', 'max_far_orig', cache=True)
 def parcel_max_far(parcels, zoning):
-    sr = misc.reindex(zoning.max_far, parcels.zoning_id)
-    return sr.fillna(1).astype('int32')
+    return misc.reindex(zoning.max_far, parcels.zoning_id)
+    #return sr.fillna(1).astype('int32')
 
 ##Placeholder-  building height currently unconstrained (very high limit-  1000 ft.)
-@orca.column('parcels', 'max_height', cache=True)
+@orca.column('parcels', 'max_height_orig', cache=True)
 def parcel_max_height(parcels, zoning):
-    return misc.reindex(zoning.max_height, parcels.zoning_id).fillna(350)
+    return misc.reindex(zoning.max_height, parcels.zoning_id)
+    #return misc.reindex(zoning.max_height, parcels.zoning_id).fillna(350)
 
+
+@orca.column('parcels', 'max_far', cache=True)
+def parcel_max_far_calc(parcels, zoning, settings):
+    p = parcels.to_frame(['parcel_size','max_far_orig','max_res_units'])
+    efficiency = settings['sqftproforma_config']['building_efficiency']
+    min_unit_size = settings['residential_developer']['min_unit_size']
+    p['res_sqft']  = min_unit_size * p['max_res_units']
+    p['bldg_sqft'] = p['res_sqft'] / efficiency
+    p['far'] = p['bldg_sqft'] / p['parcel_size']
+    min_far =  settings['sqftproforma_config']['fars'][0]
+    p.loc[p['far'] < min_far, 'far'] =  min_far
+    p.loc[p['max_far_orig'] > 0, 'far'] = p.max_far_orig
+    return p['far']
+
+
+@orca.column('parcels', 'max_height', cache=True)
+def parcel_max_height_calc(parcels, zoning, settings):
+    p = parcels.to_frame(['parcel_size','max_height_orig','max_far'])
+    height_per_story = settings['sqftproforma_config']['height_per_story']
+    parcel_coverage = settings['sqftproforma_config']['parcel_coverage']
+    p['height'] = p['max_far'] * height_per_story / parcel_coverage
+    p.loc[p['height'] < height_per_story, 'height'] = height_per_story
+    p.loc[p['max_height_orig'] > 0, 'height'] = p.max_height_orig
+    return p['height']
 
 @orca.column('parcels', 'max_res_units', cache=True)
 def parcel_max_res_units(parcels, zoning):
