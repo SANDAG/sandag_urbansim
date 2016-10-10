@@ -91,6 +91,17 @@ def building_parcel_size(buildings, parcels):
     return misc.reindex(parcels.parcel_size, buildings.parcel_id)
 
 
+@orca.column('buildings', 'residential_price_adj')
+def residential_price_adj( buildings, settings):
+    if 'residential_price' not in orca.get_table('buildings').columns:
+        return pd.Series(0, orca.get_table('buildings').index)
+    return np.where(buildings['building_type_id'] == 21,
+                    (buildings['residential_price'] * 12)/
+                    (settings['res_sales_price_multiplier'] *
+                     settings['sqftproforma_config']['cap_rate']),
+                    buildings['residential_price'])
+
+
 @orca.column('buildings', 'sqft_per_job', cache=True)
 def sqft_per_job(buildings, building_sqft_per_job):
     bldgs = buildings.to_frame(['luz_id', 'building_type_id'])
