@@ -177,15 +177,21 @@ def res_occupancy_10000ft(nodes):
 
 
 ###### PARCELS ######
+# @orca.column('parcels', 'building_purchase_price_sqft')
+# def building_purchase_price_sqft(settings):
+#     return parcel_average_price("residential") * settings['parcel_avg_pr_mult']
+
+
+# @orca.column('parcels', 'building_purchase_price')
+# def building_purchase_price(parcels):
+#     return (parcels.total_sqft * parcels.building_purchase_price_sqft).\
+#         reindex(parcels.index).fillna(0)
+
+
 @orca.column('parcels', 'building_purchase_price')
-def building_purchase_price(parcels):
-    return (parcels.total_sqft * parcels.building_purchase_price_sqft).\
-        reindex(parcels.index).fillna(0)
-
-
-@orca.column('parcels', 'building_purchase_price_sqft')
-def building_purchase_price_sqft(settings):
-    return parcel_average_price("residential") * settings['parcel_avg_pr_mult']
+def building_purchase_price(parcels, buildings):
+    return (buildings.residential_price_adj * buildings.building_sqft).\
+        groupby(buildings.parcel_id).sum().reindex(parcels.index).fillna(0)
 
 
 @orca.column('parcels', 'distance_to_onramp')
