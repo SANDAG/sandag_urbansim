@@ -226,9 +226,16 @@ def parcels_distance_to_transit(settings, net, parcels):
     return misc.reindex(distance_df.distance_to_transit, parcels.node_id)
 
 
+# @orca.column('parcels', 'land_cost')
+# def parcel_land_cost(settings, parcels):
+#     return parcels.building_purchase_price + parcels.parcel_size * settings['default_land_cost']
+
+
 @orca.column('parcels', 'land_cost')
 def parcel_land_cost(settings, parcels):
-    return parcels.building_purchase_price + parcels.parcel_size * settings['default_land_cost']
+    return np.where(parcels['building_purchase_price'] == 0,
+                    (parcels.parcel_size * settings['default_land_cost']),
+                     parcels['building_purchase_price'])
 
 
 @orca.column('parcels', 'max_dua_zoning', cache=True)
