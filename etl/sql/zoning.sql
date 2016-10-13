@@ -1,28 +1,29 @@
-DROP TABLE IF EXISTS staging.parcel_zoning_schedule;
-DROP TABLE IF EXISTS staging.zoning_allowed_use;
-DROP TABLE IF EXISTS staging.zoning;
-DROP TABLE IF EXISTS staging.zoning_schedule;
+﻿DROP TABLE IF EXISTS urbansim.parcel_zoning_schedule;
+DROP TABLE IF EXISTS urbansim.zoning_allowed_use;
+DROP TABLE IF EXISTS urbansim.zoning;
+DROP TABLE IF EXISTS urbansim.zoning_schedule;
+DROP TABLE IF EXISTS staging.sr13_capacity;
 
-CREATE TABLE staging.zoning_schedule
+CREATE TABLE urbansim.zoning_schedule
 (
     zoning_schedule_id integer PRIMARY KEY
-    ,parent_zoning_schedule_id integer REFERENCES staging.zoning_schedule (zoning_schedule_id)    
+    ,parent_zoning_schedule_id integer REFERENCES urbansim.zoning_schedule (zoning_schedule_id)    
     ,yr smallint NOT NULL
     ,short_name character varying NOT NULL
     ,long_name text
 );
-ALTER TABLE staging.zoning_schedule
+ALTER TABLE urbansim.zoning_schedule
   OWNER TO urbansim_user;
-GRANT ALL ON TABLE staging.zoning_schedule TO urbansim_user;
+GRANT ALL ON TABLE urbansim.zoning_schedule TO urbansim_user;
 
 --add base zoning schedule entry
-INSERT INTO staging.zoning_schedule (zoning_schedule_id, yr, short_name, long_name)
+INSERT INTO urbansim.zoning_schedule (zoning_schedule_id, yr, short_name, long_name)
 VALUES (1, 2016, '2016 Municipal Code Zoning', 'Staff-reviewed and codified zoning ordinances from jurisdictions');
 
 
-CREATE TABLE staging.zoning
+CREATE TABLE urbansim.zoning
 (
-    zoning_schedule_id integer NOT NULL REFERENCES staging.zoning_schedule (zoning_schedule_id)    
+    zoning_schedule_id integer NOT NULL REFERENCES urbansim.zoning_schedule (zoning_schedule_id)    
     ,zoning_id character varying PRIMARY KEY
     ,parent_zoning_id character varying
     ,jurisdiction_id integer
@@ -49,39 +50,39 @@ CREATE TABLE staging.zoning
     ,CONSTRAINT uk_zoning UNIQUE (zoning_schedule_id, zoning_id, yr_effective)
 );
 
-ALTER TABLE staging.zoning
+ALTER TABLE urbansim.zoning
   OWNER TO urbansim_user;
-GRANT ALL ON TABLE staging.zoning TO urbansim_user;
+GRANT ALL ON TABLE urbansim.zoning TO urbansim_user;
 
 CREATE INDEX idx_zoning_shape
-ON staging.zoning
+ON urbansim.zoning
 USING gist (shape);
 
-CREATE INDEX ix_staging_zoning_zoning_schedule_zoning_id
-ON staging.zoning
+CREATE INDEX ix_zoning_zoning_schedule_zoning_id
+ON urbansim.zoning
 USING btree (zoning_schedule_id, zoning_id);
 
 CREATE INDEX ix_zoning_jurisdiction_id
-ON staging.zoning
+ON urbansim.zoning
 USING btree (jurisdiction_id);
 
 
-CREATE TABLE staging.zoning_allowed_use
+CREATE TABLE urbansim.zoning_allowed_use
 (
     zoning_allowed_use_id SERIAL PRIMARY KEY
-    ,zoning_id character varying NOT NULL REFERENCES staging.zoning (zoning_id)
+    ,zoning_id character varying NOT NULL REFERENCES urbansim.zoning (zoning_id)
     ,development_type_id integer NOT NULL REFERENCES urbansim.development_type (development_type_id)
 );
-ALTER TABLE staging.zoning_allowed_use
+ALTER TABLE urbansim.zoning_allowed_use
   OWNER TO urbansim_user;
-GRANT ALL ON TABLE staging.zoning_allowed_use TO urbansim_user;
+GRANT ALL ON TABLE urbansim.zoning_allowed_use TO urbansim_user;
 
-CREATE INDEX ix_urbansim_zoning_allowed_use_zoning_id
-ON staging.zoning_allowed_use
+CREATE INDEX ix_zoning_allowed_use_zoning_id
+ON urbansim.zoning_allowed_use
 USING btree (zoning_id);
 
---load zoning from urbansim.zoning
-INSERT INTO staging.zoning
+--load zoning from staging.zoning
+INSERT INTO urbansim.zoning
 SELECT
     1 as zoning_schedule_id
     ,zoning_id
@@ -107,20 +108,20 @@ SELECT
     ,review_by
     ,geography AS shape
     ,review
-FROM urbansim.zoning;
+FROM staging.zoning;
 
-CREATE TABLE staging.parcel_zoning_schedule
+CREATE TABLE urbansim.parcel_zoning_schedule
 (
-    zoning_schedule_id integer REFERENCES staging.zoning_schedule
+    zoning_schedule_id integer REFERENCES urbansim.zoning_schedule
     ,parcel_id integer REFERENCES urbansim.parcels (parcel_id)
-    ,zoning_id character varying REFERENCES staging.zoning (zoning_id)
+    ,zoning_id character varying REFERENCES urbansim.zoning (zoning_id)
     ,CONSTRAINT uk_parcel_zoning_schedule UNIQUE (zoning_schedule_id, parcel_id, zoning_id)
 );
-ALTER TABLE staging.parcel_zoning_schedule
+ALTER TABLE urbansim.parcel_zoning_schedule
   OWNER TO urbansim_user;
-GRANT ALL ON TABLE staging.parcel_zoning_schedule TO urbansim_user;
+GRANT ALL ON TABLE urbansim.parcel_zoning_schedule TO urbansim_user;
 
-INSERT INTO staging.zoning_schedule (zoning_schedule_id, yr, short_name, long_name)
+INSERT INTO urbansim.zoning_schedule (zoning_schedule_id, yr, short_name, long_name)
 VALUES (2, 2012, 'SR13 Final Capacity Based Zoning',
         'Zoning densities on SR13 parcel level GP capacities as reviewed by the jurisdictions');
 
@@ -161,7 +162,7 @@ FROM
         urbansim.parcels
             INNER JOIN urbansim.buildings
             ON buildings.parcel_id = parcels.parcel_id
-                LEFT JOIN urbansim.zoning
+                LEFT JOIN staging.zoning
                 ON zoning.zoning_id = parcels.zoning_id
                     LEFT JOIN staging.sr13_capacity
                         ON parcels.parcel_id = sr13_capacity.parcel_id
@@ -181,7 +182,7 @@ GROUP BY
 ORDER BY
     zoning_id
     ,num_parcels DESC)
-INSERT INTO staging.zoning
+INSERT INTO urbansim.zoning
 SELECT
   2 as zoning_schedule_id
   ,zoning.zoning_id || ' cap_hs ' || t.cap_hs
@@ -208,7 +209,7 @@ SELECT
   ,shape
   ,'Override from SR13 capacity where cap_hs <> base zoning max_res_units'
 FROM
-    staging.zoning
+    urbansim.zoning
         INNER JOIN t
         ON t.zoning_id = zoning.zoning_id
 WHERE zoning.max_res_units <> t.cap_hs
@@ -238,7 +239,7 @@ FROM
         urbansim.parcels
             INNER JOIN urbansim.buildings
             ON buildings.parcel_id = parcels.parcel_id
-                LEFT JOIN urbansim.zoning
+                LEFT JOIN staging.zoning
                 ON zoning.zoning_id = parcels.zoning_id
                     LEFT JOIN staging.sr13_capacity
                         ON parcels.parcel_id = sr13_capacity.parcel_id
@@ -258,7 +259,7 @@ GROUP BY
 ORDER BY
     zoning_id
     ,num_parcels DESC)
-INSERT INTO staging.parcel_zoning_schedule
+INSERT INTO urbansim.parcel_zoning_schedule
 SELECT
     2 as zoning_schedule_id
     ,parcels.parcel_id
@@ -269,7 +270,7 @@ FROM
         ON sr13_capacity.parcel_id = parcels.parcel_id
             INNER JOIN t
             ON t.zoning_id = parcels.zoning_id
-                INNER JOIN staging.zoning
+                INNER JOIN urbansim.zoning
                 ON zoning.zoning_schedule_id = 2
                 AND zoning.zoning_id = t.zoning_id || ' cap_hs ' || t.cap_hs
                 AND zoning.max_res_units = sr13_capacity.cap_hs
@@ -322,7 +323,7 @@ FROM
 
             ON buildings.parcel_id = parcels.parcel_id
 
-                LEFT JOIN urbansim.zoning
+                LEFT JOIN staging.zoning
 
                 ON zoning.zoning_id = parcels.zoning_id
 
