@@ -45,7 +45,7 @@ CREATE TABLE staging.zoning
     ,review_date timestamp without time zone
     ,review_by character varying
     ,shape geography(MultiPolygon,4326)
-    ,tmp_notes text
+    ,review text
     ,CONSTRAINT uk_zoning UNIQUE (zoning_schedule_id, zoning_id, yr_effective)
 );
 
@@ -105,10 +105,9 @@ SELECT
     ,notes
     ,review_date
     ,review_by
-    ,shape
-    ,tmp_notes
+    ,geography AS shape
+    ,review
 FROM urbansim.zoning;
-
 
 CREATE TABLE staging.parcel_zoning_schedule
 (
@@ -182,7 +181,7 @@ GROUP BY
 ORDER BY
     zoning_id
     ,num_parcels DESC)
-/*INSERT INTO staging.zoning
+INSERT INTO staging.zoning
 SELECT
   2 as zoning_schedule_id
   ,zoning.zoning_id || ' cap_hs ' || t.cap_hs
@@ -212,7 +211,7 @@ FROM
     staging.zoning
         INNER JOIN t
         ON t.zoning_id = zoning.zoning_id
-WHERE zoning.max_res_units <> t.cap_hs */
+WHERE zoning.max_res_units <> t.cap_hs
 
 
 WITH t AS (
