@@ -133,8 +133,8 @@ ALTER TABLE urbansim.parcel_zoning_schedule
   OWNER TO urbansim_user;
 GRANT ALL ON TABLE urbansim.parcel_zoning_schedule TO urbansim_user;
 
-INSERT INTO urbansim.zoning_schedule (zoning_schedule_id, yr, short_name, long_name)
-VALUES (2, 2012, 'SR13 Final Capacity Based Zoning',
+INSERT INTO urbansim.zoning_schedule (zoning_schedule_id, parent_zoning_schedule_id, yr, short_name, long_name)
+VALUES (2, 1, 2012, 'SR13 Final Capacity Based Zoning',
         'Zoning densities on SR13 parcel level GP capacities as reviewed by the jurisdictions');
 
 
