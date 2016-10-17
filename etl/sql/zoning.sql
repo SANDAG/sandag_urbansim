@@ -67,20 +67,6 @@ ON urbansim.zoning
 USING btree (jurisdiction_id);
 
 
-CREATE TABLE urbansim.zoning_allowed_use
-(
-    zoning_allowed_use_id SERIAL PRIMARY KEY
-    ,zoning_id character varying NOT NULL REFERENCES urbansim.zoning (zoning_id)
-    ,development_type_id integer NOT NULL REFERENCES urbansim.development_type (development_type_id)
-);
-ALTER TABLE urbansim.zoning_allowed_use
-  OWNER TO urbansim_user;
-GRANT ALL ON TABLE urbansim.zoning_allowed_use TO urbansim_user;
-
-CREATE INDEX ix_zoning_allowed_use_zoning_id
-ON urbansim.zoning_allowed_use
-USING btree (zoning_id);
-
 --load zoning from staging.zoning
 INSERT INTO urbansim.zoning
 SELECT
@@ -109,6 +95,32 @@ SELECT
     ,geography AS shape
     ,review
 FROM staging.zoning;
+
+
+CREATE TABLE urbansim.zoning_allowed_use
+(
+    zoning_id character varying NOT NULL REFERENCES urbansim.zoning (zoning_id)
+    ,zoning_allowed_use_id SERIAL PRIMARY KEY
+    ,development_type_id integer NOT NULL REFERENCES urbansim.development_type (development_type_id)
+);
+ALTER TABLE urbansim.zoning_allowed_use
+  OWNER TO urbansim_user;
+GRANT ALL ON TABLE urbansim.zoning_allowed_use TO urbansim_user;
+
+CREATE INDEX ix_zoning_allowed_use_zoning_id
+ON urbansim.zoning_allowed_use
+USING btree (zoning_id);
+
+--load zoning_allowed_use from staging.zoning_allowed_use
+INSERT INTO urbansim.zoning_allowed_use
+SELECT
+    a.zoning_id
+    ,a.zoning_allowed_use_id
+    ,a.development_type_id
+FROM staging.zoning_allowed_use a
+    ,urbansim.zoning z
+WHERE z.zoning_id = a.zoning_id;
+
 
 CREATE TABLE urbansim.parcel_zoning_schedule
 (
