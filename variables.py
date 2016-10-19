@@ -335,13 +335,12 @@ def form_to_btype(row):
     if row.form == 'residential':
         return 19
 
-
+    
 @orca.injectable('parcel_sales_price_sqft_func', autocall=False)
 def parcel_sales_price_sqft(use):
     s = parcel_average_price(use)
-    import yaml
-    with open('configs/settings.yaml', 'r') as f:
-        settings = yaml.load(f)
+    settings = orca.get_injectable('settings')
+    # s = orca.get_table('parcels').avg_residential_price
     if use == "residential": s *= settings['res_sales_price_multiplier']
     return s
 
