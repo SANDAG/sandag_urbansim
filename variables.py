@@ -91,6 +91,8 @@ def building_parcel_size(buildings, parcels):
     return misc.reindex(parcels.parcel_size, buildings.parcel_id)
 
 
+# for multi-family type 21, convert rents from res hedonic to price
+# use residential hedonic result for other dev types
 @orca.column('buildings', 'residential_price_adj')
 def residential_price_adj( buildings, settings):
     if 'residential_price' not in orca.get_table('buildings').columns:
@@ -177,6 +179,7 @@ def res_occupancy_10000ft(nodes):
 
 
 ###### PARCELS ######
+##################### Building purchase price based on parcel avg price ##
 # @orca.column('parcels', 'building_purchase_price_sqft')
 # def building_purchase_price_sqft(settings):
 #     return parcel_average_price("residential") * settings['parcel_avg_pr_mult']
@@ -186,12 +189,22 @@ def res_occupancy_10000ft(nodes):
 # def building_purchase_price(parcels):
 #     return (parcels.total_sqft * parcels.building_purchase_price_sqft).\
 #         reindex(parcels.index).fillna(0)
+##########################################################################
+
+
+##################### Building purchase price based on res hedonic #######
+# avg price buildings on parcel instead of parcel avg for rent calc
+@orca.column('parcels', 'avg_residential_price')
+def avg_residential_price(parcels, buildings):
+    return buildings.to_frame().residential_price_adj.\
+        groupby(buildings.parcel_id).mean().reindex(parcels.index).fillna(0)
 
 
 @orca.column('parcels', 'building_purchase_price')
 def building_purchase_price(parcels, buildings):
     return (buildings.residential_price_adj * buildings.building_sqft).\
         groupby(buildings.parcel_id).sum().reindex(parcels.index).fillna(0)
+##########################################################################
 
 
 @orca.column('parcels', 'distance_to_onramp')
