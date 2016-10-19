@@ -268,10 +268,9 @@ def parcel_max_far(parcels, zoning, settings):
 
 
 ##Placeholder-  building height currently unconstrained (very high limit-  1000 ft.)
-@orca.column('parcels', 'max_height_orig', cache=True)
+@orca.column('parcels', 'max_height', cache=True)
 def parcel_max_height(parcels, zoning):
-    return misc.reindex(zoning.max_height, parcels.zoning_id)
-    #return misc.reindex(zoning.max_height, parcels.zoning_id).fillna(350)
+    return misc.reindex(zoning.max_height, parcels.zoning_id).fillna(350)
 
 
 @orca.column('parcels', 'max_res_units', cache=True)
