@@ -253,8 +253,8 @@ def parcel_land_cost(settings, parcels):
 
 @orca.column('parcels', 'max_dua_zoning', cache=True)
 def parcel_max_dua(parcels, zoning):
-    sr = misc.reindex(zoning.max_dua, parcels.zoning_id)
-    return sr.apply(np.floor).fillna(0).astype('int32')
+    return misc.reindex(zoning.max_dua, parcels.zoning_id)
+
 
 @orca.column('parcels', 'zoned_du', cache=True)
 def zoned_du(parcels):
