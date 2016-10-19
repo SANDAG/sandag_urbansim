@@ -174,7 +174,7 @@ FROM
         urbansim.parcels
             INNER JOIN urbansim.buildings
             ON buildings.parcel_id = parcels.parcel_id
-                LEFT JOIN staging.zoning
+                LEFT JOIN urbansim.zoning
                 ON zoning.zoning_id = parcels.zoning_id
                     LEFT JOIN staging.sr13_capacity
                         ON parcels.parcel_id = sr13_capacity.parcel_id
@@ -251,7 +251,7 @@ FROM
         urbansim.parcels
             INNER JOIN urbansim.buildings
             ON buildings.parcel_id = parcels.parcel_id
-                LEFT JOIN staging.zoning
+                LEFT JOIN urbansim.zoning
                 ON zoning.zoning_id = parcels.zoning_id
                     LEFT JOIN staging.sr13_capacity
                         ON parcels.parcel_id = sr13_capacity.parcel_id
