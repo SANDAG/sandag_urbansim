@@ -331,8 +331,6 @@ def feasibility2(parcels, settings,
                 parcel_is_allowed_func):
     kwargs = settings['feasibility']
 
-    from urbansim.developer import sqftproforma
-
     config = sqftproforma.SqFtProFormaConfig()
 
     attr = ['parcel_sizes', 'fars', 'profit_factor', 'building_efficiency', 'parcel_coverage',
@@ -357,6 +355,7 @@ def feasibility2(parcels, settings,
                           parcel_sales_price_sqft_func,
                           parcel_is_allowed_func,
                           config=config, forms_to_test=['residential'],
+                          pass_through=['parcel_size','land_cost','weighted_rent','building_purchase_price','total_sqft'],
                           **kwargs)
 
 
