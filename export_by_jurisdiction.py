@@ -76,8 +76,9 @@ transit_sql = 'SELECT x, y, stopnum FROM urbansim.transit'
 household_controls_sql = """SELECT yr as year, income_quartile, households as hh FROM urbansim.household_controls"""
 employment_controls_sql = """SELECT yr as year, number_of_jobs, sector_id FROM urbansim.employment_controls"""
 zoning_allowed_uses_sql = """SELECT development_type_id, zoning_id FROM urbansim.zoning_allowed_use ORDER BY development_type_id, zoning_id"""
+zoning_allowed_uses_aggregate_sql = """SELECT zoning_id, array_agg(development_type_id) FROM urbansim.zoning_allowed_use GROUP BY zoning_id"""
 fee_schedule_sql = """SELECT development_type_id, development_fee_per_unit_space_initial FROM urbansim.fee_schedule"""
-zoning_sql = """SELECT zoning_schedule_id, zoning_id, max_dua, max_building_height as max_height, max_far, max_res_units FROM staging.zoning"""
+zoning_sql = """SELECT zoning_schedule_id, zoning_id, max_dua, max_building_height as max_height, max_far, max_res_units FROM urbansim.zoning"""
 
 
 assessor_transactions_sql = """SELECT parcel_id, tx_price FROM (SELECT parcel_id, RANK() OVER (PARTITION BY parcel_id ORDER BY tx_date) as tx,
@@ -98,8 +99,10 @@ transit_df = pd.read_sql(transit_sql, urbansim_engine)
 household_controls_df = pd.read_sql(household_controls_sql, urbansim_engine, index_col='year')
 employment_controls_df = pd.read_sql(employment_controls_sql, urbansim_engine, index_col='year')
 zoning_allowed_uses_df = pd.read_sql(zoning_allowed_uses_sql, urbansim_engine, index_col='development_type_id')
+zoning_allowed_uses_aggregate_df = pd.read_sql(zoning_allowed_uses_aggregate_sql, urbansim_engine)
 fee_schedule_df = pd.read_sql(fee_schedule_sql, urbansim_engine, index_col='development_type_id')
 zoning_df = pd.read_sql(zoning_sql, urbansim_engine)
+
 #assessor_transactions_df = pd.read_sql(assessor_transactions_sql, urbansim_engine)
 
 building_sqft_per_job_df.sort_values(['luz_id', 'development_type_id'], inplace=True)
@@ -110,17 +113,20 @@ edges_df.sort_values(['from', 'to'], inplace=True)
 # convert unicode 'zoning_id' to str (needed for HDFStore in python 2)
 parcels_df['zoning_id'] = parcels_df['zoning_id'].astype(str)
 zoning_allowed_uses_df['zoning_id'] = zoning_allowed_uses_df['zoning_id'].astype(str)
+zoning_allowed_uses_aggregate_df['zoning_id'] = zoning_allowed_uses_aggregate_df['zoning_id'].astype(str)
+zoning_allowed_uses_aggregate_df['array_agg'] = zoning_allowed_uses_aggregate_df['array_agg'].astype(str)
+
 zoning_df['zoning_id'] = zoning_df['zoning_id'].astype(str)
 zoning_df = zoning_df.set_index('zoning_id')
 
 ###########################
 # parent data zoning
 ###########################
-zoning_schedule_sql = """SELECT * FROM staging.zoning_schedule"""
+zoning_schedule_sql = """SELECT * FROM urbansim.zoning_schedule"""
 zoning_schedule_df = pd.read_sql(zoning_schedule_sql, urbansim_engine)
 
 # get dataframe from table with updated zoning for parcels
-parcel_updates_sql = 'SELECT zoning_schedule_id, parcel_id, zoning_id FROM staging.parcel_zoning_schedule'
+parcel_updates_sql = 'SELECT zoning_schedule_id, parcel_id, zoning_id FROM urbansim.parcel_zoning_schedule'
 parcel_updates_df = pd.read_sql(parcel_updates_sql, urbansim_engine)
 
 parcels_df['zoning_schedule_id'] = 1 # to track which parcels have orig zoning
@@ -208,4 +214,7 @@ with pd.HDFStore('data/urbansim.h5', mode='w') as store:
     store.put('zoning_allowed_uses', zoning_allowed_uses_df, format='t')
     store.put('fee_schedule', fee_schedule_df, format='t')
     store.put('zoning', zoning_df_zsid, format='t')
+    store.put('zoning_allowed_uses_aggregate', zoning_allowed_uses_aggregate_df, format='t')
     #store.put('assessor_transactions', assessor_transactions_df, format='t')
+
+zoning_df_zsid.to_csv('data/zoning_w_zsid.csv')
