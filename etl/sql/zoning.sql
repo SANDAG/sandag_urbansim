@@ -218,7 +218,7 @@ SELECT
   ,notes
   ,'9/1/16'
   ,'DFL'
-  ,shape
+  ,NULL
   ,'Override from SR13 capacity where cap_hs <> base zoning max_res_units'
 FROM
     urbansim.zoning
@@ -286,6 +286,96 @@ FROM
                 ON zoning.zoning_schedule_id = 2
                 AND zoning.zoning_id = t.zoning_id || ' cap_hs ' || t.cap_hs
                 AND zoning.max_res_units = sr13_capacity.cap_hs
+
+
+/***########## INSERT POLYGONS START ##########***/
+/*** 1- INSERT ZONING POLIGONS FROM PARCELS ****/
+UPDATE urbansim.zoning z
+SET shape = p.shape::geography						--BACK TO GEOGRAPHY
+FROM
+(
+	SELECT  pzs.zoning_id, pzs.zoning_schedule_id
+		--pzs.parcel_id
+		,ST_Multi(ST_Union((p.shape)::geometry)) AS shape	--TO MULTIPART GEOMETRY
+		--, zoning_id, zoning_schedule_id
+	FROM urbansim.parcel_zoning_schedule AS pzs
+	JOIN (SELECT parcel_id, shape FROM urbansim.parcels) AS p
+	ON pzs.parcel_id = p.parcel_id
+	GROUP BY pzs.zoning_id, pzs.zoning_schedule_id
+)p
+WHERE z.zoning_id = p.zoning_id
+AND z.zoning_schedule_id = 2
+
+
+/*** 2- INSERT ZONING POLIGONS FROM PARENT ****/
+INSERT INTO urbansim.zoning
+SELECT 2 as zoning_schedule_id
+	,z.zoning_id
+	,zoning_id AS parent_zoning_id
+	,z.jurisdiction_id
+	,z.zone_code
+	,z.yr_effective
+	,z.region_id
+	,z.min_lot_size
+	,z.min_far
+	,z.max_far
+	,z.min_front_setback
+	,z.max_front_setback
+	,z.rear_setback
+	,z.side_setback
+	,z.min_dua
+	,z.max_dua
+	,z.max_res_units
+	,z.max_building_height
+	,z.zone_code_link
+	,z.notes
+	,'9/1/16'
+	,'DFL'
+	,ST_Multi(ST_Difference(z.shape::geometry, p.shape))::geography AS shape	--TRANSFORMATION?
+	,'Override from SR13 capacity where cap_hs <> base zoning max_res_units'
+FROM (SELECT *
+	FROM urbansim.zoning 
+	WHERE zoning_schedule_id = 1) AS z 
+JOIN (SELECT parent_zoning_id, ST_Multi(ST_Union((shape)::geometry)) AS shape
+	FROM urbansim.zoning
+	WHERE zoning_schedule_id = 2
+	GROUP BY parent_zoning_id
+	) AS p
+ON z.zoning_id = p.parent_zoning_id
+
+
+/*** 3- INSERT ZONING POLIGONS NOT CHANGED ****/
+INSERT INTO urbansim.zoning
+SELECT 2 as zoning_schedule_id
+	,zoning_id
+	,zoning_id AS parent_zoning_id
+	,jurisdiction_id
+	,zone_code
+	,yr_effective
+	,region_id
+	,min_lot_size
+	,min_far
+	,max_far
+	,min_front_setback
+	,max_front_setback
+	,rear_setback
+	,side_setback
+	,min_dua
+	,max_dua
+	,max_res_units
+	,max_building_height
+	,zone_code_link
+	,notes
+	,review_date
+	,review_by
+	,shape
+	,'Override from SR13 capacity where cap_hs <> base zoning max_res_units'
+FROM urbansim.zoning
+WHERE zoning_schedule_id = 1
+AND zoning_id NOT IN (SELECT DISTINCT parent_zoning_id FROM urbansim.zoning WHERE zoning_schedule_id = 2)
+
+
+
 --ORDER BY parcels.parcel_id
 --LIMIT 1000
 /*
