@@ -185,9 +185,10 @@ FROM
 
 /*################## STEP 6: FOR SUB-PARCELS WITH NO BUILDINGS STILL AND DU, ASSIGN FAKE BUILDING POINT  ###################*/
 --INSERT PLACEHOLDER CENTROIDS
-INSERT INTO urbansim.buildings (building_id, subparcel_id, parcel_id, mgra_id, shape, centroid, data_source, subparcel_assignment)
+INSERT INTO urbansim.buildings (building_id, development_type_id, subparcel_id, parcel_id, mgra_id, shape, centroid, data_source, subparcel_assignment)
 SELECT 
 	lc.subParcel + 2000000 AS building_id		--INSERTED BUILDING_ID > 2,000,000
+	,dev.development_type_id
 	,lc.subParcel
 	,parcelID
 	,MGRA
@@ -198,6 +199,7 @@ SELECT
 FROM 
 	spacecore.gis.landcore lc
 	LEFT JOIN urbansim.buildings usb ON lc.subParcel = usb.subparcel_id
+	JOIN ref.development_type_lu_code dev ON lc.lu = dev.lu_code
 WHERE 
 	du > 0
 	AND usb.subparcel_id is null
@@ -418,7 +420,7 @@ INSERT INTO urbansim.buildings(
 	,luz_id
 	)
 SELECT
-	NULL AS development_type_id
+	dev.development_type_id
 	,lc.subParcel + 4000000 AS building_id
 	,lc.parcelID
 	,lc.mgra as mgra
@@ -446,6 +448,8 @@ INNER JOIN (SELECT lc.subparcel, SUM(emp.emp_adj) emp_adj		--GROUP BY SUBPARCEL 
 ON lc.subparcel = emp.subparcel
 LEFT JOIN (SELECT subparcel_id FROM urbansim.buildings GROUP BY subparcel_id) usb
 ON lc.subParcel = usb.subparcel_id
+JOIN ref.development_type_lu_code dev
+ON lc.lu = dev.lu_code
 WHERE emp.emp_adj IS NOT NULL
 AND usb.subparcel_id IS NULL
 
