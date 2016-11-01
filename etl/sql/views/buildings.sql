@@ -615,6 +615,14 @@ ON bldg.block_id = jobs.block_id
 AND bldg.idx = jobs.idx
 
 
+/***#################### WHERE SQFT IS NULL, DERIVE FROM UNITS, JOB_SPACES ####################***/
+UPDATE urbansim.buildings
+SET [floorspace_source] = 'units_jobs_derived'
+	,[residential_sqft] = [residential_units] * 300
+	,[non_residential_sqft] = [job_spaces] * 300
+WHERE ISNULL([residential_sqft], 0) + ISNULL([non_residential_sqft], 0) = 0
+	AND ISNULL([residential_units], 0) + ISNULL([job_spaces], 0) > 0
+
 
 
 
