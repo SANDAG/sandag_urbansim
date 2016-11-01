@@ -66,6 +66,7 @@ buildings :
             ,year_built
             ,data_source
             ,subparcel_assignment
+            ,floorspace_source
 
         FROM
             spacecore.urbansim.buildings
@@ -104,6 +105,7 @@ buildings :
         year_built : !!python/name:sqlalchemy.Integer
         data_source : !!python/name:sqlalchemy.String
         subparcel_assignment : !!python/name:sqlalchemy.String
+        floorspace_source : !!python/name:sqlalchemy.String
         shape : !!python/object:geoalchemy2.Geography { geometry_type: 'GEOMETRY', srid: 4326, spatial_index: True }
         centroid : !!python/object:geoalchemy2.Geography { geometry_type: 'POINT', srid: 4326, spatial_index: True }
 
