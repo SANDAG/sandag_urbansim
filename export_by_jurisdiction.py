@@ -63,20 +63,24 @@ households_sql = 'SELECT household_id, building_id, persons, age_of_head, income
 
 jobs_sql = 'SELECT job_id, building_id, sector_id FROM urbansim.jobs'
 building_sqft_per_job_sql = 'SELECT luz_id, development_type_id, sqft_per_emp FROM urbansim.building_sqft_per_job'
+
+
 scheduled_development_events_sql = """SELECT
-                                         scheduled_development_event_id, parcel_id, building_type_id
-                                         ,year_built, sqft_per_unit, residential_units, non_residential_sqft
-                                         ,improvement_value, res_price_per_sqft, non_residential_rent_per_sqft
-                                         ,COALESCE(stories,1) as stories FROM urbansim.scheduled_development_event
+                                         "siteID", parcel_id, "devTypeID" as building_type_id,
+                                         EXTRACT(YEAR FROM "compDate")  as year_built, COALESCE(sfu,0) + COALESCE(mfu,0) AS residential_units,
+                                         "nResSqft" as non_residential_sqft, "resSqft" as residential_sqft,NULL as non_residential_rent_per_sqft,
+                                         NULL as stories
+                                         FROM urbansim.scheduled_development
                                          WHERE parcel_id IN
                                          (select parcel_id from urbansim.parcels where jurisdiction_id = """ + str(zone) + ')'
+
 schools_sql = """SELECT id, x ,y FROM urbansim.schools"""
 parks_sql = """SELECT park_id,  x, y FROM urbansim.parks"""
 transit_sql = 'SELECT x, y, stopnum FROM urbansim.transit'
 household_controls_sql = """SELECT yr as year, income_quartile, households as hh FROM urbansim.household_controls"""
 employment_controls_sql = """SELECT yr as year, number_of_jobs, sector_id FROM urbansim.employment_controls"""
 zoning_allowed_uses_sql = """SELECT development_type_id, zoning_id FROM urbansim.zoning_allowed_use ORDER BY development_type_id, zoning_id"""
-zoning_allowed_uses_aggregate_sql = """SELECT zoning_id, array_agg(development_type_id) FROM urbansim.zoning_allowed_use GROUP BY zoning_id"""
+zoning_allowed_uses_aggregate_sql = """SELECT zoning_id, array_agg(development_type_id) as allowed_development_types FROM urbansim.zoning_allowed_use GROUP BY zoning_id"""
 fee_schedule_sql = """SELECT development_type_id, development_fee_per_unit_space_initial FROM urbansim.fee_schedule"""
 zoning_sql = """SELECT zoning_schedule_id, zoning_id, max_dua, max_building_height as max_height, max_far, max_res_units FROM urbansim.zoning"""
 
@@ -92,7 +96,7 @@ buildings_df = pd.read_sql(buildings_sql, urbansim_engine, index_col='building_i
 households_df = pd.read_sql(households_sql, urbansim_engine, index_col='household_id')
 jobs_df = pd.read_sql(jobs_sql, urbansim_engine, index_col='job_id')
 building_sqft_per_job_df = pd.read_sql(building_sqft_per_job_sql, urbansim_engine)
-scheduled_development_events_df = pd.read_sql(scheduled_development_events_sql, urbansim_engine, index_col='scheduled_development_event_id')
+scheduled_development_events_df = pd.read_sql(scheduled_development_events_sql, urbansim_engine)
 schools_df = pd.read_sql(schools_sql, urbansim_engine, index_col='id')
 parks_df = pd.read_sql(parks_sql, urbansim_engine, index_col='park_id')
 transit_df = pd.read_sql(transit_sql, urbansim_engine)
@@ -114,7 +118,7 @@ edges_df.sort_values(['from', 'to'], inplace=True)
 parcels_df['zoning_id'] = parcels_df['zoning_id'].astype(str)
 zoning_allowed_uses_df['zoning_id'] = zoning_allowed_uses_df['zoning_id'].astype(str)
 zoning_allowed_uses_aggregate_df['zoning_id'] = zoning_allowed_uses_aggregate_df['zoning_id'].astype(str)
-zoning_allowed_uses_aggregate_df['array_agg'] = zoning_allowed_uses_aggregate_df['array_agg'].astype(str)
+zoning_allowed_uses_aggregate_df['allowed_development_types'] = zoning_allowed_uses_aggregate_df['allowed_development_types'].astype(str)
 
 zoning_df['zoning_id'] = zoning_df['zoning_id'].astype(str)
 zoning_df = zoning_df.set_index('zoning_id')
