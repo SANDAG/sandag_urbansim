@@ -1,6 +1,7 @@
 ﻿CREATE TABLE urbansim.zoning_parcels
 (
-    parcel_id character varying NOT NULL,
+    zoning_parcels_id serial NOT NULL,
+    parcel_id integer NOT NULL,
     zoning_id character varying NOT NULL,
     zoning_schedule_id integer NOT NULL,
     CONSTRAINT uk_zoning_parcels UNIQUE (parcel_id, zoning_id, zoning_schedule_id)
@@ -16,30 +17,30 @@ CREATE INDEX ix_zoning_parcel_id
     USING btree
     (parcel_id, zoning_id, zoning_schedule_id);
 
-SELECT * FROM urbansim.zoning_parcels
+SELECT COUNT(*) FROM urbansim.zoning_parcels
 
 
 --LOAD ZONING SCHEDULE 1
-INSERT INTO urbansim.zoning_parcels
-SELECT parcel_id
+INSERT INTO urbansim.zoning_parcels (parcel_id, zoning_id, zoning_schedule_id)
+SELECT 
+    parcel_id
     ,zoning_id
     ,1 AS zoning_schedule_id
-FROM urbansim.parcels
-
+FROM ref.parcelzoning_base  AS p
+JOIN (SELECT zoning_id, zone FROM urbansim.zoning WHERE zoning_schedule_id = 1) AS z
+    ON p.zone = z.zone
 
 --LOAD ZONING SCHEDULE 2
-INSERT INTO urbansim.zoning_parcels
-SELECT p.parcel_id
+INSERT INTO urbansim.zoning_parcels (parcel_id, zoning_id, zoning_schedule_id)
+SELECT
+    p.parcel_id
     ,COALESCE (pzs.zoning_id, p.zoning_id)
     ,2 AS zoning_schedule_id
 FROM urbansim.parcel_zoning_schedule AS pzs
-RIGHT JOIN (SELECT parcel_id, zoning_id FROM urbansim.parcels) AS p
+RIGHT JOIN (SELECT p.parcel_id, z.zoning_id 
+            FROM ref.parcelzoning_base AS p
+            LEFT JOIN (SELECT zoning_id, zone FROM urbansim.zoning WHERE zoning_schedule_id = 2) AS z ON p.zone = z.zone ) AS p
     ON pzs.parcel_id = p.parcel_id
+ORDER BY parcel_id
 ;
-/*
-SELECT parcel_id
-    ,zoning_id
-    ,zoning_schedule_id
-FROM urbansim.parcel_zoning_schedule;
-*/
 
