@@ -177,9 +177,9 @@ FROM
         ,SUM(buildings.residential_units) as residential_units
     FROM
         ref.parcelzoning_base AS parcels
-            INNER JOIN urbansim.buildings
+            LEFT JOIN urbansim.buildings
             ON buildings.parcel_id = parcels.parcel_id
-                LEFT JOIN urbansim.zoning
+                LEFT JOIN ref.zoning_base AS zoning
                 ON zoning.zone = parcels.zone
                     LEFT JOIN staging.sr13_capacity
                         ON parcels.parcel_id = sr13_capacity.parcel_id
@@ -225,10 +225,11 @@ SELECT
   ,NULL
   ,'Override from SR13 capacity where cap_hs <> base zoning max_res_units'
 FROM
-    urbansim.zoning
+    ref.zoning_base AS zoning
         INNER JOIN t
         ON t.zone = zoning.zone
 WHERE zoning.max_res_units <> t.cap_hs
+OR zoning.max_res_units IS NULL
 
 
 /*** LOAD INTO PARCEL ZONING SCHEDULE ***/
@@ -293,6 +294,7 @@ FROM
                 AND zoning.zone = t.zone || ' cap_hs ' || t.cap_hs
                 AND zoning.max_res_units = sr13_capacity.cap_hs
 
+ORDER BY parcels.parcel_id
 
 /***########## INSERT POLYGONS FOR SCHEDULE 2 START ##########***/	--FIX FOR PARCELS DATASET, NO ZONING DATA!!!!!
 /*** 1- INSERT ZONING POLIGONS FROM PARCELS ****/
