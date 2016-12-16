@@ -2,6 +2,7 @@
 DROP TABLE IF EXISTS urbansim.zoning_allowed_use;
 DROP TABLE IF EXISTS urbansim.zoning;
 DROP TABLE IF EXISTS urbansim.zoning_schedule;
+DROP TABLE IF EXISTS urbansim.zoning_parcels;
 DROP TABLE IF EXISTS staging.sr13_capacity;
 
 CREATE TABLE urbansim.zoning_schedule
