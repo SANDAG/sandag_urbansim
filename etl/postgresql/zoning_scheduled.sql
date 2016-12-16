@@ -1,4 +1,4 @@
-﻿DROP TABLE IF EXISTS urbansim.parcel_zoning_schedule;
+﻿DROP TABLE IF EXISTS urbansim.parcel_zoning_schedule2;
 DROP TABLE IF EXISTS urbansim.zoning_allowed_use;
 DROP TABLE IF EXISTS urbansim.zoning;
 DROP TABLE IF EXISTS urbansim.zoning_schedule;
@@ -70,11 +70,35 @@ USING btree (jurisdiction_id);
 
 
 --load zoning from staging.zoning
-INSERT INTO urbansim.zoning
+INSERT INTO urbansim.zoning(
+    zoning_schedule_id
+    ,zone
+    ,parent_zoning_id
+    ,parent_zone
+    ,jurisdiction_id
+    ,zone_code
+    ,yr_effective
+    ,region_id
+    ,min_lot_size
+    ,min_far
+    ,max_far
+    ,min_front_setback
+    ,max_front_setback
+    ,rear_setback
+    ,side_setback
+    ,min_dua
+    ,max_dua
+    ,max_res_units
+    ,max_building_height
+    ,zone_code_link
+    ,notes
+    ,review_date
+    ,review_by
+    ,shape
+    ,review)
 SELECT 
-    DEFAULT
-    ,1 AS zoning_schedule_id
-    ,zoning_id AS zone
+    1 AS zoning_schedule_id
+    ,zone
     ,NULL AS parent_zoning_id
     ,NULL AS parent_zone
     ,jurisdiction_id
@@ -119,25 +143,25 @@ USING btree (zoning_id);
 INSERT INTO urbansim.zoning_allowed_use
 SELECT
     z.zoning_id
-    ,a.zoning_id AS zone
+    ,a.zone
     ,a.zoning_allowed_use_id
     ,a.development_type_id
 FROM ref.zoningalloweduse_base a
     ,urbansim.zoning z
-WHERE z.zone = a.zoning_id;
+WHERE z.zone = a.zone;
 
 
-CREATE TABLE urbansim.parcel_zoning_schedule
+CREATE TABLE urbansim.parcel_zoning_schedule2
 (
     zoning_schedule_id integer REFERENCES urbansim.zoning_schedule
     ,parcel_id integer REFERENCES urbansim.parcels (parcel_id)
     ,zoning_id integer REFERENCES urbansim.zoning (zoning_id)
     ,zone character varying
-    ,CONSTRAINT uk_parcel_zoning_schedule UNIQUE (zoning_schedule_id, parcel_id, zoning_id)
+    ,CONSTRAINT uk_parcel_zoning_schedule2 UNIQUE (zoning_schedule_id, parcel_id, zoning_id)
 );
-ALTER TABLE urbansim.parcel_zoning_schedule
+ALTER TABLE urbansim.parcel_zoning_schedule2
   OWNER TO urbansim_user;
-GRANT ALL ON TABLE urbansim.parcel_zoning_schedule TO urbansim_user;
+GRANT ALL ON TABLE urbansim.parcel_zoning_schedule2 TO urbansim_user;
 
 INSERT INTO urbansim.zoning_schedule (zoning_schedule_id, parent_zoning_schedule_id, yr, short_name, long_name)
 VALUES (2, 1, 2012, 'SR13 Final Capacity Based Zoning',
@@ -198,34 +222,60 @@ GROUP BY
 ORDER BY
     zone
     ,num_parcels DESC)
---INSERT INTO urbansim.zoning
+/*INSERT INTO urbansim.zoning(
+    zoning_schedule_id
+    ,zone
+    ,parent_zoning_id
+    ,parent_zone
+    ,jurisdiction_id
+    ,zone_code
+    ,yr_effective
+    ,region_id
+    ,min_lot_size
+    ,min_far
+    ,max_far
+    ,min_front_setback
+    ,max_front_setback
+    ,rear_setback
+    ,side_setback
+    ,min_dua
+    ,max_dua
+    ,max_res_units
+    ,max_building_height
+    ,zone_code_link
+    ,notes
+    ,review_date
+    ,review_by
+    ,shape
+    ,review)*/
 SELECT
-  2 as zoning_schedule_id
-  ,zoning.zone || ' cap_hs ' || t.cap_hs
-  ,zoning.zone
-  ,jurisdiction_id
-  ,zone_code
-  ,yr_effective
-  ,region_id
-  ,min_lot_size
-  ,min_far
-  ,max_far
-  ,min_front_setback
-  ,max_front_setback
-  ,rear_setback
-  ,side_setback
-  ,min_dua
-  ,max_dua
-  ,t.cap_hs as max_res_units
-  ,max_building_height
-  ,zone_code_link
-  ,notes
-  ,'9/1/16'
-  ,'DFL'
-  ,NULL
-  ,'Override from SR13 capacity where cap_hs <> base zoning max_res_units'
+    2 AS zoning_schedule_id
+    ,zoning.zone || ' cap_hs ' || t.cap_hs
+    ,zoning.zoning_id AS parent_zoning_id
+    ,zoning.zone AS parect_zone
+    ,jurisdiction_id
+    ,zone_code
+    ,yr_effective
+    ,region_id
+    ,min_lot_size
+    ,min_far
+    ,max_far
+    ,min_front_setback
+    ,max_front_setback
+    ,rear_setback
+    ,side_setback
+    ,min_dua
+    ,max_dua
+    ,t.cap_hs as max_res_units
+    ,max_building_height
+    ,zone_code_link
+    ,notes
+    ,'9/1/16'
+    ,'DFL'
+    ,NULL
+    ,'Override from SR13 capacity where cap_hs <> base zoning max_res_units'
 FROM
-    ref.zoning_base AS zoning
+    urbansim.zoning
         INNER JOIN t
         ON t.zone = zoning.zone
 WHERE zoning.max_res_units <> t.cap_hs
@@ -277,7 +327,7 @@ GROUP BY
 ORDER BY
     zone
     ,num_parcels DESC)
---INSERT INTO urbansim.parcel_zoning_schedule
+INSERT INTO urbansim.parcel_zoning_schedule2
 SELECT
     2 as zoning_schedule_id
     ,parcels.parcel_id
@@ -294,98 +344,196 @@ FROM
                 AND zoning.zone = t.zone || ' cap_hs ' || t.cap_hs
                 AND zoning.max_res_units = sr13_capacity.cap_hs
 
-ORDER BY parcels.parcel_id
+
+/*** ZONING PARCELS TABLE ***/
+CREATE TABLE urbansim.zoning_parcels
+(
+    zoning_parcels_id serial NOT NULL,
+    parcel_id integer NOT NULL,
+    zoning_id integer NOT NULL,
+    zone character varying NOT NULL,
+    zoning_schedule_id integer NOT NULL,
+    CONSTRAINT uk_zoning_parcels UNIQUE (parcel_id, zoning_id, zoning_schedule_id)
+)
+;
+ALTER TABLE urbansim.zoning_parcels
+    OWNER TO urbansim_user;
+GRANT ALL ON TABLE urbansim.zoning TO urbansim_user;
+
+
+CREATE INDEX ix_zoning_parcel_id
+    ON urbansim.zoning_parcels
+    USING btree
+    (parcel_id, zoning_id, zoning_schedule_id);
+
+
+--LOAD ZONING SCHEDULE 1
+INSERT INTO urbansim.zoning_parcels (parcel_id, zoning_id, zone, zoning_schedule_id)
+SELECT 
+    parcel_id
+    ,z.zoning_id
+    ,p.zone
+    ,1 AS zoning_schedule_id
+FROM ref.parcelzoning_base  AS p
+JOIN (SELECT zoning_id, zone FROM urbansim.zoning WHERE zoning_schedule_id = 1) AS z
+    ON p.zone = z.zone
+
+--LOAD ZONING SCHEDULE 2
+INSERT INTO urbansim.zoning_parcels (parcel_id, zoning_id, zone, zoning_schedule_id)
+SELECT
+    p.parcel_id
+    ,COALESCE (pzs.zoning_id, p.zoning_id)
+    ,COALESCE (pzs.zone, p.zone)
+    ,2 AS zoning_schedule_id
+FROM urbansim.parcel_zoning_schedule2 AS pzs
+RIGHT JOIN (SELECT p.parcel_id, z.zoning_id, p.zone
+            FROM ref.parcelzoning_base AS p
+            LEFT JOIN (SELECT zoning_id, zone FROM urbansim.zoning WHERE zoning_schedule_id = 1) AS z ON p.zone = z.zone ) AS p
+    ON pzs.parcel_id = p.parcel_id
+ORDER BY parcel_id
+;
+
 
 /***########## INSERT POLYGONS FOR SCHEDULE 2 START ##########***/	--FIX FOR PARCELS DATASET, NO ZONING DATA!!!!!
-/*** 1- INSERT ZONING POLIGONS FROM PARCELS ****/
+/*** 1- INSERT ZONING POLYGONS FROM PARCELS ****/
 UPDATE urbansim.zoning z
 SET shape = p.shape::geography						--BACK TO GEOGRAPHY
 FROM
 (
-	SELECT  pzs.zoning_id, pzs.zoning_schedule_id
-		--pzs.parcel_id
-		,ST_Multi(ST_Union((p.shape)::geometry)) AS shape	--TO MULTIPART GEOMETRY
-		--, zoning_id, zoning_schedule_id
-	FROM urbansim.parcel_zoning_schedule AS pzs
-	JOIN (SELECT parcel_id, shape FROM urbansim.parcels) AS p
-	ON pzs.parcel_id = p.parcel_id
-	GROUP BY pzs.zoning_id, pzs.zoning_schedule_id
+    SELECT  pzs.zoning_id, pzs.zoning_schedule_id
+        --,ST_Multi(ST_Union((p.shape)::geometry)) AS shape		--TO MULTIPART GEOMETRY
+    FROM urbansim.parcel_zoning_schedule2 AS pzs
+    JOIN urbansim.parcels AS p
+    ON pzs.parcel_id = p.parcel_id
+    GROUP BY pzs.zoning_id, pzs.zoning_schedule_id
+    ORDER BY pzs.zoning_id
 )p
 WHERE z.zoning_id = p.zoning_id
 AND z.zoning_schedule_id = 2
 
 /*** 2- INSERT ADDITIONAL ZONING POLYGONS FROM PARENT;
 PARCELS NOT IN ZONING SCHEDULE 2, YES IN ZONING POLYGONS AFFECTED BY IT ****/
-INSERT INTO urbansim.zoning
-SELECT z2.zoning_schedule_id
-	,pz.zoning_id AS zoning_id
-	,pz.zoning_id AS parent_zoning_id
-	,z1.jurisdiction_id
-	,z1.zone_code
-	,z1.yr_effective
-	,z1.region_id
-	,z1.min_lot_size
-	,z1.min_far
-	,z1.max_far
-	,z1.min_front_setback
-	,z1.max_front_setback
-	,z1.rear_setback
-	,z1.side_setback
-	,z1.min_dua
-	,z1.max_dua
-	,z1.max_res_units
-	,z1.max_building_height
-	,z1.zone_code_link
-	,z1.notes
-	,z1.review_date
-	,z1.review_by
-	,pz.shape
-	,z1.review
-FROM (SELECT zoning_schedule_id, parent_zoning_id
-	FROM urbansim.zoning 
-	WHERE zoning_schedule_id = 2
-	GROUP BY zoning_schedule_id, parent_zoning_id) AS z2
-JOIN (SELECT p.zoning_id
-		,ST_Multi(ST_Union((p.shape)::geometry)) AS shape
-	FROM (SELECT parcel_id, zoning_id, shape FROM urbansim.parcels WHERE parcel_id NOT IN (SELECT parcel_id FROM urbansim.parcel_zoning_schedule WHERE zoning_schedule_id = 2)) p
-	JOIN (SELECT parent_zoning_id FROM urbansim.zoning WHERE zoning_schedule_id = 2 GROUP BY parent_zoning_id) AS z
-	ON p.zoning_id = z.parent_zoning_id
-	GROUP BY p.zoning_id
-	) AS pz
-ON z2.parent_zoning_id = pz.zoning_id
-JOIN (SELECT *
-	FROM urbansim.zoning 
-	WHERE zoning_schedule_id = 1) AS z1
-ON z2.parent_zoning_id = z1.zoning_id
-UNION ALL
+INSERT INTO urbansim.zoning(
+    zoning_schedule_id
+    ,zone
+    ,parent_zoning_id
+    ,parent_zone
+    ,jurisdiction_id
+    ,zone_code
+    ,yr_effective
+    ,region_id
+    ,min_lot_size
+    ,min_far
+    ,max_far
+    ,min_front_setback
+    ,max_front_setback
+    ,rear_setback
+    ,side_setback
+    ,min_dua
+    ,max_dua
+    ,max_res_units
+    ,max_building_height
+    ,zone_code_link
+    ,notes
+    ,review_date
+    ,review_by
+    ,shape
+    ,review)
+SELECT
+    2 AS zoning_schedule_id
+    ,zp.zone
+    ,zp.zoning_id AS parent_zoning_id
+    ,zp.zone AS parent_zone
+    ,z.jurisdiction_id
+    ,z.zone_code
+    ,z.yr_effective
+    ,z.region_id
+    ,z.min_lot_size
+    ,z.min_far
+    ,z.max_far
+    ,z.min_front_setback
+    ,z.max_front_setback
+    ,z.rear_setback
+    ,z.side_setback
+    ,z.min_dua
+    ,z.max_dua
+    ,z.max_res_units
+    ,z.max_building_height
+    ,z.zone_code_link
+    ,z.notes
+    ,z.review_date
+    ,z.review_by
+    ,zp.shape
+    ,z.review
+FROM urbansim.zoning AS z
+JOIN (SELECT
+        zp.zoning_id
+        ,zp.zone
+        ,ST_Multi(ST_Union((p.shape)::geometry)) AS shape
+    FROM urbansim.zoning_parcels AS zp
+    JOIN urbansim.parcels AS p ON zp.parcel_id = p.parcel_id
+    WHERE zp.zoning_schedule_id = 2
+    AND zp.parcel_id NOT IN (SELECT parcel_id FROM urbansim.parcel_zoning_schedule2)
+    GROUP BY zp.zoning_id, zp.zone) AS zp
+ON z.zoning_id = zp.zoning_id
+WHERE z.zoning_schedule_id = 1
+
 /*** 3- INSERT ADDITIONAL ZONING POLYGONS FROM SCHEDULE 1 NOT CHANGED IN SCHEDULE 2 ****/
-SELECT 2 AS zoning_schedule_id
-	,zoning_id
-	,zoning_id AS parent_zoning_id
-	,jurisdiction_id
-	,zone_code
-	,yr_effective
-	,region_id
-	,min_lot_size
-	,min_far
-	,max_far
-	,min_front_setback
-	,max_front_setback
-	,rear_setback
-	,side_setback
-	,min_dua
-	,max_dua
-	,max_res_units
-	,max_building_height
-	,zone_code_link
-	,notes
-	,review_date
-	,review_by
-	,shape
-	,'Override from SR13 capacity where cap_hs <> base zoning max_res_units'
+INSERT INTO urbansim.zoning(
+    zoning_schedule_id
+    ,zone
+    ,parent_zoning_id
+    ,parent_zone
+    ,jurisdiction_id
+    ,zone_code
+    ,yr_effective
+    ,region_id
+    ,min_lot_size
+    ,min_far
+    ,max_far
+    ,min_front_setback
+    ,max_front_setback
+    ,rear_setback
+    ,side_setback
+    ,min_dua
+    ,max_dua
+    ,max_res_units
+    ,max_building_height
+    ,zone_code_link
+    ,notes
+    ,review_date
+    ,review_by
+    ,shape
+    ,review)
+SELECT
+    2 AS zoning_schedule_id
+    ,zone
+    ,zoning_id AS parent_zoning_id
+    ,zone AS parent_zone
+    ,jurisdiction_id
+    ,zone_code
+    ,yr_effective
+    ,region_id
+    ,min_lot_size
+    ,min_far
+    ,max_far
+    ,min_front_setback
+    ,max_front_setback
+    ,rear_setback
+    ,side_setback
+    ,min_dua
+    ,max_dua
+    ,max_res_units
+    ,max_building_height
+    ,zone_code_link
+    ,notes
+    ,review_date
+    ,review_by
+    ,shape
+    ,review
 FROM urbansim.zoning
 WHERE zoning_schedule_id = 1
-AND zoning_id NOT IN (SELECT DISTINCT parent_zoning_id FROM urbansim.zoning WHERE zoning_schedule_id = 2)
+AND zone NOT IN (SELECT DISTINCT parent_zone FROM urbansim.zoning WHERE zoning_schedule_id = 2)
 ;
 
 
