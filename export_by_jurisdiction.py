@@ -73,10 +73,19 @@ parcels_sql = '''SELECT p.parcel_id, p.development_type_id,
                     AND zp.zoning_schedule_id = ''' + str(zsid)
 
 
-buildings_sql = 'SELECT building_id, parcel_id, COALESCE(development_type_id,0) as building_type_id, COALESCE(residential_units, 0) as residential_units, ' \
-                'COALESCE(residential_sqft, 0) as residential_sqft, COALESCE(non_residential_sqft,0) as non_residential_sqft, ' \
-                '0 as non_residential_rent_per_sqft, COALESCE(year_built, 0) year_built, COALESCE(stories, 1) as stories FROM urbansim.buildings ' \
-                'where parcel_id IN (select parcel_id from urbansim.parcels where jurisdiction_id = ' + str(zone) + ')'
+buildings_sql = '''SELECT building_id, parcel_id,
+                          COALESCE(development_type_id,0) as building_type_id,
+                          COALESCE(residential_units, 0) as residential_units,
+                          COALESCE(residential_sqft, 0) as residential_sqft,
+                          COALESCE(non_residential_sqft,0) as non_residential_sqft,
+                          0 as non_residential_rent_per_sqft,
+                          COALESCE(year_built, 0) year_built,
+                          COALESCE(stories, 1) as stories
+                     FROM urbansim.buildings
+                    WHERE parcel_id IN
+                         (SELECT parcel_id
+                            FROM urbansim.parcels
+                           WHERE jurisdiction_id = '''  + str(zone)  + ')'
 
 
 households_sql = 'SELECT household_id, building_id, persons, age_of_head, income, children FROM urbansim.households ' \
@@ -84,18 +93,32 @@ households_sql = 'SELECT household_id, building_id, persons, age_of_head, income
                  '(select parcel_id from urbansim.parcels where jurisdiction_id = ' + str(zone) +' ))'
 
 
-jobs_sql = 'SELECT job_id, building_id, sector_id FROM urbansim.jobs'
+jobs_sql = '''SELECT job_id, building_id, sector_id
+                FROM urbansim.jobs'''
+
 building_sqft_per_job_sql = 'SELECT luz_id, development_type_id, sqft_per_emp FROM urbansim.building_sqft_per_job'
 
 
-scheduled_development_events_sql = """SELECT
-                                         "siteID", parcel_id, "devTypeID" as building_type_id,
-                                         EXTRACT(YEAR FROM "compDate")  as year_built, COALESCE(sfu,0) + COALESCE(mfu,0) AS residential_units,
-                                         "nResSqft" as non_residential_sqft, "resSqft" as residential_sqft,NULL as non_residential_rent_per_sqft,
-                                         NULL as stories
-                                         FROM urbansim.scheduled_development
-                                         WHERE parcel_id IN
-                                         (select parcel_id from urbansim.parcels where jurisdiction_id = """ + str(zone) + ')'
+scheduled_development_events_sql =  '''WITH parcels_for_sched_dev AS
+                                             (SELECT siteid, count(parcel_id) as parcel_count
+                                                FROM urbansim.scheduled_development_parcels
+                                            GROUP BY siteid)
+                                        SELECT sd."siteID", sp.parcel_id,
+                                               sd."devTypeID" as building_type_id,
+                                               EXTRACT(YEAR FROM "compDate")  as year_built,
+                                               COALESCE(sfu,0) + COALESCE(mfu,0) AS total_units,
+                                               "nResSqft" as non_residential_sqft,
+                                               "resSqft" as residential_sqft,
+                                               NULL as non_residential_rent_per_sqft,
+                                               NULL as stories,
+                                               (COALESCE(sfu,0) + COALESCE(mfu,0))/parcel_count AS residential_units
+                                          FROM urbansim.scheduled_development_parcels sp
+                                          JOIN urbansim.scheduled_development sd
+                                            ON sp.siteid = sd."siteID"
+                                          JOIN parcels_for_sched_dev parcels_sd
+                                            ON parcels_sd.siteid = sp.siteid
+                                         WHERE sp.parcel_id IN (SELECT parcel_id FROM urbansim.parcels
+                                         WHERE jurisdiction_id = ''' + str(zone)  +  ')'
 
 scheduled_development_events_sql =  """ WITH parcels_on_site AS (
                                         SELECT siteid, count(parcel_id) as parcel_count
