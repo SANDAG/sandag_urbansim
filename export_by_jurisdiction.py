@@ -12,6 +12,7 @@ urbansim_engine = create_engine(get_connection_string("configs/dbconfig.yml", 'u
 data_cafe_engine = create_engine(get_connection_string("configs/dbconfig.yml", 'data_cafe'))
 
 zone = datasources.settings()['jurisdiction']
+zsid = datasources.settings()['zoning_schedule_id']
 
 bounding_box_sql =  """SELECT name as CITY
                         ,geometry::STGeomFromText(shape.STAsText(),4326).STEnvelope().STPointN(1).STX AS [Left]
@@ -45,14 +46,20 @@ edges_sql = 'SELECT from_node as from, to_node as to, distance as weight FROM ur
             'and y between ' + str(bounding_box_df.iloc[0]['Bottom']) + ' and ' +  str(bounding_box_df.iloc[0]['Top']) + ')' \
 
 
-parcels_sql = 'SELECT parcel_id, development_type_id, luz_id, parcel_acres as acres, ' \
-              'zoning_id, ST_X(ST_Transform(centroid::geometry, 2230)) as x, ST_Y(ST_Transform(centroid::geometry, 2230))  as y, ' \
-              'distance_to_coast, distance_to_freeway FROM urbansim.parcels where jurisdiction_id = ' + str(zone)
+parcels_sql = """SELECT p.parcel_id, zp.zoning_schedule_id, p.development_type_id, p.luz_id, p.parcel_acres as acres,
+                  zp.zoning_id, sp.siteid, ST_X(ST_Transform(centroid::geometry, 2230)) as x, ST_Y(ST_Transform(centroid::geometry, 2230))  as y,
+                COALESCE(p.distance_to_coast,10000) as distance_to_coast, COALESCE(p.distance_to_freeway,10000) as distance_to_freeway
+                FROM urbansim.parcels p
+                JOIN urbansim.zoning_parcels zp
+                ON p.parcel_id = zp.parcel_id
+                LEFT JOIN urbansim.scheduled_development_parcels sp
+                ON p.parcel_id = sp.parcel_id
+                WHERE zp.zoning_schedule_id = """ + str(zsid) +  ' AND p.jurisdiction_id = ' + str(zone)
 
 
 buildings_sql = 'SELECT building_id, parcel_id, COALESCE(development_type_id,0) as building_type_id, COALESCE(residential_units, 0) as residential_units, ' \
                 'COALESCE(residential_sqft, 0) as residential_sqft, COALESCE(non_residential_sqft,0) as non_residential_sqft, ' \
-                '0 as non_residential_rent_per_sqft, COALESCE(year_built, -1) year_built, COALESCE(stories, 1) as stories FROM urbansim.buildings ' \
+                '0 as non_residential_rent_per_sqft, COALESCE(year_built, 0) year_built, COALESCE(stories, 1) as stories FROM urbansim.buildings ' \
                 'where parcel_id IN (select parcel_id from urbansim.parcels where jurisdiction_id = ' + str(zone) + ')'
 
 
@@ -74,6 +81,25 @@ scheduled_development_events_sql = """SELECT
                                          WHERE parcel_id IN
                                          (select parcel_id from urbansim.parcels where jurisdiction_id = """ + str(zone) + ')'
 
+scheduled_development_events_sql =  """ WITH parcels_on_site AS (
+                                        SELECT siteid, count(parcel_id) as parcel_count
+                                        FROM urbansim.scheduled_development_parcels
+                                        GROUP BY siteid
+                                        )
+                                        SELECT sd."siteID", sp.parcel_id, sd."devTypeID" as building_type_id,
+                                        EXTRACT(YEAR FROM "compDate")  as year_built,
+                                        COALESCE(sfu,0) + COALESCE(mfu,0) AS total_units,
+                                        "nResSqft" as non_residential_sqft, "resSqft" as residential_sqft,
+                                        NULL as non_residential_rent_per_sqft, NULL as stories,
+                                        (COALESCE(sfu,0) + COALESCE(mfu,0))/parcel_count AS residential_units
+                                        FROM urbansim.scheduled_development_parcels sp
+                                        JOIN urbansim.scheduled_development sd
+                                        ON sp.siteid = sd."siteID"
+                                        JOIN parcels_on_site os
+                                        ON os.siteid = sp.siteid
+                                        WHERE sp.parcel_id IN (SELECT parcel_id FROM urbansim.parcels WHERE jurisdiction_id = """ + str(zone) + ')'
+
+
 schools_sql = """SELECT id, x ,y FROM urbansim.schools"""
 parks_sql = """SELECT park_id,  x, y FROM urbansim.parks"""
 transit_sql = 'SELECT x, y, stopnum FROM urbansim.transit'
@@ -84,6 +110,30 @@ zoning_allowed_uses_aggregate_sql = """SELECT zoning_id, array_agg(development_t
 fee_schedule_sql = """SELECT development_type_id, development_fee_per_unit_space_initial FROM urbansim.fee_schedule"""
 zoning_sql = """SELECT zoning_schedule_id, zoning_id, max_dua, max_building_height as max_height, max_far, max_res_units FROM urbansim.zoning"""
 
+
+
+
+zoning_sql =    """ SELECT parcels.parcel_id, parcels.jurisdiction_id,
+                    zoning.zoning_schedule_id, zoning.zone, zoning.zoning_id, zoning.parent_zoning_id,
+                    zoning.min_dua, zoning.max_dua,
+                    zoning.max_building_height as max_height,
+                    zoning.max_far,
+                    zoning.max_res_units
+                    FROM urbansim.zoning zoning
+                    JOIN urbansim.zoning_parcels zp
+                    ON zoning.zoning_id = CAST(zp.zoning_id as integer)
+                    JOIN urbansim.parcels parcels
+                    ON zp.parcel_id = parcels.parcel_id
+                    WHERE zoning.zoning_schedule_id = """ + str(zsid) +  ' AND zoning.jurisdiction_id = ' + str(zone)
+
+
+zoning_sql =    """SELECT zoning.zoning_schedule_id, zoning.zone, zoning.zoning_id, zoning.parent_zoning_id,
+                    zoning.min_dua, zoning.max_dua,
+                    zoning.max_building_height as max_height,
+                    zoning.max_far,
+                    zoning.max_res_units
+                    FROM urbansim.zoning zoning
+                    WHERE zoning.zoning_schedule_id = """ + str(zsid) +  ' AND zoning.jurisdiction_id = ' + str(zone)
 
 assessor_transactions_sql = """SELECT parcel_id, tx_price FROM (SELECT parcel_id, RANK() OVER (PARTITION BY parcel_id ORDER BY tx_date) as tx,
                                 tx_date, tx_price FROM estimation.assessor_par_transactions) x WHERE tx = 1"""
@@ -116,46 +166,52 @@ edges_df.sort_values(['from', 'to'], inplace=True)
 #edges_df.set_index(['from', 'to'], inplace=True)
 # convert unicode 'zoning_id' to str (needed for HDFStore in python 2)
 parcels_df['zoning_id'] = parcels_df['zoning_id'].astype(str)
+
 zoning_allowed_uses_df['zoning_id'] = zoning_allowed_uses_df['zoning_id'].astype(str)
 zoning_allowed_uses_aggregate_df['zoning_id'] = zoning_allowed_uses_aggregate_df['zoning_id'].astype(str)
 zoning_allowed_uses_aggregate_df['allowed_development_types'] = zoning_allowed_uses_aggregate_df['allowed_development_types'].astype(str)
 
 zoning_df['zoning_id'] = zoning_df['zoning_id'].astype(str)
 zoning_df = zoning_df.set_index('zoning_id')
+zoning_df['zone'] = zoning_df['zone'].astype(str)
+
+#parent_zoning
 
 ###########################
 # parent data zoning
 ###########################
-zoning_schedule_sql = """SELECT * FROM urbansim.zoning_schedule"""
-zoning_schedule_df = pd.read_sql(zoning_schedule_sql, urbansim_engine)
+# zoning_schedule_sql = """SELECT * FROM urbansim.zoning_schedule"""
+# zoning_schedule_df = pd.read_sql(zoning_schedule_sql, urbansim_engine)
+#
+# # get dataframe from table with updated zoning for parcels
+# parcel_updates_sql = 'SELECT zoning_schedule_id, parcel_id, zoning_id FROM urbansim.parcel_zoning_schedule'
+# parcel_updates_df = pd.read_sql(parcel_updates_sql, urbansim_engine)
+#
+# parcels_df['zoning_schedule_id'] = 1 # to track which parcels have orig zoning
+# parent = datasources.settings()['zoning_schedule_id'] # zoning schedule id from settings.yaml
+#
+# # create list of zoning schedule ids w parent to each
+# # e.g. [3, 2, 1] where 3 has parent 2 that has parent 1
+# zoning_sched_ids = []
+# while not math.isnan(parent):
+#     zoning_sched_ids.append(parent)
+#     parent = zoning_schedule_df['parent_zoning_schedule_id'][zoning_schedule_df['zoning_schedule_id'] == parent].values[0]
+#
+# zoning_df_zsid = zoning_df[zoning_df['zoning_schedule_id'] == zoning_sched_ids[-1]] # zoning_df parent
+# zoning_sched_ids = zoning_sched_ids[:-1] # remove last parent id (i.e. 1), bc assuming parcel table is parent
+#
+# parcels_df['original_zoning_id'] = parcels_df['zoning_id']
+# # replace parcel table zoning starting with lowest zoning schedule id to highest id
+# # e.g. replace parcel table zoning with parcel zoning schedule id=2 and then with id=3
+# for zsid in reversed(zoning_sched_ids):
+#     parcel_update_zsid = parcel_updates_df[parcel_updates_df['zoning_schedule_id'] == zsid]
+#     parcel_update_zsid = parcel_update_zsid.set_index(['parcel_id'])
+#     parcels_df.loc[parcels_df.index.isin(parcel_update_zsid.index), ['zoning_id', 'zoning_schedule_id']] = parcel_update_zsid[['zoning_id', 'zoning_schedule_id']]
+#     zoning_df_zsid = zoning_df_zsid.append(zoning_df[zoning_df['zoning_schedule_id'] == zsid])
+#
+# parcels_df['zoning_id'] = parcels_df['zoning_id'].astype(str) # zoning as string for writng to .h5
 
-# get dataframe from table with updated zoning for parcels
-parcel_updates_sql = 'SELECT zoning_schedule_id, parcel_id, zoning_id FROM urbansim.parcel_zoning_schedule'
-parcel_updates_df = pd.read_sql(parcel_updates_sql, urbansim_engine)
 
-parcels_df['zoning_schedule_id'] = 1 # to track which parcels have orig zoning
-parent = datasources.settings()['zoning_schedule_id'] # zoning schedule id from settings.yaml
-
-# create list of zoning schedule ids w parent to each
-# e.g. [3, 2, 1] where 3 has parent 2 that has parent 1
-zoning_sched_ids = []
-while not math.isnan(parent):
-    zoning_sched_ids.append(parent)
-    parent = zoning_schedule_df['parent_zoning_schedule_id'][zoning_schedule_df['zoning_schedule_id'] == parent].values[0]
-
-zoning_df_zsid = zoning_df[zoning_df['zoning_schedule_id'] == zoning_sched_ids[-1]] # zoning_df parent
-zoning_sched_ids = zoning_sched_ids[:-1] # remove last parent id (i.e. 1), bc assuming parcel table is parent
-
-parcels_df['original_zoning_id'] = parcels_df['zoning_id']
-# replace parcel table zoning starting with lowest zoning schedule id to highest id
-# e.g. replace parcel table zoning with parcel zoning schedule id=2 and then with id=3
-for zsid in reversed(zoning_sched_ids):
-    parcel_update_zsid = parcel_updates_df[parcel_updates_df['zoning_schedule_id'] == zsid]
-    parcel_update_zsid = parcel_update_zsid.set_index(['parcel_id'])
-    parcels_df.loc[parcels_df.index.isin(parcel_update_zsid.index), ['zoning_id', 'zoning_schedule_id']] = parcel_update_zsid[['zoning_id', 'zoning_schedule_id']]
-    zoning_df_zsid = zoning_df_zsid.append(zoning_df[zoning_df['zoning_schedule_id'] == zsid])
-
-parcels_df['zoning_id'] = parcels_df['zoning_id'].astype(str) # zoning as string for writng to .h5
 
 #########################################
 # scale household controls
@@ -217,8 +273,7 @@ with pd.HDFStore('data/urbansim.h5', mode='w') as store:
     store.put('employment_controls', employment_controls_df, format='t')
     store.put('zoning_allowed_uses', zoning_allowed_uses_df, format='t')
     store.put('fee_schedule', fee_schedule_df, format='t')
-    store.put('zoning', zoning_df_zsid, format='t')
+    store.put('zoning', zoning_df, format='t')
     store.put('zoning_allowed_uses_aggregate', zoning_allowed_uses_aggregate_df, format='t')
     #store.put('assessor_transactions', assessor_transactions_df, format='t')
 
-zoning_df_zsid.to_csv('data/zoning_w_zsid.csv')
