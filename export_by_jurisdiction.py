@@ -32,7 +32,6 @@ nodes_sql = '''SELECT node as node_id, x, y, on_ramp
                   AND y between ''' + str(bounding_box_df.iloc[0]['Bottom']) + '''
                             AND ''' + str(bounding_box_df.iloc[0]['Top'])
 
-
 # Necessary to duplicate nodes in order to generate built environment variables for the regessions
 intersection_sql = '''SELECT node as intersection_id, x, y
                         FROM urbansim.nodes
@@ -56,7 +55,6 @@ edges_sql = '''SELECT from_node as from, to_node as to, distance as weight
                           AND y between ''' + str(bounding_box_df.iloc[0]['Bottom'])+ '''
                                     AND ''' + str(bounding_box_df.iloc[0]['Top']) + ')'
 
-
 parcels_sql = '''SELECT p.parcel_id, p.development_type_id,
                         p.luz_id, p.parcel_acres as acres,
                         ST_X(ST_Transform(centroid::geometry, 2230)) as x,
@@ -72,7 +70,6 @@ parcels_sql = '''SELECT p.parcel_id, p.development_type_id,
                    WHERE p.jurisdiction_id = ''' + str(zone)  + '''
                     AND zp.zoning_schedule_id = ''' + str(zsid)
 
-
 buildings_sql = '''SELECT building_id, parcel_id,
                           COALESCE(development_type_id,0) as building_type_id,
                           COALESCE(residential_units, 0) as residential_units,
@@ -87,7 +84,6 @@ buildings_sql = '''SELECT building_id, parcel_id,
                             FROM urbansim.parcels
                            WHERE jurisdiction_id = '''  + str(zone)  + ')'
 
-
 households_sql = '''SELECT  household_id, building_id, persons, age_of_head, income, children
                        FROM urbansim.households
                       WHERE building_id IN (
@@ -98,12 +94,10 @@ households_sql = '''SELECT  household_id, building_id, persons, age_of_head, inc
                                      FROM urbansim.parcels
                                     WHERE jurisdiction_id = '''  + str(zone)  +  '))'
 
-
 jobs_sql = '''SELECT job_id, building_id, sector_id
                 FROM urbansim.jobs'''
 
 building_sqft_per_job_sql = 'SELECT luz_id, development_type_id, sqft_per_emp FROM urbansim.building_sqft_per_job'
-
 
 scheduled_development_events_sql =  '''WITH parcels_for_sched_dev AS
                                              (SELECT siteid, count(parcel_id) as parcel_count
@@ -126,25 +120,6 @@ scheduled_development_events_sql =  '''WITH parcels_for_sched_dev AS
                                          WHERE sp.parcel_id IN (SELECT parcel_id FROM urbansim.parcels
                                          WHERE jurisdiction_id = ''' + str(zone)  +  ')'
 
-scheduled_development_events_sql =  """ WITH parcels_on_site AS (
-                                        SELECT siteid, count(parcel_id) as parcel_count
-                                        FROM urbansim.scheduled_development_parcels
-                                        GROUP BY siteid
-                                        )
-                                        SELECT sd."siteID", sp.parcel_id, sd."devTypeID" as building_type_id,
-                                        EXTRACT(YEAR FROM "compDate")  as year_built,
-                                        COALESCE(sfu,0) + COALESCE(mfu,0) AS total_units,
-                                        "nResSqft" as non_residential_sqft, "resSqft" as residential_sqft,
-                                        NULL as non_residential_rent_per_sqft, NULL as stories,
-                                        (COALESCE(sfu,0) + COALESCE(mfu,0))/parcel_count AS residential_units
-                                        FROM urbansim.scheduled_development_parcels sp
-                                        JOIN urbansim.scheduled_development sd
-                                        ON sp.siteid = sd."siteID"
-                                        JOIN parcels_on_site os
-                                        ON os.siteid = sp.siteid
-                                        WHERE sp.parcel_id IN (SELECT parcel_id FROM urbansim.parcels WHERE jurisdiction_id = """ + str(zone) + ')'
-
-
 schools_sql = """SELECT id, x ,y FROM urbansim.schools"""
 parks_sql = """SELECT park_id,  x, y FROM urbansim.parks"""
 transit_sql = 'SELECT x, y, stopnum FROM urbansim.transit'
@@ -153,8 +128,6 @@ employment_controls_sql = """SELECT yr as year, number_of_jobs, sector_id FROM u
 zoning_allowed_uses_sql = """SELECT development_type_id, zoning_id FROM urbansim.zoning_allowed_use ORDER BY development_type_id, zoning_id"""
 zoning_allowed_uses_aggregate_sql = """SELECT zoning_id, array_agg(development_type_id) as allowed_development_types FROM urbansim.zoning_allowed_use GROUP BY zoning_id"""
 fee_schedule_sql = """SELECT development_type_id, development_fee_per_unit_space_initial FROM urbansim.fee_schedule"""
-zoning_sql = """SELECT zoning_schedule_id, zoning_id, max_dua, max_building_height as max_height, max_far, max_res_units FROM urbansim.zoning"""
-
 
 zoning_sql =    '''SELECT zoning.zoning_schedule_id, zoning.zone, zoning.zoning_id,
                           zoning.parent_zoning_id,zoning.min_dua, zoning.max_dua,
