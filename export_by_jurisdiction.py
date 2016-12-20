@@ -88,9 +88,15 @@ buildings_sql = '''SELECT building_id, parcel_id,
                            WHERE jurisdiction_id = '''  + str(zone)  + ')'
 
 
-households_sql = 'SELECT household_id, building_id, persons, age_of_head, income, children FROM urbansim.households ' \
-                 'where building_id IN (select building_id from urbansim.buildings where parcel_id IN ' \
-                 '(select parcel_id from urbansim.parcels where jurisdiction_id = ' + str(zone) +' ))'
+households_sql = '''SELECT  household_id, building_id, persons, age_of_head, income, children
+                       FROM urbansim.households
+                      WHERE building_id IN (
+                            SELECT building_id
+                              FROM urbansim.buildings
+                             WHERE parcel_id IN (
+                                   SELECT parcel_id
+                                     FROM urbansim.parcels
+                                    WHERE jurisdiction_id = '''  + str(zone)  +  '))'
 
 
 jobs_sql = '''SELECT job_id, building_id, sector_id
@@ -198,41 +204,26 @@ zoning_df['zoning_id'] = zoning_df['zoning_id'].astype(str)
 zoning_df = zoning_df.set_index('zoning_id')
 zoning_df['zone'] = zoning_df['zone'].astype(str)
 
-hh_df = households_df.reset_index(drop=False) # use household_id as column
-hh_inc = hh_df[['household_id', 'income']].copy()
 
-# current income distribution of households
-bins = [hh_inc.income.min()-1, 30000, 59999, 99999, 149999, hh_inc.income.max()+1]
+# income distribution of households for one jurisdiction
+bins = [households_df.income.min()-1, 30000, 59999, 99999, 149999, households_df.income.max()+1]
 group_names = range(1,6)
-hh_income_quartile =pd.cut(hh_inc.income, bins, labels=group_names).astype('int64')
-hh_income_quartile.value_counts()
-
-orig_pop_q1 = household_controls_df[(household_controls_df.index ==2015) & (household_controls_df['income_quartile'] == 1)]
-orig_pop_q2 = household_controls_df[(household_controls_df.index ==2015) & (household_controls_df['income_quartile'] == 2)]
-orig_pop_q3 = household_controls_df[(household_controls_df.index ==2015) & (household_controls_df['income_quartile'] == 3)]
-orig_pop_q4 = household_controls_df[(household_controls_df.index ==2015) & (household_controls_df['income_quartile'] == 4)]
-orig_pop_q5 = household_controls_df[(household_controls_df.index ==2015) & (household_controls_df['income_quartile'] == 5)]
-
-q1 = orig_pop_q1.iloc[0]['hh'].astype(float)
-q2 = orig_pop_q2.iloc[0]['hh'].astype(float)
-q3 = orig_pop_q3.iloc[0]['hh'].astype(float)
-q4 = orig_pop_q4.iloc[0]['hh'].astype(float)
-q5 = orig_pop_q5.iloc[0]['hh'].astype(float)
-
-# calculate sccale factor
-household_controls_df.ix[household_controls_df.income_quartile == 1,'scale_factor'] = hh_income_quartile.value_counts()[1]/q1
-household_controls_df.ix[household_controls_df.income_quartile == 2,'scale_factor'] = hh_income_quartile.value_counts()[2]/q2
-household_controls_df.ix[household_controls_df.income_quartile == 3,'scale_factor'] = hh_income_quartile.value_counts()[3]/q3
-household_controls_df.ix[household_controls_df.income_quartile == 4,'scale_factor'] = hh_income_quartile.value_counts()[4]/q4
-household_controls_df.ix[household_controls_df.income_quartile == 5,'scale_factor'] = hh_income_quartile.value_counts()[5]/q5
-
+households_df['bin'] =pd.cut(households_df.income, bins, labels=group_names).astype('int64')
+j_hh_quantile_counts = households_df['bin'].value_counts().sort_index()
+household_controls_df.reset_index(inplace = True)
+hh_oneyr = household_controls_df.loc[household_controls_df['year']==2015]
+hh_oneyr = hh_oneyr.reset_index(drop=False)
+hh_oneyr = hh_oneyr.set_index('income_quartile')
+hh_oneyr['jurisdiction_hh'] = j_hh_quantile_counts
+hh_oneyr['scale_factor'] = hh_oneyr['jurisdiction_hh']/hh_oneyr['hh']
+hh_oneyr = hh_oneyr.reset_index(drop=False)
+household_controls_df = pd.merge(household_controls_df,hh_oneyr[['income_quartile','scale_factor']], how='left', on=['income_quartile'])
 household_controls_df['hh_original'] = household_controls_df['hh'] # for checking keep original
-#household_controls_df['hh'] = (household_controls_df.hh * household_controls_df.scale_factor).astype('int64')
 household_controls_df['hh'] = (household_controls_df.hh * household_controls_df.scale_factor).round(decimals=0)
-#household_controls_df[(household_controls_df.index ==2015)]
-#household_controls_df.groupby([household_controls_df.index])['hh'].sum()
+household_controls_df = household_controls_df.set_index('year')
 del household_controls_df['scale_factor']
 del household_controls_df['hh_original']
+
 
 if not os.path.exists('data'):
     os.makedirs('data')
