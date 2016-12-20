@@ -14,47 +14,63 @@ data_cafe_engine = create_engine(get_connection_string("configs/dbconfig.yml", '
 zone = datasources.settings()['jurisdiction']
 zsid = datasources.settings()['zoning_schedule_id']
 
-bounding_box_sql =  """SELECT name as CITY
-                        ,geometry::STGeomFromText(shape.STAsText(),4326).STEnvelope().STPointN(1).STX AS [Left]
-                        ,geometry::STGeomFromText(shape.STAsText(),4326).STEnvelope().STPointN(1).STY AS [Bottom]
-                        ,geometry::STGeomFromText(shape.STAsText(),4326).STEnvelope().STPointN(3).STX AS [Right]
-                        ,geometry::STGeomFromText(shape.STAsText(),4326).STEnvelope().STPointN(3).STY AS [Top]
-                        FROM ref.geography_zone
+bounding_box_sql = '''SELECT name as city,
+                              geometry::STGeomFromText(shape.STAsText(),4326).STEnvelope().STPointN(1).STX AS [Left],
+                              geometry::STGeomFromText(shape.STAsText(),4326).STEnvelope().STPointN(1).STY AS [Bottom],
+                              geometry::STGeomFromText(shape.STAsText(),4326).STEnvelope().STPointN(3).STX AS [Right],
+                              geometry::STGeomFromText(shape.STAsText(),4326).STEnvelope().STPointN(3).STY AS [Top]
+                         FROM ref.geography_zone
                         WHERE geography_type_id = 136
-                        and zone = """ + str(zone)
+                        AND   zone = ''' + str(zone)
 
 bounding_box_df = pd.read_sql(bounding_box_sql, data_cafe_engine)
 
-nodes_sql = 'SELECT node as node_id, x, y, on_ramp FROM urbansim.nodes ' \
-            'WHERE x between ' + str(bounding_box_df.iloc[0]['Left']) + ' and ' +  str(bounding_box_df.iloc[0]['Right']) + \
-            'and y between ' + str(bounding_box_df.iloc[0]['Bottom']) + ' and ' +  str(bounding_box_df.iloc[0]['Top'])
+nodes_sql = '''SELECT node as node_id, x, y, on_ramp
+                 FROM urbansim.nodes
+                WHERE x between ''' + str(bounding_box_df.iloc[0]['Left'])  + '''
+                            AND ''' + str(bounding_box_df.iloc[0]['Right']) + '''
+                  AND y between ''' + str(bounding_box_df.iloc[0]['Bottom']) + '''
+                            AND ''' + str(bounding_box_df.iloc[0]['Top'])
 
 
 # Necessary to duplicate nodes in order to generate built environment variables for the regessions
-intersection_sql = 'SELECT node as intersection_id, x, y FROM urbansim.nodes ' \
-                   'WHERE x between ' + str(bounding_box_df.iloc[0]['Left']) + ' and ' +  str(bounding_box_df.iloc[0]['Right']) + \
-                    'and y between ' + str(bounding_box_df.iloc[0]['Bottom']) + ' and ' +  str(bounding_box_df.iloc[0]['Top'])
+intersection_sql = '''SELECT node as intersection_id, x, y
+                        FROM urbansim.nodes
+                       WHERE x between ''' + str(bounding_box_df.iloc[0]['Left'])   + '''
+                                   AND ''' + str(bounding_box_df.iloc[0]['Right']) + '''
+                         AND y between ''' + str(bounding_box_df.iloc[0]['Bottom']) + '''
+                                   AND ''' + str(bounding_box_df.iloc[0]['Top'])
 
-edges_sql = 'SELECT from_node as from, to_node as to, distance as weight FROM urbansim.edges ' \
-            'WHERE from_node IN  ' \
-            '(select node from urbansim.nodes ' \
-            'WHERE x between ' + str(bounding_box_df.iloc[0]['Left']) + ' and ' +  str(bounding_box_df.iloc[0]['Right']) + \
-            'and y between ' + str(bounding_box_df.iloc[0]['Bottom']) + ' and ' +  str(bounding_box_df.iloc[0]['Top']) + ')' \
-            'AND to_node IN ' \
-            '(select node from urbansim.nodes ' \
-            'WHERE x between ' + str(bounding_box_df.iloc[0]['Left']) + ' and ' +  str(bounding_box_df.iloc[0]['Right']) + \
-            'and y between ' + str(bounding_box_df.iloc[0]['Bottom']) + ' and ' +  str(bounding_box_df.iloc[0]['Top']) + ')' \
+edges_sql = '''SELECT from_node as from, to_node as to, distance as weight
+                 FROM urbansim.edges
+                WHERE from_node IN
+                     (SELECT node FROM urbansim.nodes
+                       WHERE x between ''' + str(bounding_box_df.iloc[0]['Left']) + '''
+                                   AND ''' + str(bounding_box_df.iloc[0]['Right']) + '''
+                         AND y between ''' + str(bounding_box_df.iloc[0]['Bottom']) + '''
+                                   AND ''' + str(bounding_box_df.iloc[0]['Top']) + ''')
+                   AND to_node IN
+                      (SELECT node FROM urbansim.nodes
+                        WHERE x between ''' + str(bounding_box_df.iloc[0]['Left']) + '''
+                                    AND ''' + str(bounding_box_df.iloc[0]['Right'])  + '''
+                          AND y between ''' + str(bounding_box_df.iloc[0]['Bottom'])+ '''
+                                    AND ''' + str(bounding_box_df.iloc[0]['Top']) + ')'
 
 
-parcels_sql = """SELECT p.parcel_id, zp.zoning_schedule_id, p.development_type_id, p.luz_id, p.parcel_acres as acres,
-                  zp.zoning_id, sp.siteid, ST_X(ST_Transform(centroid::geometry, 2230)) as x, ST_Y(ST_Transform(centroid::geometry, 2230))  as y,
-                COALESCE(p.distance_to_coast,10000) as distance_to_coast, COALESCE(p.distance_to_freeway,10000) as distance_to_freeway
-                FROM urbansim.parcels p
-                JOIN urbansim.zoning_parcels zp
-                ON p.parcel_id = zp.parcel_id
-                LEFT JOIN urbansim.scheduled_development_parcels sp
-                ON p.parcel_id = sp.parcel_id
-                WHERE zp.zoning_schedule_id = """ + str(zsid) +  ' AND p.jurisdiction_id = ' + str(zone)
+parcels_sql = '''SELECT p.parcel_id, p.development_type_id,
+                        p.luz_id, p.parcel_acres as acres,
+                        ST_X(ST_Transform(centroid::geometry, 2230)) as x,
+                        ST_Y(ST_Transform(centroid::geometry, 2230)) as y,
+                        COALESCE(p.distance_to_coast,10000) as distance_to_coast, COALESCE(p.distance_to_freeway,10000) as distance_to_freeway,
+                        sp.siteid
+                       ,zp.zoning_schedule_id,zp.zoning_id
+                   FROM urbansim.parcels p
+                   JOIN urbansim.zoning_parcels zp
+                     ON p.parcel_id = zp.parcel_id
+                   LEFT JOIN urbansim.scheduled_development_parcels sp
+                          ON p.parcel_id = sp.parcel_id
+                   WHERE p.jurisdiction_id = ''' + str(zone)  + '''
+                    AND zp.zoning_schedule_id = ''' + str(zsid)
 
 
 buildings_sql = 'SELECT building_id, parcel_id, COALESCE(development_type_id,0) as building_type_id, COALESCE(residential_units, 0) as residential_units, ' \
