@@ -150,29 +150,13 @@ fee_schedule_sql = """SELECT development_type_id, development_fee_per_unit_space
 zoning_sql = """SELECT zoning_schedule_id, zoning_id, max_dua, max_building_height as max_height, max_far, max_res_units FROM urbansim.zoning"""
 
 
-
-
-zoning_sql =    """ SELECT parcels.parcel_id, parcels.jurisdiction_id,
-                    zoning.zoning_schedule_id, zoning.zone, zoning.zoning_id, zoning.parent_zoning_id,
-                    zoning.min_dua, zoning.max_dua,
-                    zoning.max_building_height as max_height,
-                    zoning.max_far,
-                    zoning.max_res_units
-                    FROM urbansim.zoning zoning
-                    JOIN urbansim.zoning_parcels zp
-                    ON zoning.zoning_id = CAST(zp.zoning_id as integer)
-                    JOIN urbansim.parcels parcels
-                    ON zp.parcel_id = parcels.parcel_id
-                    WHERE zoning.zoning_schedule_id = """ + str(zsid) +  ' AND zoning.jurisdiction_id = ' + str(zone)
-
-
-zoning_sql =    """SELECT zoning.zoning_schedule_id, zoning.zone, zoning.zoning_id, zoning.parent_zoning_id,
-                    zoning.min_dua, zoning.max_dua,
-                    zoning.max_building_height as max_height,
-                    zoning.max_far,
-                    zoning.max_res_units
-                    FROM urbansim.zoning zoning
-                    WHERE zoning.zoning_schedule_id = """ + str(zsid) +  ' AND zoning.jurisdiction_id = ' + str(zone)
+zoning_sql =    '''SELECT zoning.zoning_schedule_id, zoning.zone, zoning.zoning_id,
+                          zoning.parent_zoning_id,zoning.min_dua, zoning.max_dua,
+                          zoning.max_building_height as max_height,
+                          zoning.max_far, zoning.max_res_units
+                     FROM urbansim.zoning zoning
+                    WHERE zoning.zoning_schedule_id = ''' + str(zsid) + '''
+                      AND zoning.jurisdiction_id = ''' + str(zone)
 
 assessor_transactions_sql = """SELECT parcel_id, tx_price FROM (SELECT parcel_id, RANK() OVER (PARTITION BY parcel_id ORDER BY tx_date) as tx,
                                 tx_date, tx_price FROM estimation.assessor_par_transactions) x WHERE tx = 1"""
@@ -213,48 +197,6 @@ zoning_allowed_uses_aggregate_df['allowed_development_types'] = zoning_allowed_u
 zoning_df['zoning_id'] = zoning_df['zoning_id'].astype(str)
 zoning_df = zoning_df.set_index('zoning_id')
 zoning_df['zone'] = zoning_df['zone'].astype(str)
-
-#parent_zoning
-
-###########################
-# parent data zoning
-###########################
-# zoning_schedule_sql = """SELECT * FROM urbansim.zoning_schedule"""
-# zoning_schedule_df = pd.read_sql(zoning_schedule_sql, urbansim_engine)
-#
-# # get dataframe from table with updated zoning for parcels
-# parcel_updates_sql = 'SELECT zoning_schedule_id, parcel_id, zoning_id FROM urbansim.parcel_zoning_schedule'
-# parcel_updates_df = pd.read_sql(parcel_updates_sql, urbansim_engine)
-#
-# parcels_df['zoning_schedule_id'] = 1 # to track which parcels have orig zoning
-# parent = datasources.settings()['zoning_schedule_id'] # zoning schedule id from settings.yaml
-#
-# # create list of zoning schedule ids w parent to each
-# # e.g. [3, 2, 1] where 3 has parent 2 that has parent 1
-# zoning_sched_ids = []
-# while not math.isnan(parent):
-#     zoning_sched_ids.append(parent)
-#     parent = zoning_schedule_df['parent_zoning_schedule_id'][zoning_schedule_df['zoning_schedule_id'] == parent].values[0]
-#
-# zoning_df_zsid = zoning_df[zoning_df['zoning_schedule_id'] == zoning_sched_ids[-1]] # zoning_df parent
-# zoning_sched_ids = zoning_sched_ids[:-1] # remove last parent id (i.e. 1), bc assuming parcel table is parent
-#
-# parcels_df['original_zoning_id'] = parcels_df['zoning_id']
-# # replace parcel table zoning starting with lowest zoning schedule id to highest id
-# # e.g. replace parcel table zoning with parcel zoning schedule id=2 and then with id=3
-# for zsid in reversed(zoning_sched_ids):
-#     parcel_update_zsid = parcel_updates_df[parcel_updates_df['zoning_schedule_id'] == zsid]
-#     parcel_update_zsid = parcel_update_zsid.set_index(['parcel_id'])
-#     parcels_df.loc[parcels_df.index.isin(parcel_update_zsid.index), ['zoning_id', 'zoning_schedule_id']] = parcel_update_zsid[['zoning_id', 'zoning_schedule_id']]
-#     zoning_df_zsid = zoning_df_zsid.append(zoning_df[zoning_df['zoning_schedule_id'] == zsid])
-#
-# parcels_df['zoning_id'] = parcels_df['zoning_id'].astype(str) # zoning as string for writng to .h5
-
-
-
-#########################################
-# scale household controls
-#########################################
 
 hh_df = households_df.reset_index(drop=False) # use household_id as column
 hh_inc = hh_df[['household_id', 'income']].copy()
