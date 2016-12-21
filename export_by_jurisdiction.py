@@ -55,7 +55,7 @@ edges_sql = '''SELECT from_node as from, to_node as to, distance as weight
                           AND y between ''' + str(bounding_box_df.iloc[0]['Bottom'])+ '''
                                     AND ''' + str(bounding_box_df.iloc[0]['Top']) + ')'
 
-parcels_sql = '''SELECT p.parcel_id, p.development_type_id,
+parcels_sql = '''SELECT p.parcel_id, p.development_type_id,p.jurisdiction_id,
                         p.luz_id, p.parcel_acres as acres,
                         ST_X(ST_Transform(centroid::geometry, 2230)) as x,
                         ST_Y(ST_Transform(centroid::geometry, 2230)) as y,
