@@ -2,23 +2,53 @@
 from sqlalchemy import create_engine
 from pysandag.database import get_connection_string
 import pandas as pd
+from urbansim_defaults import datasources
 
 urbansim_engine = create_engine(get_connection_string("configs/dbconfig.yml", 'urbansim_database'))
+
+zsid = datasources.settings()['zoning_schedule_id']
 
 nodes_sql = 'SELECT node as node_id, x, y, on_ramp FROM urbansim.nodes'
 # Necessary to duplicate nodes in order to generate built environment variables for the regessions
 intersection_sql = 'SELECT node as intersection_id, x, y FROM urbansim.nodes'
 edges_sql = 'SELECT from_node as from, to_node as to, distance as weight FROM urbansim.edges'
-parcels_sql = 'SELECT parcel_id, development_type_id, luz_id, parcel_acres as acres, zoning_id, ST_X(ST_Transform(centroid::geometry, 2230)) as x, ST_Y(ST_Transform(centroid::geometry, 2230)) as y, distance_to_coast, distance_to_freeway FROM urbansim.parcels'
+
+parcels_sql = '''SELECT p.parcel_id, p.development_type_id,
+                        p.luz_id, p.parcel_acres as acres,
+                        ST_X(ST_Transform(centroid::geometry, 2230)) as x,
+                        ST_Y(ST_Transform(centroid::geometry, 2230)) as y,
+                        COALESCE(p.distance_to_coast,10000) as distance_to_coast, COALESCE(p.distance_to_freeway,10000) as distance_to_freeway,
+                        sp.siteid
+                       ,zp.zoning_schedule_id,zp.zoning_id
+                   FROM urbansim.parcels p
+                   JOIN urbansim.zoning_parcels zp
+                     ON p.parcel_id = zp.parcel_id
+                   LEFT JOIN urbansim.scheduled_development_parcels sp
+                          ON p.parcel_id = sp.parcel_id
+                   WHERE zp.zoning_schedule_id = ''' + str(zsid)
+
 buildings_sql = 'SELECT building_id, parcel_id, COALESCE(development_type_id,0) as building_type_id, COALESCE(residential_units, 0) as residential_units, COALESCE(residential_sqft, 0) as residential_sqft, COALESCE(non_residential_sqft,0) as non_residential_sqft, 0 as non_residential_rent_per_sqft, COALESCE(year_built, 0) as year_built, COALESCE(stories, 1) as stories FROM urbansim.buildings'
 households_sql = 'SELECT household_id, building_id, persons, age_of_head, income, children FROM urbansim.households'
 jobs_sql = 'SELECT job_id, building_id, sector_id FROM urbansim.jobs'
 building_sqft_per_job_sql = 'SELECT luz_id, development_type_id, sqft_per_emp FROM urbansim.building_sqft_per_job'
-scheduled_development_events_sql = """SELECT
-                                         scheduled_development_event_id, parcel_id, building_type_id
-                                         ,year_built, sqft_per_unit, residential_units, non_residential_sqft
-                                         ,improvement_value, res_price_per_sqft, non_residential_rent_per_sqft
-                                         ,COALESCE(stories,1) as stories FROM urbansim.scheduled_development_event"""
+scheduled_development_events_sql =  '''WITH parcels_for_sched_dev AS
+                                             (SELECT siteid, count(parcel_id) as parcel_count
+                                                FROM urbansim.scheduled_development_parcels
+                                            GROUP BY siteid)
+                                        SELECT sd."siteID", sp.parcel_id,
+                                               sd."devTypeID" as building_type_id,
+                                               EXTRACT(YEAR FROM "compDate")  as year_built,
+                                               COALESCE(sfu,0) + COALESCE(mfu,0) AS total_units,
+                                               "nResSqft" as non_residential_sqft,
+                                               "resSqft" as residential_sqft,
+                                               NULL as non_residential_rent_per_sqft,
+                                               NULL as stories,
+                                               (COALESCE(sfu,0) + COALESCE(mfu,0))/parcel_count AS residential_units
+                                          FROM urbansim.scheduled_development_parcels sp
+                                          JOIN urbansim.scheduled_development sd
+                                            ON sp.siteid = sd."siteID"
+                                          JOIN parcels_for_sched_dev parcels_sd
+                                            ON parcels_sd.siteid = sp.siteid'''
 schools_sql = """SELECT id, x ,y FROM urbansim.schools"""
 parks_sql = """SELECT park_id,  x, y FROM urbansim.parks"""
 transit_sql = 'SELECT x, y, stopnum FROM urbansim.transit'
@@ -39,7 +69,7 @@ buildings_df = pd.read_sql(buildings_sql, urbansim_engine, index_col='building_i
 households_df = pd.read_sql(households_sql, urbansim_engine, index_col='household_id')
 jobs_df = pd.read_sql(jobs_sql, urbansim_engine, index_col='job_id')
 building_sqft_per_job_df = pd.read_sql(building_sqft_per_job_sql, urbansim_engine)
-scheduled_development_events_df = pd.read_sql(scheduled_development_events_sql, urbansim_engine, index_col='scheduled_development_event_id')
+scheduled_development_events_df = pd.read_sql(scheduled_development_events_sql, urbansim_engine)
 schools_df = pd.read_sql(schools_sql, urbansim_engine, index_col='id')
 parks_df = pd.read_sql(parks_sql, urbansim_engine, index_col='park_id')
 transit_df = pd.read_sql(transit_sql, urbansim_engine)
