@@ -13,7 +13,7 @@ nodes_sql = 'SELECT node as node_id, x, y, on_ramp FROM urbansim.nodes'
 intersection_sql = 'SELECT node as intersection_id, x, y FROM urbansim.nodes'
 edges_sql = 'SELECT from_node as from, to_node as to, distance as weight FROM urbansim.edges'
 
-parcels_sql = '''SELECT p.parcel_id, p.development_type_id,
+parcels_sql = '''SELECT p.parcel_id, p.development_type_id,p.jurisdiction_id,
                         p.luz_id, p.parcel_acres as acres,
                         ST_X(ST_Transform(centroid::geometry, 2230)) as x,
                         ST_Y(ST_Transform(centroid::geometry, 2230)) as y,
