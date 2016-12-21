@@ -27,7 +27,16 @@ parcels_sql = '''SELECT p.parcel_id, p.development_type_id,
                           ON p.parcel_id = sp.parcel_id
                    WHERE zp.zoning_schedule_id = ''' + str(zsid)
 
-buildings_sql = 'SELECT building_id, parcel_id, COALESCE(development_type_id,0) as building_type_id, COALESCE(residential_units, 0) as residential_units, COALESCE(residential_sqft, 0) as residential_sqft, COALESCE(non_residential_sqft,0) as non_residential_sqft, 0 as non_residential_rent_per_sqft, COALESCE(year_built, 0) as year_built, COALESCE(stories, 1) as stories FROM urbansim.buildings'
+buildings_sql = '''SELECT building_id, parcel_id,
+                          COALESCE(development_type_id,0) as building_type_id,
+                          COALESCE(residential_units, 0) as residential_units,
+                          COALESCE(residential_sqft, 0) as residential_sqft,
+                          COALESCE(non_residential_sqft,0) as non_residential_sqft,
+                          0 as non_residential_rent_per_sqft,
+                          COALESCE(year_built, 0) year_built,
+                          COALESCE(stories, 1) as stories
+                     FROM urbansim.buildings'''
+
 households_sql = 'SELECT household_id, building_id, persons, age_of_head, income, children FROM urbansim.households'
 jobs_sql = 'SELECT job_id, building_id, sector_id FROM urbansim.jobs'
 building_sqft_per_job_sql = 'SELECT luz_id, development_type_id, sqft_per_emp FROM urbansim.building_sqft_per_job'
@@ -56,8 +65,12 @@ household_controls_sql = """SELECT yr as year, income_quartile, households as hh
 employment_controls_sql = """SELECT yr as year, number_of_jobs, sector_id FROM urbansim.employment_controls"""
 zoning_allowed_uses_sql = """SELECT development_type_id, zoning_id FROM urbansim.zoning_allowed_use ORDER BY development_type_id, zoning_id"""
 fee_schedule_sql = """SELECT development_type_id, development_fee_per_unit_space_initial FROM urbansim.fee_schedule"""
-zoning_sql = """SELECT zoning_id, max_dua, max_building_height as max_height, max_far, max_res_units FROM urbansim.zoning"""
-
+zoning_sql =    '''SELECT zoning.zoning_schedule_id, zoning.zone, zoning.zoning_id,
+                          zoning.parent_zoning_id,zoning.min_dua, zoning.max_dua,
+                          zoning.max_building_height as max_height,
+                          zoning.max_far, zoning.max_res_units
+                     FROM urbansim.zoning zoning
+                    WHERE zoning.zoning_schedule_id = ''' + str(zsid) + '''
 
 assessor_transactions_sql = """SELECT parcel_id, tx_price FROM (SELECT parcel_id, RANK() OVER (PARTITION BY parcel_id ORDER BY tx_date) as tx, tx_date, tx_price FROM estimation.assessor_par_transactions) x WHERE tx = 1"""
 
