@@ -70,9 +70,8 @@ zoning_sql =    '''SELECT zoning.zoning_schedule_id, zoning.zone, zoning.zoning_
                           zoning.max_building_height as max_height,
                           zoning.max_far, zoning.max_res_units
                      FROM urbansim.zoning zoning
-                    WHERE zoning.zoning_schedule_id = ''' + str(zsid) + '''
+                    WHERE zoning.zoning_schedule_id = ''' + str(zsid)
 
-assessor_transactions_sql = """SELECT parcel_id, tx_price FROM (SELECT parcel_id, RANK() OVER (PARTITION BY parcel_id ORDER BY tx_date) as tx, tx_date, tx_price FROM estimation.assessor_par_transactions) x WHERE tx = 1"""
 
 nodes_df = pd.read_sql(nodes_sql, urbansim_engine, index_col='node_id')
 intersection_df = pd.read_sql(intersection_sql, urbansim_engine, index_col='intersection_id')
@@ -91,7 +90,6 @@ employment_controls_df = pd.read_sql(employment_controls_sql, urbansim_engine, i
 zoning_allowed_uses_df = pd.read_sql(zoning_allowed_uses_sql, urbansim_engine, index_col='development_type_id')
 fee_schedule_df = pd.read_sql(fee_schedule_sql, urbansim_engine, index_col='development_type_id')
 zoning_df = pd.read_sql(zoning_sql, urbansim_engine)
-#assessor_transactions_df = pd.read_sql(assessor_transactions_sql, urbansim_engine)
 
 building_sqft_per_job_df.sort_values(['luz_id', 'development_type_id'], inplace=True)
 building_sqft_per_job_df.set_index(['luz_id', 'development_type_id'], inplace=True)
@@ -99,10 +97,12 @@ building_sqft_per_job_df.set_index(['luz_id', 'development_type_id'], inplace=Tr
 edges_df.sort_values(['from', 'to'], inplace=True)
 #edges_df.set_index(['from', 'to'], inplace=True)
 # convert unicode 'zoning_id' to str (needed for HDFStore in python 2)
-parcels_df['zoning_id'] = parcels_df['zoning_id'].astype(str)
-zoning_allowed_uses_df['zoning_id'] = zoning_allowed_uses_df['zoning_id'].astype(str)
-zoning_df['zoning_id'] = zoning_df['zoning_id'].astype(str)
+# parcels_df['zoning_id'] = parcels_df['zoning_id'].astype(str)
+#zoning_allowed_uses_df['zoning_id'] = zoning_allowed_uses_df['zoning_id'].astype(str)
+# zoning_df['zoning_id'] = zoning_df['zoning_id'].astype(str)
 zoning_df = zoning_df.set_index('zoning_id')
+zoning_df['zone'] = zoning_df['zone'].astype(str)
+
 
 with pd.HDFStore('data/urbansim.h5', mode='w') as store:
     store.put('nodes', nodes_df, format='t')
@@ -122,4 +122,3 @@ with pd.HDFStore('data/urbansim.h5', mode='w') as store:
     store.put('zoning_allowed_uses', zoning_allowed_uses_df, format='t')
     store.put('fee_schedule', fee_schedule_df, format='t')
     store.put('zoning', zoning_df, format='t')
-    #store.put('assessor_transactions', assessor_transactions_df, format='t')
