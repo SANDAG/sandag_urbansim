@@ -80,6 +80,9 @@ def is_office(buildings):
 def is_retail(buildings):
     return (buildings.building_type_id == 5).astype('int')
 
+@orca.column('buildings', 'jurisdiction_id')
+def jurisdiction_id(buildings,parcels):
+    return misc.reindex(parcels.jurisdiction_id, buildings.parcel_id).fillna(0)
 
 @orca.column('buildings', 'luz_id')
 def luz_id(buildings, parcels):
@@ -98,9 +101,8 @@ def residential_price_adj( buildings, settings):
     if 'residential_price' not in orca.get_table('buildings').columns:
         return pd.Series(0, orca.get_table('buildings').index)
     return np.where(buildings['building_type_id'] == 21,
-                    (buildings['residential_price'] * 12)/
-                    (settings['res_sales_price_multiplier'] *
-                     settings['sqftproforma_config']['cap_rate']),
+                    (buildings['residential_price'] * 12 *
+                    settings['price_to_rent_ratio']),
                     buildings['residential_price'])
 
 
