@@ -6,6 +6,9 @@ from sqlalchemy import create_engine
 from pysandag.database import get_connection_string
 import pandas as pd
 import os
+import logging
+
+# logging.basicConfig(filename='log.txt',level=logging.INFO)
 
 # orig_stdout = sys.stdout
 # f = file('data\\stdout.txt', 'w')
@@ -16,7 +19,8 @@ except OSError:
     pass
 
 rng = range(2015, 2020)
-scenario = 'Carlsbad Only'
+scenario = 'Solana_Beach_zsid1'
+
 orca.run(['build_networks'])
 
 # residential only
