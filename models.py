@@ -471,37 +471,74 @@ def run_developer(forms, agents, buildings,supply_fname, parcel_size,
 
     df = df[df.parcel_size < max_parcel_size]
 
-    df.ave_unit_size[df.ave_unit_size < min_unit_size] = min_unit_size
+    df['units_from_max_dua_zoning'] = np.NaN
 
-    df['max_dua_zoning'][df['max_dua_zoning'] == -1] = np.NaN  # -1 means no value
-    df['max_res_units'][df['max_res_units'] == -1] = np.NaN  # -1 means no value
+    df.loc[df['max_dua_from_zoning'] >= 0, 'units_from_max_dua_zoning'] = (df.max_dua_from_zoning * df.acres).round()
+    df['units_from_max_res_zoning'] = df['max_res_units']
+    df['units_from_min_unit_size'] = (df['residential_sqft']/min_unit_size).round()
 
-    # 3 options for res units:
-    #   res units = residential sqft divided by ave_unit_size
-    #   res units = max_dua (from zoning) * parcel acres
-    #   res units = max_res_units
+    df['units_from_zoning'] = np.NaN # final units from zoning
 
-    df['max_units_from_ave_unit'] = (df.residential_sqft / df.ave_unit_size).round()
-    df['max_units_from_dua'] = (df.max_dua_zoning * (df.parcel_size / 43560)).round()
+    df.loc[(df['units_from_max_res_zoning'] >= 0) &
+                    (df['units_from_max_dua_zoning'].isnull()), 'units_from_zoning'] = df[
+        'units_from_max_res_zoning']
 
-    df['residential_units'] =  df['max_units_from_ave_unit'] # max res units and max dua are null
-    df.loc[~df['max_res_units'].isnull() & df['max_units_from_dua'].isnull(), 'residential_units'] = df['max_res_units']
-    df.loc[df['max_res_units'].isnull() & ~df['max_units_from_dua'].isnull(), 'residential_units'] = df['max_units_from_dua']
-    df.loc[~df['max_res_units'].isnull() & ~df['max_units_from_dua'].isnull(), 'residential_units'] = df[['max_units_from_dua', 'max_res_units']].min(axis=1)
+    df.loc[(df['units_from_max_res_zoning'].isnull()) &
+                    (df['units_from_max_dua_zoning'] >= 0), 'units_from_zoning'] = df[
+        'units_from_max_dua_zoning']
 
-    if use_max_res_units:
-        df.loc[~df['max_res_units'].isnull() & ~df['max_units_from_dua'].isnull(), 'residential_units'] = df['max_res_units']
+    df.loc[(df['units_from_max_res_zoning'].isnull()) &
+                    (df['units_from_max_dua_zoning'].isnull()), 'units_from_zoning'] = 0
 
-    ave_unit_size = df.residential_sqft / df.residential_units
+    df.loc[(df['units_from_max_res_zoning'] >= 0) &
+                    (df['units_from_max_dua_zoning'] >= 0), 'units_from_zoning'] = df[
+        ['units_from_max_res_zoning', 'units_from_max_dua_zoning']].min(axis=1)
+###################################################################################################
+# for schedule 2 ONLY
+#    df['units_from_zoning'] = df['units_from_max_res_zoning']
+#    df.loc[(df['units_from_max_res_zoning'].isnull()), 'units_from_zoning'] = 0
+# end for schedule 2  ONLY
+#######################################################################################################
+
+    df.loc[(df['siteid'] > 0), 'units_from_zoning'] = 0
+
+    df['final_units_constrained_by_size'] = df[['units_from_zoning', 'units_from_min_unit_size']].min(
+        axis=1)
+
+    df['unit_size_from_final'] = df['residential_sqft'] / df['units_from_zoning']
+
+    df.loc[(df['unit_size_from_final'] < min_unit_size), 'unit_size_from_final'] = min_unit_size
+
+    df['final_units_constrained_by_size'] = (df['residential_sqft'] / df['unit_size_from_final']).round()
+    df['net_units'] = df.final_units_constrained_by_size - df.current_units
+
+    df['roi'] = df['max_profit'] / df['total_cost']
+
+    df = df.reset_index(drop=False)
+    df = df.set_index(['parcel_id'])
+
+    unit_size_from_final = df.unit_size_from_final
+
+
+    df2 = df.loc[:, ['parcel_id', 'zoning_id', 'zoning_schedule_id', 'parent_zoning_id',
+                     'current_units','max_dua_zoning', 'acres', 'units_from_max_dua_zoning',
+                     'max_res_units','allowed_development_types',
+                     'allowed_units','net_units','unit_size_from_final']]
+    # df['net_units_corrected'] = df['net_units']
+
+    # df['agg'] = df['array_agg'].apply(lambda x: any(pd.Series(x).str.contains('2')))
+    # df.loc[((df['agg']==False)& (df['net_units'] > 1)), 'net_units_corrected'] = 1
+    feasibility_available = 'data/parcels_available_units_' + str(year) + '.csv'
+    df.to_csv(feasibility_available)
 
     new_buildings = dev.pick(forms,
                              target_units,
                              parcel_size,
-                             ave_unit_size,
+                             unit_size_from_final,
                              total_units,
                              max_parcel_size=max_parcel_size,
                              min_unit_size=min_unit_size,
-                             drop_after_build=True,
+                             drop_after_build=False,
                              residential=residential,
                              bldg_sqft_per_job=bldg_sqft_per_job,
                              profit_to_prob_func=profit_to_prob_func)
@@ -541,6 +578,7 @@ def run_developer(forms, agents, buildings,supply_fname, parcel_size,
 
     old_buildings = buildings.to_frame(buildings.local_columns)
     new_buildings = new_buildings[buildings.local_columns]
+    new_buildings['new_bldg'] = True
 
     if remove_developed_buildings:
         old_buildings = \
