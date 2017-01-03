@@ -8,6 +8,10 @@ from urbansim.developer import developer
 import numpy as np
 from pysandag.database import get_connection_string
 import math
+import psycopg2
+import getpass
+import datetime
+
 
 
 ###  ESTIMATIONS  ##################################
@@ -607,8 +611,8 @@ def get_git_hash(model='residential'):
     return git_hash
 
 
-def to_database(scenario=' ', urbansim_connection=get_connection_string("configs/dbconfig.yml", 'urbansim_database'),
-                rng=range(0, 0), default_schema='urbansim_output'):
+def to_database(scenario=' ', rng=range(0, 0), urbansim_connection=get_connection_string("configs/dbconfig.yml", 'urbansim_database'),
+                default_schema='urbansim_output'):
     """ df_name:
             Required parameter, is the name of the table that will be read from the H5 file,
             Also first half of the table name to be stored in the database
@@ -628,29 +632,36 @@ def to_database(scenario=' ', urbansim_connection=get_connection_string("configs
     scenario_id = cursor.fetchone()
     cursor.execute('SELECT parent_scenario_id FROM urbansim_output.parent_scenario WHERE scenario_name=%s', t)
     parent_scenario_id = cursor.fetchone()
+    conn.close()
 
     for year in rng:
         if year == 0 and scenario_id[0] == 1:
-            for x in ['parcels', 'buildings', 'households']:
+            for x in ['parcels', 'buildings']:
+
                 print 'exporting ' + x + str(year) + ' ' + str(scenario_id[0])
 
                 df = pd.read_hdf('data\\results.h5', 'base/' + x)
                 df['parent_scenario_id'] = parent_scenario_id[0]
                 df.to_sql(x + '_base', urbansim_connection, flavor='postgresql', schema=default_schema, if_exists='append')
         elif year != 0:
-            for x in ['parcels', 'buildings', 'households']:
+            for x in ['buildings','feasibility']:
                 print 'exporting ' + x + str(year) + ' ' + str(scenario_id[0])
 
                 df = pd.read_hdf('data\\results.h5', str(year) + '/' + x)
+                if x == 'feasibility':
+                    df = df['residential']
                 df['year'] = year
                 df['scenario_id'] = scenario_id[0]
                 df['parent_scenario_id'] = parent_scenario_id[0]
                 # df['zoning_schedule_id'] = settings['zoning_schedule_id']
                 df.to_sql(x, urbansim_connection, flavor='postgresql', schema=default_schema, if_exists='append')
 
+    conn = psycopg2.connect(database="urbansim", user="urbansim_user", password="urbansim", host="socioeca8",
+                            port="5432")
+    print "Opened database successfully"
+    cursor = conn.cursor()
     cursor.execute('''DELETE FROM urbansim_output.buildings WHERE building_id + residential_units in (
-                      SELECT building_id + residential_units FROM urbansim_output.buildings_base
-                          )''')
+                      SELECT building_id + residential_units FROM urbansim_output.buildings_base)''')
     conn.commit()
     print "Deleted any old building that existed in the base table"
     cursor.execute('''DELETE FROM urbansim_output.parcels WHERE parcel_id +  total_residential_units IN(
@@ -658,6 +669,7 @@ def to_database(scenario=' ', urbansim_connection=get_connection_string("configs
                           )''')
     conn.commit()
     print "Deleted parcels where no buildings were made"
+    conn.close()
 
 
 def update_scenario(scenario=' '):
@@ -716,6 +728,7 @@ def update_scenario(scenario=' '):
                           distance_to_onramp real,
                           year_built_1980to1990 boolean,
                           year_built_1970to1980 boolean,
+                          residential_price_adj double precision,
                           distance_to_transit real,
                           year_built_1950to1960 boolean,
                           parcel_size double precision,
@@ -759,10 +772,12 @@ def update_scenario(scenario=' '):
     cursor.execute('''CREATE TABLE IF NOT EXISTS urbansim_output.parcels_base
           (
                       parcel_id bigint PRIMARY KEY,
+                      zoning_schedule_id integer,
                       development_type_id bigint,
                       luz_id bigint,
                       acres double precision,
                       zoning_id text,
+                      siteid integer,
                       x double precision,
                       y double precision,
                       distance_to_coast double precision,
@@ -776,6 +791,7 @@ def update_scenario(scenario=' '):
                       building_purchase_price_sqft double precision,
                       max_far integer,
                       building_purchase_price double precision,
+                      avg_residential_price double precision,
                       zoned_du integer,
                       ave_unit_size double precision,
                       distance_to_onramp real,
@@ -827,6 +843,7 @@ def update_scenario(scenario=' '):
                             distance_to_onramp real,
                             year_built_1980to1990 boolean,
                             year_built_1970to1980 boolean,
+                            residential_price_adj double precision,
                             distance_to_transit real,
                             year_built_1950to1960 boolean,
                             parcel_size double precision,
@@ -874,10 +891,12 @@ def update_scenario(scenario=' '):
     cursor.execute('''CREATE TABLE IF NOT EXISTS urbansim_output.parcels
           (
                       parcel_id bigint,
+                      zoning_schedule_id integer,
                       development_type_id bigint,
                       luz_id bigint,
                       acres double precision,
                       zoning_id text,
+                      siteid integer,
                       x double precision,
                       y double precision,
                       distance_to_coast double precision,
@@ -891,6 +910,7 @@ def update_scenario(scenario=' '):
                       building_purchase_price_sqft double precision,
                       max_far integer,
                       building_purchase_price double precision,
+                      avg_residential_price double precision,
                       zoned_du integer,
                       ave_unit_size real,
                       distance_to_onramp real,
@@ -934,7 +954,7 @@ def update_scenario(scenario=' '):
                 ", git_hash)" \
                 "VALUES (%s, %s, %s, %s, %s);"
 
-        data = (parent_scenario_id[0], scenario_id[0] + 1, getpass.getuser(), str(datetime.now()), get_git_hash())
+        data = (parent_scenario_id[0], scenario_id[0] + 1, getpass.getuser(), str(datetime.datetime.now()), get_git_hash())
         cursor.execute(query, data)
         conn.commit()
 
@@ -952,9 +972,10 @@ def update_scenario(scenario=' '):
                 ", git_hash)" \
                 "VALUES (%s, %s, %s, %s, %s);"
 
-        data = (parent_scenario_id2[0], 1, getpass.getuser(), str(datetime.now()), get_git_hash())
+        data = (parent_scenario_id2[0], 1, getpass.getuser(), str(datetime.datetime.now()), get_git_hash())
         cursor.execute(query, data)
         conn.commit()
+    conn.close()
 
 
 
