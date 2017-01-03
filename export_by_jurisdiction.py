@@ -193,6 +193,7 @@ hh_oneyr = hh_oneyr.reset_index(drop=False)
 household_controls_df = pd.merge(household_controls_df,hh_oneyr[['income_quartile','scale_factor']], how='left', on=['income_quartile'])
 household_controls_df['hh_original'] = household_controls_df['hh'] # for checking keep original
 household_controls_df['hh'] = (household_controls_df.hh * household_controls_df.scale_factor).round(decimals=0)
+household_controls_df['hh'] = household_controls_df['hh'].astype(int)
 household_controls_df = household_controls_df.set_index('year')
 del household_controls_df['scale_factor']
 del household_controls_df['hh_original']
