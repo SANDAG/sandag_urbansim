@@ -462,13 +462,25 @@ def run_developer(forms, agents, buildings,supply_fname, parcel_size,
     df['residential', 'max_profit'].loc[df['residential','max_profit_orig'] < 0] = .001
     orca.add_table("feasibility", df)
 
+    parcels = orca.get_table('parcels').to_frame()
+
     df = df['residential']
+    settings = orca.get_injectable('settings')
     df["parcel_size"] = parcel_size
     df["ave_unit_size"] = ave_unit_size
     df['current_units'] = total_units
     df['max_dua_zoning'] = max_dua_zoning
     df['max_res_units'] = max_res_units
-
+    df['zoning_id'] = parcels.zoning_id
+    df['siteid'] = parcels.siteid
+    df['zoning_schedule_id'] = parcels.zoning_schedule_id
+    df['acres'] = parcels.parcel_acres
+    df['land_cost_per_sqft'] = settings['default_land_cost']
+    df['cap_rate'] = settings['sqftproforma_config']['cap_rate']
+    df['building_efficiency'] = settings['sqftproforma_config']['building_efficiency']
+    df['min_size_per_unit'] = min_unit_size
+    df['max_dua_from_zoning'] =  df['max_dua_zoning']
+    df['development_type_id'] = parcels.development_type_id
     df = df[df.parcel_size < max_parcel_size]
 
     df['units_from_max_dua_zoning'] = np.NaN
