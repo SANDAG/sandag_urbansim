@@ -26,7 +26,7 @@ jobs_transition:
 default_land_cost: 12.21
 
 feasibility:
-  parcel_filter: newest_building < 2010
+#  parcel_filter: newest_building < 2010
   residential_to_yearly: True
   only_built: False # True to build only profitable buildings
 #  pass_through:
@@ -68,9 +68,11 @@ feasibility:
 
 residential_developer:
   target_vacancy: .08
-  min_unit_size: 1000
+  min_unit_size: 1
   bldg_sqft_per_job: 400
-  use_max_res_units: True
+  max_parcel_size: 10000000
+  remove_developed_buildings: False
+#  use_max_res_units: False
 
 non_residential_developer:
   target_vacancy: .49
@@ -159,7 +161,8 @@ sqftproforma_config:
 
 parcel_avg_pr_mult: .81
 res_sales_price_multiplier: 1.2
+price_to_rent_ratio: 25
 
-zoning_schedule_id: 2
+zoning_schedule_id: 1
 
-jurisdiction: 1 # Carlsbad
+jurisdiction: 17
