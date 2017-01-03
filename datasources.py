@@ -47,13 +47,13 @@ def zoning(store):
 @orca.table('zoning_allowed_uses', cache=True)
 def zoning_allowed_uses(store, parcels):
     zoning_allowed_uses_df = store['zoning_allowed_uses']
-    parcels = parcels.to_frame(columns = ['original_zoning_id',])
+    parcels = parcels.to_frame(columns = ['zoning_id',])
     allowed_df = pd.DataFrame(index=parcels.index)
 
     for devtype in np.unique(zoning_allowed_uses_df.index.values):
         devtype_allowed = zoning_allowed_uses_df.loc[zoning_allowed_uses_df.index == devtype]\
             .reset_index().set_index('zoning_id')
-        allowed = misc.reindex(devtype_allowed.development_type_id, parcels.original_zoning_id)
+        allowed = misc.reindex(devtype_allowed.development_type_id, parcels.zoning_id)
         df = pd.DataFrame(data=False, index=allowed.index, columns=['allowed'])
         df[~allowed.isnull()] = True
         allowed_df[devtype] = df.allowed
