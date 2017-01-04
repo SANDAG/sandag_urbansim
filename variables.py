@@ -170,30 +170,30 @@ def res_occupancy_10000ft(nodes):
 
 ###### PARCELS ######
 ##################### Building purchase price based on parcel avg price ##
-# @orca.column('parcels', 'building_purchase_price_sqft')
-# def building_purchase_price_sqft(settings):
-#     return parcel_average_price("residential") * settings['parcel_avg_pr_mult']
+@orca.column('parcels', 'building_purchase_price_sqft')
+def building_purchase_price_sqft(settings):
+    return parcel_average_price("residential") * settings['parcel_avg_pr_mult']
 
 
-# @orca.column('parcels', 'building_purchase_price')
-# def building_purchase_price(parcels):
-#     return (parcels.total_sqft * parcels.building_purchase_price_sqft).\
-#         reindex(parcels.index).fillna(0)
+@orca.column('parcels', 'building_purchase_price')
+def building_purchase_price(parcels):
+    return (parcels.total_sqft * parcels.building_purchase_price_sqft).\
+        reindex(parcels.index).fillna(0)
 ##########################################################################
 
 
 ##################### Building purchase price based on res hedonic #######
 # avg price buildings on parcel instead of parcel avg for rent calc
-@orca.column('parcels', 'avg_residential_price')
-def avg_residential_price(parcels, buildings):
-    return buildings.to_frame().residential_price.\
-        groupby(buildings.parcel_id).mean().reindex(parcels.index).fillna(0)
+# @orca.column('parcels', 'avg_residential_price')
+# def avg_residential_price(parcels, buildings):
+#     return buildings.to_frame().residential_price.\
+#         groupby(buildings.parcel_id).mean().reindex(parcels.index).fillna(0)
+#
+# @orca.column('parcels', 'building_purchase_price')
+# def building_purchase_price(parcels, buildings):
+#     return (buildings.residential_price * buildings.building_sqft).\
+#         groupby(buildings.parcel_id).sum().reindex(parcels.index).fillna(0)
 
-
-@orca.column('parcels', 'building_purchase_price')
-def building_purchase_price(parcels, buildings):
-    return (buildings.residential_price * buildings.building_sqft).\
-        groupby(buildings.parcel_id).sum().reindex(parcels.index).fillna(0)
 ##########################################################################
 
 
