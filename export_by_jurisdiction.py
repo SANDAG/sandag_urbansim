@@ -77,7 +77,8 @@ buildings_sql = '''SELECT building_id, parcel_id,
                           COALESCE(non_residential_sqft,0) as non_residential_sqft,
                           0 as non_residential_rent_per_sqft,
                           COALESCE(year_built, 0) year_built,
-                          COALESCE(stories, 1) as stories
+                          COALESCE(stories, 1) as stories,
+                          FALSE as new_bldg
                      FROM urbansim.buildings
                     WHERE parcel_id IN
                          (SELECT parcel_id

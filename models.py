@@ -324,14 +324,13 @@ def scheduled_development_events(scheduled_development_events, buildings):
         sched_dev['building_id'] = idx
         sched_dev['building_type_id'] = 21
         sched_dev = sched_dev.set_index('building_id')
+        sched_dev['new_bldg'] = True
         from urbansim.developer.developer import Developer
         merge = Developer(pd.DataFrame({})).merge
         b = buildings.to_frame(buildings.local_columns)
         if 'residential_price' in b.columns:
             sched_dev['residential_price'] = 0
         all_buildings = merge(b,sched_dev[b.columns])
-
-        all_buildings['new_bldg'] = all_buildings.index.isin(idx)
 
         orca.add_table("buildings", all_buildings)
 

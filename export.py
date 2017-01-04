@@ -34,7 +34,8 @@ buildings_sql = '''SELECT building_id, parcel_id,
                           COALESCE(non_residential_sqft,0) as non_residential_sqft,
                           0 as non_residential_rent_per_sqft,
                           COALESCE(year_built, 0) year_built,
-                          COALESCE(stories, 1) as stories
+                          COALESCE(stories, 1) as stories,
+                          FALSE as new_bldg
                      FROM urbansim.buildings'''
 
 households_sql = 'SELECT household_id, building_id, persons, age_of_head, income, children FROM urbansim.households'
