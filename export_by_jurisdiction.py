@@ -9,51 +9,51 @@ from urbansim_defaults import datasources
 
 
 urbansim_engine = create_engine(get_connection_string("configs/dbconfig.yml", 'urbansim_database'))
-data_cafe_engine = create_engine(get_connection_string("configs/dbconfig.yml", 'data_cafe'))
+#data_cafe_engine = create_engine(get_connection_string("configs/dbconfig.yml", 'data_cafe'))
 
 zone = datasources.settings()['jurisdiction']
 zsid = datasources.settings()['zoning_schedule_id']
 
-bounding_box_sql = '''SELECT name as city,
-                              geometry::STGeomFromText(shape.STAsText(),4326).STEnvelope().STPointN(1).STX AS [Left],
-                              geometry::STGeomFromText(shape.STAsText(),4326).STEnvelope().STPointN(1).STY AS [Bottom],
-                              geometry::STGeomFromText(shape.STAsText(),4326).STEnvelope().STPointN(3).STX AS [Right],
-                              geometry::STGeomFromText(shape.STAsText(),4326).STEnvelope().STPointN(3).STY AS [Top]
-                         FROM ref.geography_zone
-                        WHERE geography_type_id = 136
-                        AND   zone = ''' + str(zone)
+# bounding_box_sql = '''SELECT name as city,
+#                               geometry::STGeomFromText(shape.STAsText(),4326).STEnvelope().STPointN(1).STX AS [Left],
+#                               geometry::STGeomFromText(shape.STAsText(),4326).STEnvelope().STPointN(1).STY AS [Bottom],
+#                               geometry::STGeomFromText(shape.STAsText(),4326).STEnvelope().STPointN(3).STX AS [Right],
+#                               geometry::STGeomFromText(shape.STAsText(),4326).STEnvelope().STPointN(3).STY AS [Top]
+#                          FROM ref.geography_zone
+#                         WHERE geography_type_id = 136
+#                         AND   zone = ''' + str(zone)
 
-bounding_box_df = pd.read_sql(bounding_box_sql, data_cafe_engine)
+# bounding_box_df = pd.read_sql(bounding_box_sql, data_cafe_engine)
 
 nodes_sql = '''SELECT node as node_id, x, y, on_ramp
-                 FROM urbansim.nodes
-                WHERE x between ''' + str(bounding_box_df.iloc[0]['Left'])  + '''
-                            AND ''' + str(bounding_box_df.iloc[0]['Right']) + '''
-                  AND y between ''' + str(bounding_box_df.iloc[0]['Bottom']) + '''
-                            AND ''' + str(bounding_box_df.iloc[0]['Top'])
+                 FROM urbansim.nodes'''
+               # WHERE x between ''' + str(bounding_box_df.iloc[0]['Left'])  + '''
+               #             AND ''' + str(bounding_box_df.iloc[0]['Right']) + '''
+               #   AND y between ''' + str(bounding_box_df.iloc[0]['Bottom']) + '''
+               #             AND ''' + str(bounding_box_df.iloc[0]['Top'])
 
 # Necessary to duplicate nodes in order to generate built environment variables for the regessions
 intersection_sql = '''SELECT node as intersection_id, x, y
-                        FROM urbansim.nodes
-                       WHERE x between ''' + str(bounding_box_df.iloc[0]['Left'])   + '''
-                                   AND ''' + str(bounding_box_df.iloc[0]['Right']) + '''
-                         AND y between ''' + str(bounding_box_df.iloc[0]['Bottom']) + '''
-                                   AND ''' + str(bounding_box_df.iloc[0]['Top'])
+                        FROM urbansim.nodes'''
+                       # WHERE x between ''' + str(bounding_box_df.iloc[0]['Left'])   + '''
+                       #             AND ''' + str(bounding_box_df.iloc[0]['Right']) + '''
+                       #   AND y between ''' + str(bounding_box_df.iloc[0]['Bottom']) + '''
+                       #             AND ''' + str(bounding_box_df.iloc[0]['Top'])
 
 edges_sql = '''SELECT from_node as from, to_node as to, distance as weight
-                 FROM urbansim.edges
-                WHERE from_node IN
-                     (SELECT node FROM urbansim.nodes
-                       WHERE x between ''' + str(bounding_box_df.iloc[0]['Left']) + '''
-                                   AND ''' + str(bounding_box_df.iloc[0]['Right']) + '''
-                         AND y between ''' + str(bounding_box_df.iloc[0]['Bottom']) + '''
-                                   AND ''' + str(bounding_box_df.iloc[0]['Top']) + ''')
-                   AND to_node IN
-                      (SELECT node FROM urbansim.nodes
-                        WHERE x between ''' + str(bounding_box_df.iloc[0]['Left']) + '''
-                                    AND ''' + str(bounding_box_df.iloc[0]['Right'])  + '''
-                          AND y between ''' + str(bounding_box_df.iloc[0]['Bottom'])+ '''
-                                    AND ''' + str(bounding_box_df.iloc[0]['Top']) + ')'
+                 FROM urbansim.edges'''
+                # WHERE from_node IN
+                #      (SELECT node FROM urbansim.nodes
+                #        WHERE x between ''' + str(bounding_box_df.iloc[0]['Left']) + '''
+                #                    AND ''' + str(bounding_box_df.iloc[0]['Right']) + '''
+                #          AND y between ''' + str(bounding_box_df.iloc[0]['Bottom']) + '''
+                #                    AND ''' + str(bounding_box_df.iloc[0]['Top']) + ''')
+                #    AND to_node IN
+                #       (SELECT node FROM urbansim.nodes
+                #         WHERE x between ''' + str(bounding_box_df.iloc[0]['Left']) + '''
+                #                     AND ''' + str(bounding_box_df.iloc[0]['Right'])  + '''
+                #           AND y between ''' + str(bounding_box_df.iloc[0]['Bottom'])+ '''
+                #                     AND ''' + str(bounding_box_df.iloc[0]['Top']) + ')'
 
 parcels_sql = '''SELECT p.parcel_id, p.development_type_id,p.jurisdiction_id,
                         p.luz_id, p.parcel_acres as acres,
