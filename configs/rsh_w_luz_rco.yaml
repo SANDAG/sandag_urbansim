@@ -1057,7 +1057,9 @@ models:
                 I(luz_id == 96)[T.True]: 0.35056023095042704
                 I(luz_id == 99)[T.True]: 0.13651197692366873
                 I(year_built > 2010)[T.True]: -0.09688112742489047
-                Intercept: 1.1733368295492235
+                Intercept: 6.877119304 #rent to price
+                # rent * 12 months * 25 (rent to price multiplier)
+                # Intercept: 1.1733368295492235 + ln(12) + ln(25))
             Std. Error:
                 I(luz_id == 10)[T.True]: 0.03613984367875199
                 I(luz_id == 11)[T.True]: 0.017806598284649262
