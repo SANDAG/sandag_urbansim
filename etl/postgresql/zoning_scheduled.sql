@@ -124,6 +124,7 @@ SELECT
     ,shape
     ,review
 FROM ref.zoning_base
+;
 
 CREATE TABLE urbansim.zoning_allowed_use
 (
@@ -132,6 +133,7 @@ CREATE TABLE urbansim.zoning_allowed_use
     ,zoning_allowed_use_id SERIAL PRIMARY KEY
     ,development_type_id integer NOT NULL REFERENCES urbansim.development_type (development_type_id)
 );
+
 ALTER TABLE urbansim.zoning_allowed_use
   OWNER TO urbansim_user;
 GRANT ALL ON TABLE urbansim.zoning_allowed_use TO urbansim_user;
@@ -160,6 +162,7 @@ CREATE TABLE urbansim.parcel_zoning_schedule2
     ,zone character varying
     ,CONSTRAINT uk_parcel_zoning_schedule2 UNIQUE (zoning_schedule_id, parcel_id, zoning_id)
 );
+
 ALTER TABLE urbansim.parcel_zoning_schedule2
   OWNER TO urbansim_user;
 GRANT ALL ON TABLE urbansim.parcel_zoning_schedule2 TO urbansim_user;
@@ -178,7 +181,7 @@ CREATE TABLE staging.sr13_capacity
 
 COPY staging.sr13_capacity
 FROM 'E:\sr13Capacity.csv' DELIMITER ',' CSV
-
+;
 
 /*** LOAD INTO ZONING ***/
 WITH t AS (
@@ -223,7 +226,7 @@ GROUP BY
 ORDER BY
     zone
     ,num_parcels DESC)
-/*INSERT INTO urbansim.zoning(
+INSERT INTO urbansim.zoning(
     zoning_schedule_id
     ,zone
     ,parent_zoning_id
@@ -248,7 +251,7 @@ ORDER BY
     ,review_date
     ,review_by
     ,shape
-    ,review)*/
+    ,review)
 SELECT
     2 AS zoning_schedule_id
     ,zoning.zone || ' cap_hs ' || t.cap_hs
@@ -281,20 +284,12 @@ FROM
         ON t.zone = zoning.zone
 WHERE zoning.max_res_units <> t.cap_hs
 OR zoning.max_res_units IS NULL
-
+;
 
 /*** LOAD INTO PARCEL ZONING SCHEDULE ***/
 WITH t AS (
-SELECT
-    zone
-    ,max_res_units
-    ,cap_hs
-    ,COUNT(*) as num_parcels
-    ,COUNT(zone) OVER (PARTITION BY zone) as total_cases
-FROM
-    (    SELECT
+    SELECT
         parcels.parcel_id
-        ,zoning.zoning_id
         ,zoning.zone
         ,zoning.min_dua
         ,zoning.max_dua
@@ -306,7 +301,7 @@ FROM
         ,SUM(buildings.residential_units) as residential_units
     FROM
         ref.parcelzoning_base AS parcels
-            INNER JOIN urbansim.buildings
+            LEFT JOIN urbansim.buildings
             ON buildings.parcel_id = parcels.parcel_id
                 LEFT JOIN urbansim.zoning
                 ON zoning.zone = parcels.zone
@@ -320,31 +315,18 @@ FROM
         ,zoning.min_dua
         ,zoning.max_dua
         ,zoning.max_res_units
-        ,sr13_capacity.cap_hs) parcel_zoning_sr13_comparison  
-GROUP BY
-    zone
-    ,max_res_units
-    ,cap_hs    
-ORDER BY
-    zone
-    ,num_parcels DESC)
+        ,sr13_capacity.cap_hs
+)
 INSERT INTO urbansim.parcel_zoning_schedule2
 SELECT
     2 as zoning_schedule_id
-    ,parcels.parcel_id
+    ,parcel_id
     ,zoning.zoning_id
     ,zoning.zone
-FROM
-    ref.parcelzoning_base AS parcels
-        INNER JOIN staging.sr13_capacity
-        ON sr13_capacity.parcel_id = parcels.parcel_id
-            INNER JOIN t
-            ON t.zone = parcels.zone
-                INNER JOIN urbansim.zoning
-                ON zoning.zoning_schedule_id = 2
-                AND zoning.zone = t.zone || ' cap_hs ' || t.cap_hs
-                AND zoning.max_res_units = sr13_capacity.cap_hs
-
+FROM t
+JOIN urbansim.zoning ON zoning.zone = t.zone || ' cap_hs ' || t.cap_hs
+ORDER BY 2
+;
 
 /*** ZONING PARCELS TABLE ***/
 CREATE TABLE urbansim.zoning_parcels
@@ -355,8 +337,8 @@ CREATE TABLE urbansim.zoning_parcels
     zone character varying NOT NULL,
     zoning_schedule_id integer NOT NULL,
     CONSTRAINT uk_zoning_parcels UNIQUE (parcel_id, zoning_id, zoning_schedule_id)
-)
-;
+);
+
 ALTER TABLE urbansim.zoning_parcels
     OWNER TO urbansim_user;
 GRANT ALL ON TABLE urbansim.zoning TO urbansim_user;
@@ -378,7 +360,7 @@ SELECT
 FROM ref.parcelzoning_base  AS p
 JOIN (SELECT zoning_id, zone FROM urbansim.zoning WHERE zoning_schedule_id = 1) AS z
     ON p.zone = z.zone
-
+;
 --LOAD ZONING SCHEDULE 2
 INSERT INTO urbansim.zoning_parcels (parcel_id, zoning_id, zone, zoning_schedule_id)
 SELECT
@@ -402,7 +384,7 @@ SET shape = p.shape::geography						--BACK TO GEOGRAPHY
 FROM
 (
     SELECT  pzs.zoning_id, pzs.zoning_schedule_id
-        --,ST_Multi(ST_Union((p.shape)::geometry)) AS shape		--TO MULTIPART GEOMETRY
+        ,ST_Multi(ST_Union((p.shape)::geometry)) AS shape		--TO MULTIPART GEOMETRY
     FROM urbansim.parcel_zoning_schedule2 AS pzs
     JOIN urbansim.parcels AS p
     ON pzs.parcel_id = p.parcel_id
@@ -411,6 +393,7 @@ FROM
 )p
 WHERE z.zoning_id = p.zoning_id
 AND z.zoning_schedule_id = 2
+;
 
 /*** 2- INSERT ADDITIONAL ZONING POLYGONS FROM PARENT;
 PARCELS NOT IN ZONING SCHEDULE 2, YES IN ZONING POLYGONS AFFECTED BY IT ****/
@@ -478,6 +461,7 @@ JOIN (SELECT
     GROUP BY zp.zoning_id, zp.zone) AS zp
 ON z.zoning_id = zp.zoning_id
 WHERE z.zoning_schedule_id = 1
+;
 
 /*** 3- INSERT ADDITIONAL ZONING POLYGONS FROM SCHEDULE 1 NOT CHANGED IN SCHEDULE 2 ****/
 INSERT INTO urbansim.zoning(
@@ -537,6 +521,7 @@ WHERE zoning_schedule_id = 1
 AND zone NOT IN (SELECT DISTINCT parent_zone FROM urbansim.zoning WHERE zoning_schedule_id = 2)
 ;
 
+SELECT COUNT(*) FROM urbansim.zoning;
 
 
 
