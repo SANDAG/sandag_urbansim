@@ -61,14 +61,16 @@ parcels_sql = '''SELECT p.parcel_id, p.development_type_id,p.jurisdiction_id,
                         ST_Y(ST_Transform(centroid::geometry, 2230)) as y,
                         COALESCE(p.distance_to_coast,10000) as distance_to_coast, COALESCE(p.distance_to_freeway,10000) as distance_to_freeway,
                         sp.siteid
-                       ,zp.zoning_schedule_id,zp.zoning_id
+                       ,zp.zoning_schedule_id,COALESCE(z.parent_zoning_id, z.zoning_id) as zoning_id
                    FROM urbansim.parcels p
                    JOIN urbansim.zoning_parcels zp
                      ON p.parcel_id = zp.parcel_id
+                    JOIN urbansim.zoning z
+                     ON zp.zoning_id = z.zoning_id
                    LEFT JOIN urbansim.scheduled_development_parcels sp
                           ON p.parcel_id = sp.parcel_id
                    WHERE p.jurisdiction_id = ''' + str(zone)  + '''
-                    AND zp.zoning_schedule_id = ''' + str(zsid)
+                    AND zp.zoning_schedule_id = ''' + str(zsid) + ' AND zp.zoning_schedule_id = ' +  str(zsid)
 
 buildings_sql = '''SELECT building_id, parcel_id,
                           COALESCE(development_type_id,0) as building_type_id,
