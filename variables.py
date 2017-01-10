@@ -170,6 +170,11 @@ def res_occupancy_10000ft(nodes):
 
 ###### PARCELS ######
 ##################### Building purchase price based on parcel avg price ##
+@orca.column('parcels', 'parcel_avg_price_residential')
+def parcel_avg_price_residential(settings):
+    return parcel_average_price("residential")
+
+
 @orca.column('parcels', 'building_purchase_price_sqft')
 def building_purchase_price_sqft(settings):
     return parcel_average_price("residential") * settings['parcel_avg_pr_mult']
