@@ -693,12 +693,13 @@ def to_database(scenario=' ', rng=range(0, 0), urbansim_connection=get_connectio
                 df['parent_scenario_id'] = parent_scenario_id[0]
                 df.to_sql(x + '_base', urbansim_connection, flavor='postgresql', schema=default_schema, if_exists='append')
         elif year != 0:
-            for x in ['buildings','feasibility']:
+            for x in ['buildings','feasibility','parcels']:
                 print 'exporting ' + x + str(year) + ' ' + str(scenario_id[0])
 
                 df = pd.read_hdf('data\\results.h5', str(year) + '/' + x)
                 if x == 'feasibility':
                     df = df['residential']
+                    df.rename(columns={'total_sqft': 'total_sqft_existing_bldgs'}, inplace=True)
                 df['year'] = year
                 df['scenario_id'] = scenario_id[0]
                 df['parent_scenario_id'] = parent_scenario_id[0]
