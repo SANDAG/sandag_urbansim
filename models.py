@@ -506,8 +506,8 @@ def run_developer(forms, agents, buildings,supply_fname, parcel_size,
         ['units_from_max_res_zoning', 'units_from_max_dua_zoning']].min(axis=1)
 ###################################################################################################
 # for schedule 2 ONLY
-#    df['units_from_zoning'] = df['units_from_max_res_zoning']
-#    df.loc[(df['units_from_max_res_zoning'].isnull()), 'units_from_zoning'] = 0
+    df['units_from_zoning'] = df['units_from_max_res_zoning']
+    df.loc[(df['units_from_max_res_zoning'].isnull()), 'units_from_zoning'] = 0
 # end for schedule 2  ONLY
 #######################################################################################################
 
