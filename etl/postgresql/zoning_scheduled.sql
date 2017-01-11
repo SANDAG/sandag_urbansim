@@ -126,6 +126,7 @@ SELECT
 FROM ref.zoning_base
 ;
 
+
 CREATE TABLE urbansim.zoning_allowed_use
 (
     zoning_id integer NOT NULL REFERENCES urbansim.zoning (zoning_id)
@@ -183,6 +184,11 @@ COPY staging.sr13_capacity
 FROM 'E:\sr13Capacity.csv' DELIMITER ',' CSV
 ;
 
+ALTER TABLE staging.sr13_capacity
+  OWNER TO urbansim_user;
+GRANT ALL ON TABLE staging.sr13_capacity TO urbansim_user;
+
+
 /*** LOAD INTO ZONING ***/
 WITH t AS (
 SELECT
@@ -199,7 +205,7 @@ FROM
         ,zoning.max_dua
         ,zoning.max_res_units
         ,CASE
-             WHEN sr13_capacity.cap_hs IS NULL OR sr13_capacity.cap_hs < 0 THEN 0
+             WHEN sr13_capacity.cap_hs < 0 THEN 0
              ELSE sr13_capacity.cap_hs
          END as cap_hs
         ,SUM(buildings.residential_units) as residential_units
@@ -295,7 +301,7 @@ WITH t AS (
         ,zoning.max_dua
         ,zoning.max_res_units
         ,CASE
-             WHEN sr13_capacity.cap_hs IS NULL OR sr13_capacity.cap_hs < 0 THEN 0
+             WHEN sr13_capacity.cap_hs < 0 THEN 0
              ELSE sr13_capacity.cap_hs
          END as cap_hs
         ,SUM(buildings.residential_units) as residential_units
