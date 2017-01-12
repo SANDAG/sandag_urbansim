@@ -1,7 +1,7 @@
 import orca
 import models, datasources, variables
 import sys
-from models import to_database, get_git_hash, update_scenario
+from sd_utils import to_database, get_git_hash, update_scenario
 from sqlalchemy import create_engine
 from pysandag.database import get_connection_string
 import pandas as pd
