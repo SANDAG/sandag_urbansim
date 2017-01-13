@@ -201,6 +201,10 @@ def building_purchase_price(parcels):
 
 ##########################################################################
 
+@orca.column('parcels', 'addl_units')
+def housing_capacity(parcels, capacity):
+    return misc.reindex(capacity.addl_units, parcels.index)
+
 
 @orca.column('parcels', 'distance_to_onramp')
 def parcels_distance_to_onramp(settings, net, parcels):

@@ -163,7 +163,7 @@ zoning_allowed_uses_df = pd.read_sql(zoning_allowed_uses_sql, urbansim_engine, i
 zoning_allowed_uses_aggregate_df = pd.read_sql(zoning_allowed_uses_aggregate_sql, urbansim_engine)
 fee_schedule_df = pd.read_sql(fee_schedule_sql, urbansim_engine, index_col='development_type_id')
 zoning_df = pd.read_sql(zoning_sql, urbansim_engine)
-capacity_df = pd.read_sql(capacity_sql, urbansim_engine)
+capacity_df = pd.read_sql(capacity_sql, urbansim_engine,index_col='parcel_id')
 
 
 #assessor_transactions_df = pd.read_sql(assessor_transactions_sql, urbansim_engine)
@@ -215,6 +215,7 @@ with pd.HDFStore('data/urbansim.h5', mode='w') as store:
     store.put('edges', edges_df, format='t')
     store.put('parcels', parcels_df, format='t')
     store.put('buildings', buildings_df, format='t')
+    store.put('capacity', capacity_df, format='t')
     store.put('households', households_df, format='t')
     store.put('jobs', jobs_df, format='t')
     store.put('building_sqft_per_job', building_sqft_per_job_df, format='t')
