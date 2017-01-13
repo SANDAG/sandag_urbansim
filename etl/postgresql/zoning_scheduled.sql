@@ -188,7 +188,6 @@ ALTER TABLE staging.sr13_capacity
   OWNER TO urbansim_user;
 GRANT ALL ON TABLE staging.sr13_capacity TO urbansim_user;
 
-
 /*** LOAD INTO ZONING ***/
 WITH t AS (
 SELECT
@@ -208,23 +207,20 @@ FROM
              WHEN sr13_capacity.cap_hs < 0 THEN 0
              ELSE sr13_capacity.cap_hs
          END as cap_hs
-        ,SUM(buildings.residential_units) as residential_units
     FROM
-        ref.parcelzoning_base AS parcels
-            LEFT JOIN urbansim.buildings
-            ON buildings.parcel_id = parcels.parcel_id
-                LEFT JOIN ref.zoning_base AS zoning
+        staging.sr13_capacity
+            JOIN ref.parcelzoning_base AS parcels
+            ON parcels.parcel_id = sr13_capacity.parcel_id
+                JOIN ref.zoning_base AS zoning
                 ON zoning.zone = parcels.zone
-                    LEFT JOIN staging.sr13_capacity
-                        ON parcels.parcel_id = sr13_capacity.parcel_id
     GROUP BY
         parcels.parcel_id
-        ,parcels.zone
         ,zoning.zone
         ,zoning.min_dua
         ,zoning.max_dua
         ,zoning.max_res_units
-        ,sr13_capacity.cap_hs) parcel_zoning_sr13_comparison  
+        ,sr13_capacity.cap_hs
+    ) parcel_zoning_sr13_comparison  
 GROUP BY
     zone
     ,max_res_units
@@ -285,13 +281,10 @@ SELECT
     ,NULL
     ,'Override from SR13 capacity where cap_hs <> base zoning max_res_units'
 FROM
-    urbansim.zoning
-        INNER JOIN t
+    (SELECT * FROM urbansim.zoning WHERE zoning_schedule_id = 1) AS zoning
+        JOIN t
         ON t.zone = zoning.zone
-WHERE zoning.max_res_units <> t.cap_hs
-OR zoning.max_res_units IS NULL
 ;
-
 /*** LOAD INTO PARCEL ZONING SCHEDULE ***/
 WITH t AS (
     SELECT
@@ -304,18 +297,14 @@ WITH t AS (
              WHEN sr13_capacity.cap_hs < 0 THEN 0
              ELSE sr13_capacity.cap_hs
          END as cap_hs
-        ,SUM(buildings.residential_units) as residential_units
     FROM
-        ref.parcelzoning_base AS parcels
-            LEFT JOIN urbansim.buildings
-            ON buildings.parcel_id = parcels.parcel_id
+        staging.sr13_capacity
+            JOIN ref.parcelzoning_base AS parcels
+            ON parcels.parcel_id = sr13_capacity.parcel_id
                 LEFT JOIN urbansim.zoning
                 ON zoning.zone = parcels.zone
-                    LEFT JOIN staging.sr13_capacity
-                        ON parcels.parcel_id = sr13_capacity.parcel_id
     GROUP BY
         parcels.parcel_id
-        ,parcels.zone
         ,zoning.zoning_id
         ,zoning.zone
         ,zoning.min_dua
@@ -330,7 +319,8 @@ SELECT
     ,zoning.zoning_id
     ,zoning.zone
 FROM t
-JOIN urbansim.zoning ON zoning.zone = t.zone || ' cap_hs ' || t.cap_hs
+JOIN urbansim.zoning
+ON zoning.zone = t.zone || ' cap_hs ' || t.cap_hs
 ORDER BY 2
 ;
 
