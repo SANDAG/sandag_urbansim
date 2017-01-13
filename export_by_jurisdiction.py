@@ -137,11 +137,13 @@ zoning_sql =    '''SELECT zoning.zoning_schedule_id, zoning.zone, zoning.zoning_
                           zoning.max_building_height as max_height,
                           zoning.max_far, zoning.max_res_units
                      FROM urbansim.zoning zoning
-                    WHERE zoning.zoning_schedule_id = ''' + str(zsid) + '''
-                      AND zoning.jurisdiction_id = ''' + str(zone)
+                    WHERE zoning.jurisdiction_id = ''' + str(zone)
 
 assessor_transactions_sql = """SELECT parcel_id, tx_price FROM (SELECT parcel_id, RANK() OVER (PARTITION BY parcel_id ORDER BY tx_date) as tx,
                                 tx_date, tx_price FROM estimation.assessor_par_transactions) x WHERE tx = 1"""
+
+if zsid == 2:
+    capacity_sql = 'SELECT parcel_id, addl_units FROM staging.schedule2_sr13 WHERE jurisdiction_id = ' + str(zone)
 
 nodes_df = pd.read_sql(nodes_sql, urbansim_engine, index_col='node_id')
 intersection_df = pd.read_sql(intersection_sql, urbansim_engine, index_col='intersection_id')
@@ -161,6 +163,8 @@ zoning_allowed_uses_df = pd.read_sql(zoning_allowed_uses_sql, urbansim_engine, i
 zoning_allowed_uses_aggregate_df = pd.read_sql(zoning_allowed_uses_aggregate_sql, urbansim_engine)
 fee_schedule_df = pd.read_sql(fee_schedule_sql, urbansim_engine, index_col='development_type_id')
 zoning_df = pd.read_sql(zoning_sql, urbansim_engine)
+capacity_df = pd.read_sql(capacity_sql, urbansim_engine)
+
 
 #assessor_transactions_df = pd.read_sql(assessor_transactions_sql, urbansim_engine)
 
