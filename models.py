@@ -397,7 +397,7 @@ def target_avg_unit_size():
 
 def run_developer(forms, agents, buildings,supply_fname, parcel_size,
                   ave_unit_size, total_units, feasibility,
-                  max_dua_zoning, max_res_units, year=None,
+                  max_dua_zoning, max_res_units, addl_units,year=None,
                   target_vacancy=.1, use_max_res_units=False,
                   form_to_btype_callback=None,
                   add_more_columns_callback=None, max_parcel_size=2000000,
@@ -497,6 +497,7 @@ def run_developer(forms, agents, buildings,supply_fname, parcel_size,
     df['current_units'] = total_units
     df['max_dua_zoning'] = max_dua_zoning
     df['max_res_units'] = max_res_units
+    df['addl_units'] = addl_units
     df['zoning_id'] = parcels.zoning_id
     df['siteid'] = parcels.siteid
     df['zoning_schedule_id'] = parcels.zoning_schedule_id
@@ -673,6 +674,7 @@ def residential_developer(feasibility, households, buildings, parcels, year,
         feasibility,
         parcels.max_dua_zoning,
         parcels.max_res_units,
+        parcels.addl_units,
         year=year,
         form_to_btype_callback=form_to_btype_func,
         add_more_columns_callback=add_extra_columns_func,
