@@ -64,8 +64,6 @@ def to_database(scenario=' ', rng=range(0, 0), urbansim_connection=get_connectio
                 if x == 'feasibility':
                     df = df['residential']
                     df.rename(columns={'total_sqft': 'total_sqft_existing_bldgs'}, inplace=True)
-                if x == 'parcels':
-                    df = df.drop('addl_units', 1)
                 df['year'] = year
                 df['scenario_id'] = scenario_id[0]
                 df['parent_scenario_id'] = parent_scenario_id[0]
