@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import orca
 
 
 class Developer(object):
@@ -179,12 +180,11 @@ class Developer(object):
         df["parcel_size"] = parcel_size
         df['current_units'] = current_units
         df = df[df.parcel_size < max_parcel_size]
-
-        df['residential_units'] = (df.residential_sqft / df.ave_unit_size).round()
         df['job_spaces'] = (df.non_residential_sqft / bldg_sqft_per_job).round()
 
         if residential:
-            df['net_units'] = df.residential_units
+            df['net_units'] = df['addl_units']
+            df['residential_units'] = df['addl_units']
         else:
             df['net_units'] = df.job_spaces - df.current_units
         df = df[df.net_units > 0]
@@ -192,8 +192,7 @@ class Developer(object):
         if len(df) == 0:
             print "WARNING THERE ARE NO FEASIBLE BUILDING TO CHOOSE FROM"
             return
-        outfile = 'data/pick' + form[0] + '.csv'
-        df.to_csv(outfile)
+
         # print "Describe of net units\n", df.net_units.describe()
         print "Sum of net units that are profitable: {:,}".\
             format(int(df.net_units.sum()))
@@ -214,19 +213,11 @@ class Developer(object):
             # we don't know how many developments we will need, as they differ in net_units.
             # If all developments have net_units of 1 than we need target_units of them.
             # So we choose the smaller of available developments and target_units.
-            np.random.seed(3)
             choices = np.random.choice(df.index.values, size=min(len(df.index), target_units),
                                        replace=False, p=p)
             tot_units = df.net_units.loc[choices].values.cumsum()
             ind = int(np.searchsorted(tot_units, target_units, side="left")) + 1
             build_idx = choices[:ind]
-
-            # df['roi'] = df['max_profit']/df['total_cost']
-            # result = df.sort_values(['roi'], ascending = False)
-            # tot_units = result.net_units.loc[result.index.values].values.cumsum()
-            # ind = int(np.searchsorted(tot_units, target_units, side="left")) + 1
-            # build_idx = result.index.values[:ind]
-            # del df['roi']
 
         if drop_after_build:
             self.feasibility = self.feasibility.drop(build_idx)

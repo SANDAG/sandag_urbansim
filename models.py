@@ -4,8 +4,8 @@ from urbansim.developer import sqftproforma
 import orca
 from urbansim_defaults import models
 from urbansim_defaults import utils
-from urbansim.developer import developer
 import numpy as np
+import developer
 from pysandag.database import get_connection_string
 import math
 import psycopg2
@@ -365,7 +365,7 @@ def feasibility2(parcels, settings,
                           parcel_sales_price_sqft_func,
                           parcel_is_allowed_func,
                           config=config, forms_to_test=['residential'],
-                          pass_through=['parcel_size','land_cost','weighted_rent','building_purchase_price','building_purchase_price_sqft','total_sqft','parcel_avg_price_residential','max_res_units'],
+                          pass_through=['parcel_size','land_cost','weighted_rent','building_purchase_price','building_purchase_price_sqft','total_sqft','parcel_avg_price_residential', 'addl_units', 'max_res_units'],
                           **kwargs)
 
 
@@ -469,7 +469,7 @@ def run_developer(forms, agents, buildings,supply_fname, parcel_size,
     Writes the result back to the buildings table and returns the new
     buildings with available debugging information on each new building
     """
-    # num_units_to_build = target_units_def()
+    num_units_to_build = target_units_def()
     # ave_unit_size = target_avg_unit_size()
     dev = developer.Developer(feasibility.to_frame())
 
@@ -509,12 +509,12 @@ def run_developer(forms, agents, buildings,supply_fname, parcel_size,
     df['max_dua_from_zoning'] =  df['max_dua_zoning']
     df['development_type_id'] = parcels.development_type_id
     df = df[df.parcel_size < max_parcel_size]
-
+    '''
     df['units_from_max_dua_zoning'] = np.NaN
 
     df.loc[df['max_dua_from_zoning'] >= 0, 'units_from_max_dua_zoning'] = (df.max_dua_from_zoning * df.acres).round()
     df['units_from_max_res_zoning'] = df['max_res_units']
-    df['units_from_min_unit_size'] = (df['residential_sqft']/min_unit_size).round()
+
 
     df['units_from_zoning'] = np.NaN # final units from zoning
 
@@ -532,16 +532,18 @@ def run_developer(forms, agents, buildings,supply_fname, parcel_size,
     df.loc[(df['units_from_max_res_zoning'] >= 0) &
                     (df['units_from_max_dua_zoning'] >= 0), 'units_from_zoning'] = df[
         ['units_from_max_res_zoning', 'units_from_max_dua_zoning']].min(axis=1)
+        '''
+
 ###################################################################################################
 # for schedule 2 ONLY
-    df['units_from_zoning'] = df['units_from_max_res_zoning']
-    df.loc[(df['units_from_max_res_zoning'].isnull()), 'units_from_zoning'] = 0
+    df['units_from_min_unit_size'] = (df['residential_sqft'] / min_unit_size).round()
+    # df.loc[(df['units_from_max_res_zoning'].isnull()), 'units_from_zoning'] = 0
 # end for schedule 2  ONLY
 #######################################################################################################
 
     df.loc[(df['siteid'] > 0), 'units_from_zoning'] = 0
 
-    df['final_units_constrained_by_size'] = df[['units_from_zoning', 'units_from_min_unit_size']].min(
+    df['final_units_constrained_by_size'] = df[['addl_units', 'units_from_min_unit_size']].min(
         axis=1)
 
     df['unit_size_from_final'] = df['residential_sqft'] / df['units_from_zoning']
@@ -549,7 +551,7 @@ def run_developer(forms, agents, buildings,supply_fname, parcel_size,
     df.loc[(df['unit_size_from_final'] < min_unit_size), 'unit_size_from_final'] = min_unit_size
 
     df['final_units_constrained_by_size'] = (df['residential_sqft'] / df['unit_size_from_final']).round()
-    df['net_units'] = df.final_units_constrained_by_size - df.current_units
+    df['net_units'] = df.final_units_constrained_by_size
 
     df['roi'] = df['max_profit'] / df['total_cost']
 
@@ -557,18 +559,6 @@ def run_developer(forms, agents, buildings,supply_fname, parcel_size,
     df = df.set_index(['parcel_id'])
 
     unit_size_from_final = df.unit_size_from_final
-
-
-    df2 = df.loc[:, ['parcel_id', 'zoning_id', 'zoning_schedule_id', 'parent_zoning_id',
-                     'current_units','max_dua_zoning', 'acres', 'units_from_max_dua_zoning',
-                     'max_res_units','allowed_development_types',
-                     'allowed_units','net_units','unit_size_from_final']]
-    # df['net_units_corrected'] = df['net_units']
-
-    # df['agg'] = df['array_agg'].apply(lambda x: any(pd.Series(x).str.contains('2')))
-    # df.loc[((df['agg']==False)& (df['net_units'] > 1)), 'net_units_corrected'] = 1
-    feasibility_available = 'data/parcels_available_units_' + str(year) + '.csv'
-    df.to_csv(feasibility_available)
 
     new_buildings = dev.pick(forms,
                              target_units,
