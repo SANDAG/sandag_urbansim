@@ -483,43 +483,25 @@ scheduled_development :
         SHAPE_Area : !!python/name:sqlalchemy.Float
         shape : !!python/object:geoalchemy2.Geography { geometry_type: 'GEOMETRY', srid: 4326, spatial_index: True }
 
-scheduled_development_event :
+scheduled_development_parcels :
     ##Input Query
     in_query_non_spatial : >
         SELECT
-            scheduled_development_event_id
-        parcel_id
-            ,development_type_id as building_type_id
-            ,year_built
-            ,sqft_per_unit
-            ,residential_units
-            ,non_residential_sqft
-            ,improvement_value
-            ,res_price_per_sqft
-            ,nonres_rent_per_sqft as non_residential_rent_per_sqft
-            ,COALESCE(stories,1) as stories
+            parcel_id
+            ,siteid
         FROM
-            urbansim.scheduled_development_event
+            urbansim.scheduled_development_parcels
     ##Index Column
-    index_col : scheduled_development_event_id
+    index_col : parcel_id
     indexes :
-        ix_scheduled_development_event_id: scheduled_development_event_id
-        ix_scheduled_development_event_parcel_id: parcel_id
+        ix_scheduled_development_parcels_parcel_id: parcel_id
+        ix_scheduled_development_parcels_site_id: siteid
     ##Output
-    out_table : scheduled_development_event
+    out_table : scheduled_development_parcels
     #Map columns
     column_data_types :
-        scheduled_development_event_id : !!python/name:sqlalchemy.Integer
         parcel_id : !!python/name:sqlalchemy.Integer
-        building_type_id : !!python/name:sqlalchemy.Integer
-        year_built : !!python/name:sqlalchemy.Integer
-        sqft_per_unit : !!python/name:sqlalchemy.Integer
-        residential_units : !!python/name:sqlalchemy.Integer
-        non_residential_sqft : !!python/name:sqlalchemy.Integer
-        improvement_value : !!python/name:sqlalchemy.Integer
-        res_price_per_sqft : !!python/name:sqlalchemy.Integer
-        non_residential_rent_per_sqft : !!python/name:sqlalchemy.Integer
-        stories : !!python/name:sqlalchemy.Integer
+        siteid : !!python/name:sqlalchemy.Integer
 
 schools :
     ##Input Query
