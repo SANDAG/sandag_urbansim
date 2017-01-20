@@ -70,8 +70,7 @@ zoning_sql =    '''SELECT zoning.zoning_schedule_id, zoning.zone, zoning.zoning_
                           zoning.parent_zoning_id,zoning.min_dua, zoning.max_dua,
                           zoning.max_building_height as max_height,
                           zoning.max_far, zoning.max_res_units
-                     FROM urbansim.zoning zoning
-                    WHERE zoning.zoning_schedule_id = ''' + str(zsid)
+                     FROM urbansim.zoning zoning'''
 
 
 nodes_df = pd.read_sql(nodes_sql, urbansim_engine, index_col='node_id')
