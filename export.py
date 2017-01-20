@@ -72,6 +72,8 @@ zoning_sql =    '''SELECT zoning.zoning_schedule_id, zoning.zone, zoning.zoning_
                           zoning.max_far, zoning.max_res_units
                      FROM urbansim.zoning zoning'''
 
+if zsid == 2:
+    capacity_sql = 'SELECT parcel_id, addl_units FROM staging.schedule2_sr13'
 
 nodes_df = pd.read_sql(nodes_sql, urbansim_engine, index_col='node_id')
 intersection_df = pd.read_sql(intersection_sql, urbansim_engine, index_col='intersection_id')
@@ -90,6 +92,8 @@ employment_controls_df = pd.read_sql(employment_controls_sql, urbansim_engine, i
 zoning_allowed_uses_df = pd.read_sql(zoning_allowed_uses_sql, urbansim_engine, index_col='development_type_id')
 fee_schedule_df = pd.read_sql(fee_schedule_sql, urbansim_engine, index_col='development_type_id')
 zoning_df = pd.read_sql(zoning_sql, urbansim_engine)
+capacity_df = pd.read_sql(capacity_sql, urbansim_engine,index_col='parcel_id')
+
 
 building_sqft_per_job_df.sort_values(['luz_id', 'development_type_id'], inplace=True)
 building_sqft_per_job_df.set_index(['luz_id', 'development_type_id'], inplace=True)
