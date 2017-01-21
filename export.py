@@ -93,6 +93,7 @@ zoning_allowed_uses_df = pd.read_sql(zoning_allowed_uses_sql, urbansim_engine, i
 fee_schedule_df = pd.read_sql(fee_schedule_sql, urbansim_engine, index_col='development_type_id')
 zoning_df = pd.read_sql(zoning_sql, urbansim_engine)
 capacity_df = pd.read_sql(capacity_sql, urbansim_engine,index_col='parcel_id')
+parcels_df = parcels_df.merge(capacity_df, how='left', left_index=True, right_index=True)
 
 
 building_sqft_per_job_df.sort_values(['luz_id', 'development_type_id'], inplace=True)
