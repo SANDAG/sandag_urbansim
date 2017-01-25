@@ -165,7 +165,7 @@ fee_schedule_df = pd.read_sql(fee_schedule_sql, urbansim_engine, index_col='deve
 zoning_df = pd.read_sql(zoning_sql, urbansim_engine)
 capacity_df = pd.read_sql(capacity_sql, urbansim_engine,index_col='parcel_id')
 parcels_df = parcels_df.merge(capacity_df, how='left', left_index=True, right_index=True)
-
+parcels_df["new_built_units"] = 0
 
 #assessor_transactions_df = pd.read_sql(assessor_transactions_sql, urbansim_engine)
 
