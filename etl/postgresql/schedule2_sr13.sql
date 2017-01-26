@@ -15,20 +15,30 @@
 		from urbansim.parcels
 
 */
+-- 
+-- select scenario_id,sum(addl_units) 
+-- from staging.schedule2_sr13 
+-- where jurisdiction_id = 16
+-- GROUP BY scenario_id
+-- 
+-- SELECT count(*)  
+-- FROM staging.schedule2_sr13 
+-- where jurisdiction_id = 16
+-- GROUP BY scenario_id
+-- 
+-- select * FROM staging.schedule2_sr13 
+-- where jurisdiction_id = 16 and scenario_id = 2
 
--- select sum(addl_units) from staging.schedule2_sr13 
--- GROUP BY jurisdiction_id
 
---SELECT *  FROM staging.schedule2_sr13 where jurisdiction_id = 16
-
---DELETE FROM staging.schedule2_sr13 where jurisdiction_id = 16
+--DELETE FROM staging.schedule2_sr13 where jurisdiction_id = 16 and scenario_id = 2
 
 
 INSERT INTO staging.schedule2_sr13 (
-	parcel_id, jurisdiction_id, source_zoning_schedule_id, zone, 
+	parcel_id, scenario_id, jurisdiction_id, source_zoning_schedule_id, zone, 
 	zoning_id, parent_zoning, allowed_dev_type, 
 	acres, proportion_undevelopable,acres_constrained, 
-	min_dua, max_dua, max_dua_units, max_res_units, cap_hs, current_units) (
+	min_dua, max_dua, max_dua_units, max_res_units, cap_hs, current_units,
+	sr13_cap_hs, sr13_du_ludu2015, sr13_cap_hs_ludu2015, sr13_update_2015, sr13_du) (
 WITH dev_type_aggregated AS (
 SELECT 	zp.parcel_id, coalesce(zoning.parent_zoning_id, zoning.zoning_id) as lookup_zoning_id, 
 	array_agg(allowed.development_type_id) as allowed_dev_type 
@@ -52,7 +62,8 @@ SELECT 	parcels.parcel_id, 2 as scenario_id, parcels.jurisdiction_id, zoning.zon
 	(1 - COALESCE(parcels.proportion_undevelopable,0)) * parcels.parcel_acres  AS acres_constrained,
 	zoning.min_dua, zoning.max_dua,  
 	(1 - COALESCE(parcels.proportion_undevelopable,0)) * parcels.parcel_acres * zoning.max_dua AS max_dua_units,
-	zoning.max_res_units, zoning.cap_hs, res.current_units
+	zoning.max_res_units, zoning.cap_hs, res.current_units,
+	sr13.cap_hs, sr13.du_ludu2015, sr13.cap_hs_ludu2015, sr13.update_2015, sr13.du
 FROM 	urbansim.zoning zoning
 JOIN 	urbansim.zoning_parcels zp 
 ON 	zoning.zoning_id = zp.zoning_id 
@@ -60,12 +71,14 @@ JOIN 	urbansim.parcels parcels
 ON 	zp.parcel_id = parcels.parcel_id
 LEFT JOIN dev_type_aggregated dev
 ON 	zp.parcel_id = dev.parcel_id
+LEFT JOIN ref.sr13_capacity sr13
+ON 	zp.parcel_id = sr13.parcel_id
 JOIN 	residential_units res
 ON 	res.parcel_id = zp.parcel_id
 WHERE 	zp.zoning_schedule_id = 2 AND zoning.jurisdiction_id = 16);
 
 -- -- rounding scenario 2
-UPDATE staging.schedule1_municipal_zoning
+UPDATE staging.schedule2_sr13
 SET max_dua_units_rounded = 
 ROUND(max_dua_units)
 where jurisdiction_id = 16 and scenario_id = 2;
