@@ -1,4 +1,4 @@
-﻿/* Populate table:  staging.schedule2_sr13 
+﻿/* Populate table:  urbansim_output.ludu2015_parcel_id_to_sr13_caphs 
 	 acres_constrained: 
 		acres multiplied by proportion developable (proportion_undevelopable subtracted from one)
 	allowed_dev_type: 
@@ -17,28 +17,33 @@
 */
 -- 
 -- select scenario_id,sum(addl_units) 
--- from staging.schedule2_sr13 
+-- from urbansim_output.ludu2015_parcel_id_to_sr13_caphs 
 -- where jurisdiction_id = 16
 -- GROUP BY scenario_id
 -- 
 -- SELECT count(*)  
--- FROM staging.schedule2_sr13 
+-- FROM urbansim_output.ludu2015_parcel_id_to_sr13_caphs 
 -- where jurisdiction_id = 16
 -- GROUP BY scenario_id
 -- 
--- select * FROM staging.schedule2_sr13 
--- where jurisdiction_id = 16 and scenario_id = 2
+--  select * FROM urbansim_output.ludu2015_parcel_id_to_sr13_caphs 
+--  where jurisdiction_id = 16 and scenario_id = 1
 
 
---DELETE FROM staging.schedule2_sr13 where jurisdiction_id = 16 and scenario_id = 2
+DELETE FROM urbansim_output.ludu2015_parcel_id_to_sr13_caphs where jurisdiction_id = 16 and scenario_id = 1
 
 
-INSERT INTO staging.schedule2_sr13 (
-	parcel_id, scenario_id, jurisdiction_id, source_zoning_schedule_id, zone, 
-	zoning_id, parent_zoning, allowed_dev_type, 
-	acres, proportion_undevelopable,acres_constrained, 
-	min_dua, max_dua, max_dua_units, max_res_units, cap_hs, current_units,
-	sr13_cap_hs, sr13_du_ludu2015, sr13_cap_hs_ludu2015, sr13_update_2015, sr13_du) (
+INSERT INTO urbansim_output.ludu2015_parcel_id_to_sr13_caphs (
+	parcel_id, jurisdiction_id, scenario_id, scheduled_development, 
+        parcel_id_2015_to_sr13, zone, zoning_id, parent_zoning_id, 
+       allowed_dev_type, acres, undevelopable_proportion, 
+       developable_acres, 
+       zoning_min_dua, zoning_max_dua, 
+       zoning_max_dua_units, 
+       zoning_max_res_units, 
+       buildings_res_units, 
+       ludu2015_du, sr13_du, sr13_cap_hs_negatives_to_zeros, 
+       sr13_cap_hs, growth_adjusted_sr13_cap_hs) (
 WITH dev_type_aggregated AS (
 SELECT 	zp.parcel_id, coalesce(zoning.parent_zoning_id, zoning.zoning_id) as lookup_zoning_id, 
 	array_agg(allowed.development_type_id) as allowed_dev_type 
@@ -56,14 +61,15 @@ RIGHT JOIN urbansim.parcels p
 ON 	b.parcel_id = p.parcel_id
 WHERE 	p.jurisdiction_id = 16
 GROUP BY p.parcel_id)
-SELECT 	parcels.parcel_id, 2 as scenario_id, parcels.jurisdiction_id, zoning.zoning_schedule_id, zoning.zone, 
-	zoning.zoning_id, zoning.parent_zoning_id, dev.allowed_dev_type,
-	parcels.parcel_acres as acres, parcels.proportion_undevelopable, 
-	(1 - COALESCE(parcels.proportion_undevelopable,0)) * parcels.parcel_acres  AS acres_constrained,
+SELECT 	parcels.parcel_id, parcels.jurisdiction_id, 1 as scenario_id, FALSE as scheduled_development,
+	sr13.update_2015, zoning.zone, zoning.zoning_id, zoning.parent_zoning_id, 
+	dev.allowed_dev_type, parcels.parcel_acres, parcels.proportion_undevelopable, 
+	(1 - COALESCE(parcels.proportion_undevelopable,0)) * parcels.parcel_acres,
 	zoning.min_dua, zoning.max_dua,  
-	(1 - COALESCE(parcels.proportion_undevelopable,0)) * parcels.parcel_acres * zoning.max_dua AS max_dua_units,
-	zoning.max_res_units, zoning.cap_hs, res.current_units,
-	sr13.cap_hs, sr13.du_ludu2015, sr13.cap_hs_ludu2015, sr13.update_2015, sr13.du
+	(1 - COALESCE(parcels.proportion_undevelopable,0)) * parcels.parcel_acres * zoning.max_dua,
+	zoning.max_res_units,  res.current_units,
+	sr13.du_ludu2015,sr13.du,zoning.cap_hs,
+	sr13.cap_hs,  sr13.cap_hs_ludu2015
 FROM 	urbansim.zoning zoning
 JOIN 	urbansim.zoning_parcels zp 
 ON 	zoning.zoning_id = zp.zoning_id 
@@ -77,77 +83,73 @@ JOIN 	residential_units res
 ON 	res.parcel_id = zp.parcel_id
 WHERE 	zp.zoning_schedule_id = 2 AND zoning.jurisdiction_id = 16);
 
--- -- rounding scenario 2
-UPDATE staging.schedule2_sr13
-SET max_dua_units_rounded = 
-ROUND(max_dua_units)
-where jurisdiction_id = 16 and scenario_id = 2;
+-- -- rounding
+--Santee use FLOOR instead of round 
+UPDATE urbansim_output.ludu2015_parcel_id_to_sr13_caphs
+SET zoning_max_dua_units_rounded = 
+FLOOR(zoning_max_dua_units)
+where jurisdiction_id = 16 and scenario_id = 1;
 
 
 
 -- calculate minimum_of_max_dua_units_and_max_res_units for parcels not in series 13
-UPDATE staging.schedule2_sr13
-SET minimum_of_max_dua_units_and_max_res_units = (
+UPDATE urbansim_output.ludu2015_parcel_id_to_sr13_caphs
+SET minimum_of_max_dua_units_rounded_and_max_res_units = (
 CASE
-WHEN max_dua_units_rounded IS NULL AND max_res_units is NULL THEN 0
-ELSE round(LEAST(max_dua_units_rounded, max_res_units))
+WHEN zoning_max_dua_units_rounded IS NULL AND zoning_max_res_units is NULL THEN 0
+ELSE round(LEAST(zoning_max_dua_units_rounded, zoning_max_res_units))
 END)
-WHERE jurisdiction_id = 16 and scenario_id = 2 and 
-parcel_id NOT IN (SELECT parcel_id from staging.sr13_capacity sr13);
+WHERE jurisdiction_id = 16 and scenario_id = 1 and 
+parcel_id NOT IN (SELECT parcel_id from ref.sr13_capacity sr13);
 
 
 -- set addl_units to cap_hs
-UPDATE staging.schedule2_sr13
-SET addl_units = cap_hs
-WHERE jurisdiction_id = 16 and scenario_id = 2;
+UPDATE urbansim_output.ludu2015_parcel_id_to_sr13_caphs
+SET aggregated_addl_units = sr13_cap_hs_negatives_to_zeros
+WHERE jurisdiction_id = 16 and scenario_id = 1;
 
 
 -- for parcels not in series 13, calc addl_units as minimum of max_dua and max_res_units
-UPDATE staging.schedule2_sr13
-SET addl_units =
-minimum_of_max_dua_units_and_max_res_units - current_units
-WHERE jurisdiction_id = 16 and scenario_id = 2 and 
-parcel_id NOT IN (SELECT parcel_id from staging.sr13_capacity sr13);
+UPDATE urbansim_output.ludu2015_parcel_id_to_sr13_caphs
+SET aggregated_addl_units =
+minimum_of_max_dua_units_rounded_and_max_res_units - buildings_res_units
+WHERE jurisdiction_id = 16 and scenario_id = 1 and 
+parcel_id NOT IN (SELECT parcel_id from ref.sr13_capacity sr13);
 
 
 --set negative capacity to zero
-UPDATE staging.schedule2_sr13
-SET addl_units = 0
-WHERE addl_units < 0 and jurisdiction_id = 16 and scenario_id = 2;
-
-
--- add scheduled dev column
-UPDATE staging.schedule2_sr13
-SET scheduled_development = FALSE where jurisdiction_id = 16 and scenario_id = 2;
+UPDATE urbansim_output.ludu2015_parcel_id_to_sr13_caphs
+SET aggregated_addl_units = 0
+WHERE aggregated_addl_units < 0 and jurisdiction_id = 16 and scenario_id = 1;
 
 
 -- set scheduled dev true for parcels in scheduled development
-UPDATE staging.schedule2_sr13
+UPDATE urbansim_output.ludu2015_parcel_id_to_sr13_caphs
 SET scheduled_development = TRUE
-WHERE parcel_id IN (SELECT parcel_id FROM urbansim.scheduled_development_parcels) and jurisdiction_id = 16 and scenario_id = 2;
+WHERE parcel_id IN (SELECT parcel_id FROM urbansim.scheduled_development_parcels) and jurisdiction_id = 16 and scenario_id = 1;
 
 
 -- set siteid for scheduled de
-UPDATE staging.schedule2_sr13 s2
+UPDATE urbansim_output.ludu2015_parcel_id_to_sr13_caphs s2
 SET siteid_sched_dev = subquery.siteid
 FROM (SELECT parcel_id, siteid
 	FROM urbansim.scheduled_development_parcels) AS subquery
-WHERE s2.parcel_id = subquery.parcel_id and jurisdiction_id = 16 and scenario_id = 2;
+WHERE s2.parcel_id = subquery.parcel_id and jurisdiction_id = 16 and scenario_id = 1;
 
 
 --set addl_units to zero for scheduled dev
-UPDATE staging.schedule2_sr13
-SET addl_units = 0
-WHERE scheduled_development = TRUE and jurisdiction_id = 16 and scenario_id = 2;
+UPDATE urbansim_output.ludu2015_parcel_id_to_sr13_caphs
+SET aggregated_addl_units = 0
+WHERE scheduled_development = TRUE and jurisdiction_id = 16 and scenario_id = 1;
 
 
 --set addl_units for sched dev (all units to one parcel in the sched dev)
-UPDATE staging.schedule2_sr13 s2
-SET addl_units = subquery.units_per_parcel
+UPDATE urbansim_output.ludu2015_parcel_id_to_sr13_caphs s2
+SET aggregated_addl_units = subquery.units_per_parcel
 FROM (
 WITH parcels_one AS (
 SELECT siteid_sched_dev, MIN(parcel_id) as parcelid
-FROM staging.schedule2_sr13
+FROM urbansim_output.ludu2015_parcel_id_to_sr13_caphs
 WHERE siteid_sched_dev > 0
 GROUP BY siteid_sched_dev)
 SELECT os.parcelid, (COALESCE(sfu,0) + COALESCE(mfu,0)) AS units_per_parcel
@@ -155,4 +157,4 @@ FROM urbansim.scheduled_development sd
 JOIN parcels_one os
 ON os.siteid_sched_dev = sd."siteID"
 ) AS subquery
-WHERE s2.parcel_id = subquery.parcelid and jurisdiction_id = 16 and scenario_id = 2;
+WHERE s2.parcel_id = subquery.parcelid and jurisdiction_id = 16 and scenario_id = 1;
