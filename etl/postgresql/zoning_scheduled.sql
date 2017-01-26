@@ -3,7 +3,6 @@ DROP TABLE IF EXISTS urbansim.zoning_allowed_use;
 DROP TABLE IF EXISTS urbansim.zoning;
 DROP TABLE IF EXISTS urbansim.zoning_schedule;
 DROP TABLE IF EXISTS urbansim.zoning_parcels;
-DROP TABLE IF EXISTS staging.sr13_capacity;
 
 CREATE TABLE urbansim.zoning_schedule
 (
@@ -43,12 +42,13 @@ CREATE TABLE urbansim.zoning
     ,min_dua numeric
     ,max_dua numeric
     ,max_res_units integer
+    ,cap_hs integer
     ,max_building_height integer
     ,zone_code_link character varying
     ,notes text
     ,review_date timestamp without time zone
     ,review_by character varying
-    ,shape geography(MultiPolygon,4326)
+    ,geom geography(MultiPolygon,4326)
     ,review text
     ,CONSTRAINT uk_zoning UNIQUE (zoning_schedule_id, zone, yr_effective)
 );
@@ -57,9 +57,9 @@ ALTER TABLE urbansim.zoning
   OWNER TO urbansim_user;
 GRANT ALL ON TABLE urbansim.zoning TO urbansim_user;
 
-CREATE INDEX idx_zoning_shape
+CREATE INDEX idx_zoning_geom
 ON urbansim.zoning
-USING gist (shape);
+USING gist (geom);
 
 CREATE INDEX ix_zoning_zoning_schedule_zoning_id
 ON urbansim.zoning
@@ -95,7 +95,7 @@ INSERT INTO urbansim.zoning(
     ,notes
     ,review_date
     ,review_by
-    ,shape
+    ,geom
     ,review)
 SELECT 
     1 AS zoning_schedule_id
@@ -121,7 +121,7 @@ SELECT
     ,notes
     ,review_date
     ,review_by
-    ,shape
+    ,geom
     ,review
 FROM ref.zoning_base
 ;
@@ -173,21 +173,6 @@ VALUES (2, 1, 2012, 'SR13 Final Capacity Based Zoning',
         'Zoning densities on SR13 parcel level GP capacities as reviewed by the jurisdictions');
 
 
-CREATE TABLE staging.sr13_capacity
-(
-    parcel_id int PRIMARY KEY
-    ,cap_hs int
-    ,du int
-);
-
-COPY staging.sr13_capacity
-FROM 'E:\sr13Capacity.csv' DELIMITER ',' CSV
-;
-
-ALTER TABLE staging.sr13_capacity
-  OWNER TO urbansim_user;
-GRANT ALL ON TABLE staging.sr13_capacity TO urbansim_user;
-
 /*** LOAD INTO ZONING ***/
 WITH t AS (
 SELECT
@@ -208,7 +193,7 @@ FROM
              ELSE sr13_capacity.cap_hs
          END as cap_hs
     FROM
-        staging.sr13_capacity
+        ref.sr13_capacity
             JOIN ref.parcelzoning_base AS parcels
             ON parcels.parcel_id = sr13_capacity.parcel_id
                 JOIN ref.zoning_base AS zoning
@@ -247,20 +232,21 @@ INSERT INTO urbansim.zoning(
     ,min_dua
     ,max_dua
     ,max_res_units
+    ,cap_hs
     ,max_building_height
     ,zone_code_link
     ,notes
     ,review_date
     ,review_by
-    ,shape
+    ,geom
     ,review)
 SELECT
     2 AS zoning_schedule_id
-    ,zoning.zone || ' cap_hs ' || t.cap_hs
+    ,zoning.zone || ' cap_hs ' || t.cap_hs AS zone
     ,zoning.zoning_id AS parent_zoning_id
     ,zoning.zone AS parect_zone
     ,jurisdiction_id
-    ,zone_code
+    ,zone_code || ' cap_hs ' || t.cap_hs AS zone_code
     ,yr_effective
     ,region_id
     ,min_lot_size
@@ -270,9 +256,10 @@ SELECT
     ,max_front_setback
     ,rear_setback
     ,side_setback
-    ,min_dua
-    ,max_dua
-    ,t.cap_hs as max_res_units
+    ,NULL AS min_dua
+    ,NULL AS max_dua
+    ,NULL AS max_res_units
+    ,t.cap_hs
     ,max_building_height
     ,zone_code_link
     ,notes
@@ -298,7 +285,7 @@ WITH t AS (
              ELSE sr13_capacity.cap_hs
          END as cap_hs
     FROM
-        staging.sr13_capacity
+        ref.sr13_capacity
             JOIN ref.parcelzoning_base AS parcels
             ON parcels.parcel_id = sr13_capacity.parcel_id
                 LEFT JOIN urbansim.zoning
@@ -376,11 +363,11 @@ ORDER BY parcel_id
 /***########## INSERT POLYGONS FOR SCHEDULE 2 START ##########***/	--FIX FOR PARCELS DATASET, NO ZONING DATA!!!!!
 /*** 1- INSERT ZONING POLYGONS FROM PARCELS ****/
 UPDATE urbansim.zoning z
-SET shape = p.shape::geography						--BACK TO GEOGRAPHY
+SET geom = p.geom::geography						--BACK TO GEOGRAPHY
 FROM
 (
     SELECT  pzs.zoning_id, pzs.zoning_schedule_id
-        ,ST_Multi(ST_Union((p.shape)::geometry)) AS shape		--TO MULTIPART GEOMETRY
+        ,ST_Multi(ST_Union((p.geom)::geometry)) AS geom		--TO MULTIPART GEOMETRY
     FROM urbansim.parcel_zoning_schedule2 AS pzs
     JOIN urbansim.parcels AS p
     ON pzs.parcel_id = p.parcel_id
@@ -417,7 +404,7 @@ INSERT INTO urbansim.zoning(
     ,notes
     ,review_date
     ,review_by
-    ,shape
+    ,geom
     ,review)
 SELECT
     2 AS zoning_schedule_id
@@ -443,13 +430,13 @@ SELECT
     ,z.notes
     ,z.review_date
     ,z.review_by
-    ,zp.shape
+    ,zp.geom
     ,z.review
 FROM urbansim.zoning AS z
 JOIN (SELECT
         zp.zoning_id
         ,zp.zone
-        ,ST_Multi(ST_Union((p.shape)::geometry)) AS shape
+        ,ST_Multi(ST_Union((p.geom)::geometry)) AS geom
     FROM urbansim.zoning_parcels AS zp
     JOIN urbansim.parcels AS p ON zp.parcel_id = p.parcel_id
     WHERE zp.zoning_schedule_id = 2
@@ -484,7 +471,7 @@ INSERT INTO urbansim.zoning(
     ,notes
     ,review_date
     ,review_by
-    ,shape
+    ,geom
     ,review)
 SELECT
     2 AS zoning_schedule_id
@@ -510,7 +497,7 @@ SELECT
     ,notes
     ,review_date
     ,review_by
-    ,shape
+    ,geom
     ,review
 FROM urbansim.zoning
 WHERE zoning_schedule_id = 1
