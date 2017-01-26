@@ -298,6 +298,10 @@ def total_sqft(parcels, buildings):
     return buildings.building_sqft.groupby(buildings.parcel_id).sum().\
         reindex(parcels.index).fillna(0)
 
+@orca.column('parcels', 'new_built_units', cache=False)
+def new_units(parcels, buildings):
+    return buildings.new_units.groupby(buildings.parcel_id).sum().\
+        reindex(parcels.index).fillna(0)
 
 @orca.column('parcels', 'zone_id', cache=True)
 def parcel_zone_id(parcels):

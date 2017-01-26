@@ -325,6 +325,7 @@ def scheduled_development_events(scheduled_development_events, buildings):
         sched_dev['building_type_id'] = 21
         sched_dev = sched_dev.set_index('building_id')
         sched_dev['new_bldg'] = True
+        sched_dev['new_units'] = sched_dev['total_units']
         sched_dev['sch_dev'] = True
         from urbansim.developer.developer import Developer
         merge = Developer(pd.DataFrame({})).merge
@@ -610,6 +611,7 @@ def run_developer(forms, agents, buildings,supply_fname, parcel_size,
     new_buildings = new_buildings[buildings.local_columns]
     new_buildings['new_bldg'] = True
     new_buildings['sch_dev'] = False
+    new_buildings['new_units'] = new_buildings['residential_units']
     if remove_developed_buildings:
         old_buildings = \
             utils._remove_developed_buildings(old_buildings, new_buildings, unplace_agents)
