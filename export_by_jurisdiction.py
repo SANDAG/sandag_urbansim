@@ -144,7 +144,7 @@ assessor_transactions_sql = """SELECT parcel_id, tx_price FROM (SELECT parcel_id
                                 tx_date, tx_price FROM estimation.assessor_par_transactions) x WHERE tx = 1"""
 
 if zsid == 2:
-    capacity_sql = 'SELECT parcel_id, addl_units FROM staging.schedule2_sr13 WHERE jurisdiction_id = ' + str(zone)
+    capacity_sql = 'SELECT parcel_id, addl_units FROM staging.schedule2_sr13 WHERE jurisdiction_id = ' + str(zone) and scenario_id = 1
 
 nodes_df = pd.read_sql(nodes_sql, urbansim_engine, index_col='node_id')
 intersection_df = pd.read_sql(intersection_sql, urbansim_engine, index_col='intersection_id')

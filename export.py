@@ -35,7 +35,8 @@ buildings_sql = '''SELECT building_id, parcel_id,
                           0 as non_residential_rent_per_sqft,
                           COALESCE(year_built, 0) year_built,
                           COALESCE(stories, 1) as stories,
-                          FALSE as new_bldg
+                          FALSE as new_bldg,
+                           0 as new_units
                      FROM urbansim.buildings'''
 
 households_sql = 'SELECT household_id, building_id, persons, age_of_head, income, children FROM urbansim.households'
@@ -73,7 +74,7 @@ zoning_sql =    '''SELECT zoning.zoning_schedule_id, zoning.zone, zoning.zoning_
                      FROM urbansim.zoning zoning'''
 
 if zsid == 2:
-    capacity_sql = 'SELECT parcel_id, addl_units FROM staging.schedule2_sr13'
+    capacity_sql = 'SELECT parcel_id, addl_units FROM staging.schedule2_sr13 where scenario_id = 1'
 
 nodes_df = pd.read_sql(nodes_sql, urbansim_engine, index_col='node_id')
 intersection_df = pd.read_sql(intersection_sql, urbansim_engine, index_col='intersection_id')
