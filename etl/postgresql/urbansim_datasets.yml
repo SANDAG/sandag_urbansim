@@ -1,4 +1,4 @@
-schema : urbansim
+schema : ref
 
 assessor_transactions :
     in_query_non_spatial: >
@@ -278,6 +278,102 @@ jobs :
         building_id : !!python/name:sqlalchemy.BigInteger
         sector_id : !!python/name:sqlalchemy.Integer
 
+ludu2012 :
+    ##Input Query
+    in_query_non_spatial : >
+        SELECT
+            OBJECTID
+            ,subParcel AS subparcel_id
+            ,lu
+            ,plu
+            ,planID
+            ,siteID
+            ,genOwnID
+            ,apn
+            ,parcelID AS parcel_id
+            ,editFlag
+            ,du
+            ,MGRA
+            ,regionID
+        FROM spacecore.GIS.ludu2012
+    ##Index Column
+    index_col : OBJECTID
+    indexes :
+        ix_ludu2012_parcel_id: parcel_id
+    ##Input Query Spatial
+    in_query_spatial : >
+        SELECT
+            OBJECTID
+            ,shape.STAsText() AS shape
+        FROM
+            spacecore.GIS.ludu2012
+    ##Output
+    out_table : ludu2012
+    #Map columns --> Notice special geometry column
+    column_data_types :
+        OBJECTID : !!python/name:sqlalchemy.Integer
+        subparcel_id : !!python/name:sqlalchemy.Integer
+        parcel_id : !!python/name:sqlalchemy.Integer
+        lu : !!python/name:sqlalchemy.Integer
+        plu : !!python/name:sqlalchemy.Integer
+        planID : !!python/name:sqlalchemy.Integer
+        siteID: !!python/name:sqlalchemy.Integer
+        genOwnID: !!python/name:sqlalchemy.Integer
+        apn : !!python/name:sqlalchemy.String
+        editFlag : !!python/name:sqlalchemy.String
+        du : !!python/name:sqlalchemy.Integer
+        MGRA :  !!python/name:sqlalchemy.Integer
+        regionID : !!python/name:sqlalchemy.Integer
+        shape : !!python/object:geoalchemy2.Geography { geometry_type: 'GEOMETRY', srid: 4326, spatial_index: True }
+
+ludu2015 :
+    ##Input Query
+    in_query_non_spatial : >
+        SELECT
+            OBJECTID
+            ,subParcel AS subparcel_id
+            ,lu
+            ,plu
+            ,planID
+            ,siteID
+            ,genOwnID
+            ,apn
+            ,parcelID AS parcel_id
+            ,editFlag
+            ,du
+            ,MGRA
+            ,regionID
+        FROM spacecore.GIS.ludu2015
+    ##Index Column
+    index_col : OBJECTID
+    indexes :
+        ix_ludu2015_parcel_id: parcel_id
+    ##Input Query Spatial
+    in_query_spatial : >
+        SELECT
+            OBJECTID
+            ,shape.STAsText() AS shape
+        FROM
+            spacecore.GIS.ludu2015
+    ##Output
+    out_table : ludu2015
+    #Map columns --> Notice special geometry column
+    column_data_types :
+        OBJECTID : !!python/name:sqlalchemy.Integer
+        subparcel_id : !!python/name:sqlalchemy.Integer
+        parcel_id : !!python/name:sqlalchemy.Integer
+        lu : !!python/name:sqlalchemy.Integer
+        plu : !!python/name:sqlalchemy.Integer
+        planID : !!python/name:sqlalchemy.Integer
+        siteID: !!python/name:sqlalchemy.Integer
+        genOwnID: !!python/name:sqlalchemy.Integer
+        apn : !!python/name:sqlalchemy.String
+        editFlag : !!python/name:sqlalchemy.String
+        du : !!python/name:sqlalchemy.Integer
+        MGRA :  !!python/name:sqlalchemy.Integer
+        regionID : !!python/name:sqlalchemy.Integer
+        shape : !!python/object:geoalchemy2.Geography { geometry_type: 'GEOMETRY', srid: 4326, spatial_index: True }
+
 nodes :
     ##Input Query
     in_query_non_spatial : >
@@ -533,6 +629,32 @@ schools :
         id : !!python/name:sqlalchemy.Integer
         x : !!python/name:sqlalchemy.Numeric
         y : !!python/name:sqlalchemy.Numeric
+
+sr13_capacity :
+    ##Input Query
+    in_query_non_spatial : >
+        SELECT
+            parcel_id_ludu2015 AS parcel_id
+            ,du_sr13
+            ,cap_hs_sr13
+            ,du_ludu2015
+            ,cap_hs_ludu2015
+            ,update_2015
+        FROM spacecore.ref.sr13capacity_ludu2015
+    ##Index Column
+    index_col : parcel_id
+    indexes :
+        ix_sr13_capacity_parcel_id: parcel_id
+    ##Output
+    out_table : sr13_capacity
+    #Map columns --> Notice special geometry column
+    column_data_types :
+        parcel_id : !!python/name:sqlalchemy.Integer
+        du : !!python/name:sqlalchemy.Integer
+        cap_hs : !!python/name:sqlalchemy.Integer
+        du_ludu2015 : !!python/name:sqlalchemy.Integer
+        cap_hs_ludu2015 : !!python/name:sqlalchemy.Integer
+        update_2015 : !!python/name:sqlalchemy.String
 
 transit :
     ##Input Query
