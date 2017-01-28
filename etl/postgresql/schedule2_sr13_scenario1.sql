@@ -1,4 +1,12 @@
-﻿/* Populate table:  urbansim_output.res_capacity_ludu2015_to_sr13 
+﻿
+-- EDIT THIS SCRIPT
+
+---   new column names in ref.sr13_capacity 
+
+
+--------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+/* Populate table:  urbansim_output.res_capacity_ludu2015_to_sr13 
 	 acres_constrained: 
 		acres multiplied by proportion developable (proportion_undevelopable subtracted from one)
 	allowed_dev_type: 
