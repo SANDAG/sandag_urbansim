@@ -76,7 +76,7 @@ SELECT 	parcels.parcel_id, parcels.jurisdiction_id, 1 as scenario_id, FALSE as s
 	zoning.min_dua, zoning.max_dua,  
 	(1 - COALESCE(parcels.proportion_undevelopable,0)) * parcels.parcel_acres * zoning.max_dua,
 	zoning.max_res_units,  res.current_units,
-	sr13.du_ludu2015,sr13.du,zoning.cap_hs,
+	sr13.ludu2015_du,sr13.du,zoning.cap_hs,
 	sr13.cap_hs
 FROM 	urbansim.zoning zoning
 JOIN 	urbansim.zoning_parcels zp 
@@ -86,7 +86,7 @@ ON 	zp.parcel_id = parcels.parcel_id
 LEFT JOIN dev_type_aggregated dev
 ON 	zp.parcel_id = dev.parcel_id
 LEFT JOIN ref.sr13_capacity sr13
-ON 	zp.parcel_id = sr13.parcel_id
+ON 	zp.parcel_id = sr13.ludu2015_parcel_id
 JOIN 	residential_units res
 ON 	res.parcel_id = zp.parcel_id
 WHERE 	zp.zoning_schedule_id = 2 AND zoning.jurisdiction_id IN (7,4,17,8,3,16,5));
