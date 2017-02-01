@@ -65,13 +65,14 @@ feasibility:
 #    2: 72
 #  luz_shifter:
 #    0: 0.78
+max_unit_size: 3000
 
 residential_developer:
-  target_vacancy: .08
-  min_unit_size: 1
+  target_vacancy: .03
+  min_unit_size: 600
   bldg_sqft_per_job: 400
   max_parcel_size: 10000000
-  remove_developed_buildings: False
+  remove_developed_buildings: True
 #  use_max_res_units: False
 
 non_residential_developer:
@@ -119,7 +120,7 @@ building_type_map:
 ## Custom setting for feasibility##
 sqftproforma_config:
   parcel_sizes : [10000.0]
-  fars: [.1, .25, .5, .75, 1.0, 1.5, 1.8, 2.0, 2.25, 2.5, 2.75, 3.0, 3.25, 3.5, 3.75, 4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0, 9.0, 11.0]
+  fars: [0.01, 0.05, .1, .25, .5, .75, 1.0, 1.5, 1.8, 2.0, 2.25, 2.5, 2.75, 3.0, 3.25, 3.5, 3.75, 4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0, 9.0, 11.0]
   uses: ['retail', 'industrial', 'office', 'residential']
   residential_uses: [False, False, False, True]
 
@@ -163,6 +164,6 @@ parcel_avg_pr_mult: .81
 res_sales_price_multiplier: 1.2
 price_to_rent_ratio: 25
 
-zoning_schedule_id: 1
+zoning_schedule_id: 2
 
 jurisdiction: 17

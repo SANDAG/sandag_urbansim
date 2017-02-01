@@ -183,7 +183,8 @@ class Developer(object):
         df['job_spaces'] = (df.non_residential_sqft / bldg_sqft_per_job).round()
 
         if residential:
-            df['net_units'] = df['addl_units'] - df["new_built_units"]
+            df['units_from_min_unit_size'] = (df['residential_sqft'] / min_unit_size).round()
+            df['net_units'] = df[['addl_units', 'units_from_min_unit_size']].min(axis=1) - df["new_built_units"]
             df['residential_units'] = df['addl_units']
         else:
             df['net_units'] = df.job_spaces - df.current_units
