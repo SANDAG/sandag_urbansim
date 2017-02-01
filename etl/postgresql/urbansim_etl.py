@@ -28,7 +28,7 @@ selected = [
     #'scheduled_development',
     #'scheduled_development_parcels',
     #'schools',
-    'sr13_capacity',
+    'sr13capacity_ludu2015',
     #'transit',
     #'zoning_allowed_use',
     #'zoning',

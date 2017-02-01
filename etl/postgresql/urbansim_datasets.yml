@@ -630,31 +630,33 @@ schools :
         x : !!python/name:sqlalchemy.Numeric
         y : !!python/name:sqlalchemy.Numeric
 
-sr13_capacity :
+sr13capacity_ludu2015 :
     ##Input Query
     in_query_non_spatial : >
         SELECT
-            parcel_id_ludu2015 AS parcel_id
-            ,du_sr13
-            ,cap_hs_sr13
-            ,du_ludu2015
-            ,cap_hs_ludu2015
+            ludu2015_parcel_id
+            ,sr13_du
+            ,sr13_cap_hs_with_negatives
+            ,ludu2015_du
+            ,sr13_cap_hs_growth_adjusted
             ,update_2015
-        FROM spacecore.ref.sr13capacity_ludu2015
+            ,revised
+        FROM ref.sr13capacity_ludu2015
     ##Index Column
-    index_col : parcel_id
+    index_col : ludu2015_parcel_id
     indexes :
-        ix_sr13_capacity_parcel_id: parcel_id
+        ix_sr13_capacity_ludu15_parcel_id: ludu2015_parcel_id
     ##Output
     out_table : sr13_capacity
     #Map columns --> Notice special geometry column
     column_data_types :
-        parcel_id : !!python/name:sqlalchemy.Integer
-        du : !!python/name:sqlalchemy.Integer
-        cap_hs : !!python/name:sqlalchemy.Integer
-        du_ludu2015 : !!python/name:sqlalchemy.Integer
-        cap_hs_ludu2015 : !!python/name:sqlalchemy.Integer
+        ludu2015_parcel_id : !!python/name:sqlalchemy.Integer
+        sr13_du : !!python/name:sqlalchemy.Integer
+        sr13_cap_hs_with_negatives : !!python/name:sqlalchemy.Integer
+        ludu2015_du : !!python/name:sqlalchemy.Integer
+        sr13_cap_hs_growth_adjusted : !!python/name:sqlalchemy.Integer
         update_2015 : !!python/name:sqlalchemy.String
+        revised : !!python/name:sqlalchemy.String
 
 transit :
     ##Input Query
