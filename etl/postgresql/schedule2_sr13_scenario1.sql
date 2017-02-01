@@ -1,10 +1,4 @@
-﻿
--- EDIT THIS SCRIPT
-
----   new column names in ref.sr13_capacity 
-
-
---------------------------------------------------------------------------------
+﻿--------------------------------------------------------------------------------
 -------------------------------------------------------------------------------
 /* Populate table:  urbansim_output.res_capacity_ludu2015_to_sr13 
 	 acres_constrained: 
@@ -26,19 +20,19 @@
 -- 
 -- select scenario_id,sum(addl_units) 
 -- from urbansim_output.res_capacity_ludu2015_to_sr13 
--- where jurisdiction_id IN (7,4,17,8,3,16,5)
+-- where jurisdiction_id NOT IN (14,19)
 -- GROUP BY scenario_id
 -- 
 -- SELECT count(*)  
 -- FROM urbansim_output.res_capacity_ludu2015_to_sr13 
--- where jurisdiction_id IN (7,4,17,8,3,16,5)
+-- where jurisdiction_id NOT IN (14,19)
 -- GROUP BY scenario_id
 -- 
 --  select * FROM urbansim_output.res_capacity_ludu2015_to_sr13 
---  where jurisdiction_id IN (7,4,17,8,3,16,5) and scenario_id = 1
+--  where jurisdiction_id NOT IN (14,19) and scenario_id = 1
 
 
---DELETE FROM urbansim_output.res_capacity_ludu2015_to_sr13 where jurisdiction_id IN (7,4,17,8,3,16,5) and scenario_id = 1
+--DELETE FROM urbansim_output.res_capacity_ludu2015_to_sr13 where jurisdiction_id NOT IN (14,19) and scenario_id = 1
 
 
 INSERT INTO urbansim_output.res_capacity_ludu2015_to_sr13 (
@@ -60,14 +54,14 @@ JOIN	urbansim.zoning zoning
 ON 	allowed.zoning_id = coalesce(zoning.parent_zoning_id, zoning.zoning_id)
 JOIN 	urbansim.zoning_parcels zp
 ON 	zoning.zoning_id = zp.zoning_id
-WHERE 	zp.zoning_schedule_id = 2 AND zoning.jurisdiction_id IN (7,4,17,8,3,16,5)
+WHERE 	zp.zoning_schedule_id = 2 AND zoning.jurisdiction_id NOT IN (14,19)
 GROUP BY lookup_zoning_id, zp.parcel_id),
 residential_units AS (
 SELECT 	p.parcel_id, coalesce(SUM(b.residential_units),0) AS current_units
 FROM	urbansim.buildings b
 RIGHT JOIN urbansim.parcels p 
 ON 	b.parcel_id = p.parcel_id
-WHERE 	p.jurisdiction_id IN (7,4,17,8,3,16,5)
+WHERE 	p.jurisdiction_id NOT IN (14,19)
 GROUP BY p.parcel_id)
 SELECT 	parcels.parcel_id, parcels.jurisdiction_id, 1 as scenario_id, FALSE as scheduled_development,
 	sr13.update_2015, zoning.zoning_schedule_id, zoning.zone, zoning.zoning_id, zoning.parent_zoning_id, 
@@ -76,8 +70,8 @@ SELECT 	parcels.parcel_id, parcels.jurisdiction_id, 1 as scenario_id, FALSE as s
 	zoning.min_dua, zoning.max_dua,  
 	(1 - COALESCE(parcels.proportion_undevelopable,0)) * parcels.parcel_acres * zoning.max_dua,
 	zoning.max_res_units,  res.current_units,
-	sr13.ludu2015_du,sr13.du,zoning.cap_hs,
-	sr13.cap_hs
+	sr13.ludu2015_du,sr13.sr13_du,zoning.cap_hs,
+	sr13.sr13_cap_hs_with_negatives
 FROM 	urbansim.zoning zoning
 JOIN 	urbansim.zoning_parcels zp 
 ON 	zoning.zoning_id = zp.zoning_id 
@@ -89,14 +83,14 @@ LEFT JOIN ref.sr13_capacity sr13
 ON 	zp.parcel_id = sr13.ludu2015_parcel_id
 JOIN 	residential_units res
 ON 	res.parcel_id = zp.parcel_id
-WHERE 	zp.zoning_schedule_id = 2 AND zoning.jurisdiction_id IN (7,4,17,8,3,16,5));
+WHERE 	zp.zoning_schedule_id = 2 AND zoning.jurisdiction_id NOT IN (14,19));
 
 -- -- rounding
 --Santee use FLOOR instead of round 
 UPDATE urbansim_output.res_capacity_ludu2015_to_sr13
 SET zoning_max_dua_units_rounded = 
 FLOOR(zoning_max_dua_units)
-where jurisdiction_id IN (7,4,17,8,3,16,5) and scenario_id = 1;
+where jurisdiction_id NOT IN (14,19) and scenario_id = 1;
 
 
 
@@ -107,34 +101,34 @@ CASE
 WHEN zoning_max_dua_units_rounded IS NULL AND zoning_max_res_units is NULL THEN 0
 ELSE round(LEAST(zoning_max_dua_units_rounded, zoning_max_res_units))
 END)
-WHERE jurisdiction_id IN (7,4,17,8,3,16,5) and scenario_id = 1 and 
-parcel_id NOT IN (SELECT parcel_id from ref.sr13_capacity sr13);
+WHERE jurisdiction_id NOT IN (14,19) and scenario_id = 1 and 
+parcel_id NOT IN (SELECT ludu2015_parcel_id from ref.sr13_capacity sr13);
 
 
 -- set addl_units to cap_hs
 UPDATE urbansim_output.res_capacity_ludu2015_to_sr13
 SET addl_units = sr13_cap_hs_growth_adjusted
-WHERE jurisdiction_id IN (7,4,17,8,3,16,5) and scenario_id = 1;
+WHERE jurisdiction_id NOT IN (14,19) and scenario_id = 1;
 
 
 -- for parcels not in series 13, calc addl_units as minimum of max_dua and max_res_units
 UPDATE urbansim_output.res_capacity_ludu2015_to_sr13
 SET addl_units =
 minimum_of_max_dua_units_rounded_and_max_res_units - buildings_res_units
-WHERE jurisdiction_id IN (7,4,17,8,3,16,5) and scenario_id = 1 and 
-parcel_id NOT IN (SELECT parcel_id from ref.sr13_capacity sr13);
+WHERE jurisdiction_id NOT IN (14,19) and scenario_id = 1 and 
+parcel_id NOT IN (SELECT ludu2015_parcel_id from ref.sr13_capacity sr13);
 
-
+	
 --set negative capacity to zero
 UPDATE urbansim_output.res_capacity_ludu2015_to_sr13
 SET addl_units = 0
-WHERE addl_units < 0 and jurisdiction_id IN (7,4,17,8,3,16,5) and scenario_id = 1;
+WHERE addl_units < 0 and jurisdiction_id NOT IN (14,19) and scenario_id = 1;
 
 
 -- set scheduled dev true for parcels in scheduled development
 UPDATE urbansim_output.res_capacity_ludu2015_to_sr13
 SET scheduled_development = TRUE
-WHERE parcel_id IN (SELECT parcel_id FROM urbansim.scheduled_development_parcels) and jurisdiction_id IN (7,4,17,8,3,16,5) and scenario_id = 1;
+WHERE parcel_id IN (SELECT parcel_id FROM urbansim.scheduled_development_parcels) and jurisdiction_id NOT IN (14,19) and scenario_id = 1;
 
 
 -- set siteid for scheduled de
@@ -142,13 +136,13 @@ UPDATE urbansim_output.res_capacity_ludu2015_to_sr13 s2
 SET siteid_sched_dev = subquery.siteid
 FROM (SELECT parcel_id, siteid
 	FROM urbansim.scheduled_development_parcels) AS subquery
-WHERE s2.parcel_id = subquery.parcel_id and jurisdiction_id IN (7,4,17,8,3,16,5) and scenario_id = 1;
+WHERE s2.parcel_id = subquery.parcel_id and jurisdiction_id NOT IN (14,19) and scenario_id = 1;
 
 
 --set addl_units to zero for scheduled dev
 UPDATE urbansim_output.res_capacity_ludu2015_to_sr13
 SET addl_units = 0
-WHERE scheduled_development = TRUE and jurisdiction_id IN (7,4,17,8,3,16,5) and scenario_id = 1;
+WHERE scheduled_development = TRUE and jurisdiction_id NOT IN (14,19) and scenario_id = 1;
 
 
 --set addl_units for sched dev (all units to one parcel in the sched dev)
@@ -165,4 +159,4 @@ FROM urbansim.scheduled_development sd
 JOIN parcels_one os
 ON os.siteid_sched_dev = sd."siteID"
 ) AS subquery
-WHERE s2.parcel_id = subquery.parcelid and jurisdiction_id IN (7,4,17,8,3,16,5) and scenario_id = 1;
+WHERE s2.parcel_id = subquery.parcelid and jurisdiction_id NOT IN (14,19) and scenario_id = 1;
