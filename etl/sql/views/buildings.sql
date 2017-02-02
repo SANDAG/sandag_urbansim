@@ -442,7 +442,7 @@ SELECT
 FROM gis.landcore lc
 INNER JOIN (SELECT lc.subparcel, SUM(emp.emp_adj) emp_adj		--GROUP BY SUBPARCEL FOR UNIQUE BUILDING_ID
 			FROM socioec_data.ca_edd.emp_2013 emp
-			JOIN gis.landcore lc 
+			JOIN gis.landcore lc							--XX INCLUDES ALL 'LU'; ROW
 			ON lc.Shape.STContains(emp.shape) = 1
 			GROUP BY lc.subparcel) emp
 ON lc.subparcel = emp.subparcel
@@ -452,6 +452,8 @@ JOIN ref.development_type_lu_code dev
 ON lc.lu = dev.lu_code
 WHERE emp.emp_adj IS NOT NULL
 AND usb.subparcel_id IS NULL
+
+--CHECK FOR BUILDINGS ASSIGNED TO NON-DEVELOPABLE PARCELS; ROW^^
 
 --UPDATE PLACEHOLDER SHAPES TO MATCH CENTROIDS
 UPDATE urbansim.buildings
