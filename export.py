@@ -74,7 +74,7 @@ zoning_sql =    '''SELECT zoning.zoning_schedule_id, zoning.zone, zoning.zoning_
                      FROM urbansim.zoning zoning'''
 
 if zsid == 2:
-    capacity_sql = 'SELECT parcel_id, addl_units FROM staging.schedule2_sr13 where scenario_id = 1'
+    capacity_sql = 'SELECT parcel_id, addl_units FROM urbansim_output.res_capacity_ludu2015_to_sr13 where scenario_id = 1'
 
 nodes_df = pd.read_sql(nodes_sql, urbansim_engine, index_col='node_id')
 intersection_df = pd.read_sql(intersection_sql, urbansim_engine, index_col='intersection_id')
