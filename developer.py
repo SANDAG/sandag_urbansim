@@ -221,6 +221,13 @@ class Developer(object):
             ind = int(np.searchsorted(tot_units, target_units, side="left")) + 1
             build_idx = choices[:ind]
 
+            # df['roi'] = df['max_profit']/df['total_cost']
+            # result = df.sort_values(['roi'], ascending = False)
+            # tot_units = result.net_units.loc[result.index.values].values.cumsum()
+            # ind = int(np.searchsorted(tot_units, target_units, side="left")) + 1
+            # build_idx = result.index.values[:ind]
+            # del df['roi']
+
         if drop_after_build:
             self.feasibility = self.feasibility.drop(build_idx)
 
