@@ -600,8 +600,9 @@ class SqFtProForma(object):
 
         settings = orca.get_injectable('settings')
         # parcel sizes * possible fars
-        building_bulks = fars * df.parcel_size.values
+        building_bulks = (fars * df.parcel_size.values) - (df.ave_unit_size.values * df.total_residential_units.values)
         building_bulks[building_bulks * c.building_efficiency / df.addl_units.values > settings['max_unit_size']] = np.nan
+        building_bulks[building_bulks * c.building_efficiency / df.addl_units.values < settings['residential_developer']['min_unit_size']] = np.nan
         # cost to build the new building
         building_costs = building_bulks * cost_sqft_col
 
