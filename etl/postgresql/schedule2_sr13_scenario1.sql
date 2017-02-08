@@ -32,7 +32,9 @@
 --  where jurisdiction_id NOT IN (14,19) and scenario_id = 1
 
 
---DELETE FROM urbansim_output.res_capacity_ludu2015_to_sr13 where jurisdiction_id NOT IN (14,19) and scenario_id = 1
+--DELETE FROM urbansim_output.res_capacity_ludu2015_to_sr13 where 
+----jurisdiction_id NOT IN (14,19) and 
+--scenario_id = 1
 
 
 INSERT INTO urbansim_output.res_capacity_ludu2015_to_sr13 (
