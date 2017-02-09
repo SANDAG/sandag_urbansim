@@ -161,9 +161,9 @@ sqftproforma_config:
 #yaml values for hard code values in variables.py
 
 parcel_avg_pr_mult: .81
-res_sales_price_multiplier: 1.2
-price_to_rent_ratio: 25
+res_sales_price_multiplier: 2.5
+price_to_rent_ratio: 50
 
 zoning_schedule_id: 2
 
-jurisdiction: 17
+jurisdiction: 11

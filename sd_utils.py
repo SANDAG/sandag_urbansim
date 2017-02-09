@@ -5,6 +5,7 @@ import psycopg2
 import getpass
 import yaml
 import datetime
+import numpy as np
 from urbansim_defaults import datasources
 
 with open('configs/settings.yaml', 'r') as f:
@@ -71,6 +72,8 @@ def to_database(scenario=' ', rng=range(0, 0), urbansim_connection=get_connectio
                     df = df[df.new_units > 0]
                 elif x == 'feasibility':
                         df = df[df.addl_units > 0]
+                        df['existing_units'] = np.where(df['new_built_units'] == 0, df['total_residential_units'], \
+                                                        df['total_residential_units'] - df['addl_units'])
                 df.to_sql(x, urbansim_connection, flavor='postgresql', schema=default_schema, if_exists='append')
 
     conn = psycopg2.connect(database="urbansim", user="urbansim_user", password="urbansim", host="socioeca8",

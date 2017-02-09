@@ -600,9 +600,9 @@ class SqFtProForma(object):
 
         settings = orca.get_injectable('settings')
         # parcel sizes * possible fars
-        building_bulks = (fars * df.parcel_size.values) - (df.ave_unit_size.values * df.total_residential_units.values)
-        building_bulks[building_bulks * c.building_efficiency / df.addl_units.values > settings['max_unit_size']] = np.nan
-        building_bulks[building_bulks * c.building_efficiency / df.addl_units.values < settings['residential_developer']['min_unit_size']] = np.nan
+        building_bulks = (fars * df.parcel_size.values)
+        building_bulks[building_bulks * c.building_efficiency / (df.addl_units.values + df.total_residential_units.values)> settings['max_unit_size']] = np.nan
+        building_bulks[building_bulks * c.building_efficiency / (df.addl_units.values + df.total_residential_units.values)< settings['residential_developer']['min_unit_size']] = np.nan
         # cost to build the new building
         building_costs = building_bulks * cost_sqft_col
 
@@ -619,6 +619,7 @@ class SqFtProForma(object):
         profit = profit.astype('float')
         profit[np.isnan(profit)] = -np.inf
         maxprofitind = np.argmax(profit, axis=0)
+        total_res = (fars * df.total_residential_units.values / fars)
 
         def twod_get(indexes, arr):
             return arr[indexes, np.arange(indexes.size)].astype('float')
@@ -632,7 +633,8 @@ class SqFtProForma(object):
             'building_revenue': twod_get(maxprofitind, building_revenue),
             'max_profit_far': twod_get(maxprofitind, fars),
             'max_profit': twod_get(maxprofitind, profit),
-            'parking_config': parking_config
+            'parking_config': parking_config,
+            'total_residential_units': twod_get(maxprofitind, total_res)
         }, index=df.index)
 
         if pass_through:
