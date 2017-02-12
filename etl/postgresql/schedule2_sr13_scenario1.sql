@@ -34,7 +34,7 @@
 
 --DELETE FROM urbansim_output.res_capacity where 
 ----jurisdiction_id NOT IN (14,19) and 
---schedule_id = 1
+--schedule_id = 2
 
 
 INSERT INTO urbansim_output.res_capacity (
