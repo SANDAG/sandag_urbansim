@@ -56,7 +56,7 @@ def to_database(scenario=' ', rng=range(0, 0), urbansim_connection=get_connectio
 
                 df = pd.read_hdf('data\\results.h5', 'base/' + x)
                 df['parent_scenario_id'] = parent_scenario_id[0]
-                df.to_sql(x + '_base', urbansim_connection, flavor='postgresql', schema=default_schema, if_exists='append')
+                df.to_sql(x + '_base', urbansim_connection, schema=default_schema, if_exists='append')
         elif year == rng[len(rng)-1]:
             for x in ['buildings','feasibility']:
                 print 'exporting ' + x + str(year) + ' ' + str(scenario_id[0])
@@ -74,7 +74,7 @@ def to_database(scenario=' ', rng=range(0, 0), urbansim_connection=get_connectio
                         df = df[df.addl_units > 0]
                         df['existing_units'] = np.where(df['new_built_units'] == 0, df['total_residential_units'], \
                                                         df['total_residential_units'] - df['addl_units'])
-                df.to_sql(x, urbansim_connection, flavor='postgresql', schema=default_schema, if_exists='append')
+                df.to_sql(x, urbansim_connection, schema=default_schema, if_exists='append')
 
     conn = psycopg2.connect(database="urbansim", user="urbansim_user", password="urbansim", host="socioeca8",
                             port="5432")
