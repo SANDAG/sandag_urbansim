@@ -81,7 +81,8 @@ buildings_sql = '''SELECT building_id, parcel_id,
                           COALESCE(year_built, 0) year_built,
                           COALESCE(stories, 1) as stories,
                           FALSE as new_bldg,
-                          0 as new_units
+                          0 as new_units,
+                          NULL as residential_price
                      FROM urbansim.buildings
                     WHERE parcel_id IN
                          (SELECT parcel_id
@@ -152,6 +153,7 @@ intersection_df = pd.read_sql(intersection_sql, urbansim_engine, index_col='inte
 edges_df = pd.read_sql(edges_sql, urbansim_engine)
 parcels_df = pd.read_sql(parcels_sql, urbansim_engine,index_col='parcel_id')
 buildings_df = pd.read_sql(buildings_sql, urbansim_engine, index_col='building_id')
+buildings_df['residential_price'] = buildings_df['residential_price'] .astype(float)
 households_df = pd.read_sql(households_sql, urbansim_engine, index_col='household_id')
 jobs_df = pd.read_sql(jobs_sql, urbansim_engine, index_col='job_id')
 building_sqft_per_job_df = pd.read_sql(building_sqft_per_job_sql, urbansim_engine)
