@@ -315,29 +315,27 @@ def nrh_simulate2(buildings, aggregations):
 def scheduled_development_events(scheduled_development_events, buildings, parcels):
     year = get_year()
     sched_dev = scheduled_development_events.to_frame()
-    parcels_df = orca.get_table('parcels').to_frame()
-    sched_dev = sched_dev[sched_dev.year_built==year]
-    sched_dev = sched_dev[sched_dev.residential_units > 0]
-    # sched_dev['residential_sqft'] = sched_dev.sqft_per_unit*sched_dev.residential_units
+    sched_dev = sched_dev.groupby('siteID').apply(lambda x: x.iloc[np.random.randint(0, len(x))])
+    phasein = pd.read_csv('data/schdev.csv')
+    sched_dev = sched_dev.merge(phasein,left_on = 'siteID',right_on = 'siteID', how = 'left')
+    sched_dev = sched_dev.loc[sched_dev['Units'] > 0]
+    sched_dev = sched_dev[sched_dev.Year==year]
     #TODO: The simple division here is not consistent with other job_spaces calculations
     sched_dev['job_spaces'] = sched_dev.non_residential_sqft/400
     if len(sched_dev) > 0:
         max_bid = buildings.index.values.max()
         idx = np.arange(max_bid + 1,max_bid+len(sched_dev)+1)
         sched_dev['building_id'] = idx
-        sched_dev['building_type_id'] = 21
+        sched_dev['building_type_id'] = np.where(sched_dev['Htype'] == 'MF', 21, 19)
         sched_dev = sched_dev.set_index('building_id')
         sched_dev['new_bldg'] = True
-        sched_dev = sched_dev.merge(parcels_df[['addl_units']], left_on='parcel_id', right_index=True, how='left')
-        sched_dev['new_units'] = sched_dev['addl_units']
+        sched_dev['year_built'] = year
+        sched_dev['new_units'] = sched_dev['Units']
         sched_dev['sch_dev'] = True
-        from urbansim.developer.developer import Developer
-        merge = Developer(pd.DataFrame({})).merge
         b = buildings.to_frame(buildings.local_columns)
         if 'residential_price' in b.columns:
             sched_dev['residential_price'] = 0
-        all_buildings = merge(b,sched_dev[b.columns])
-
+        all_buildings = developer.Developer.merge(b,sched_dev[b.columns])
         orca.add_table("buildings", all_buildings)
 
 

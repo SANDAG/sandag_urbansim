@@ -36,6 +36,7 @@ buildings_sql = '''SELECT building_id, parcel_id,
                           COALESCE(year_built, 0) year_built,
                           COALESCE(stories, 1) as stories,
                           FALSE as new_bldg,
+                          FALSE as sch_dev,
                            0 as new_units,
                           NULL as residential_price
                      FROM urbansim.buildings'''
