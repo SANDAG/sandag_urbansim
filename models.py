@@ -332,6 +332,7 @@ def scheduled_development_events(scheduled_development_events, buildings, parcel
         sched_dev['year_built'] = year
         sched_dev['new_units'] = sched_dev['Units']
         sched_dev['sch_dev'] = True
+        sched_dev['residential_units'] = sched_dev['Units']
         b = buildings.to_frame(buildings.local_columns)
         if 'residential_price' in b.columns:
             sched_dev['residential_price'] = 0
