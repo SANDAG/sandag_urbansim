@@ -367,7 +367,7 @@ def feasibility2(parcels, settings,
 
     run_feasibility(parcels,
                           parcel_sales_price_sqft_func,
-                          parcel_is_allowed_func,
+                          parcel_is_allowed_func, parcel_filter = 'scheduled_development==False',
                           config=config, forms_to_test=['residential'],
                           pass_through=['parcel_size','land_cost','weighted_rent','building_purchase_price','building_purchase_price_sqft','total_sqft','parcel_avg_price_residential', 'addl_units', "new_built_units", 'max_res_units'],
                           **kwargs)
