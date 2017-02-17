@@ -365,7 +365,7 @@ def feasibility2(parcels, settings,
             types.update({x: settings["sqftproforma_config"]['forms'][x]})
 
     setattr(config, 'forms', types)
-
+    parcels = parcels[parcels.addl_units > 0]
     run_feasibility(parcels,
                           parcel_sales_price_sqft_func,
                           parcel_is_allowed_func, parcel_filter = 'scheduled_development==False',
