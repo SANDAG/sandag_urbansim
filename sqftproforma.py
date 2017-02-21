@@ -611,7 +611,7 @@ class SqFtProForma(object):
 
         # rent to make for the new building
         building_revenue = building_bulks * (1-parking_sqft_ratio) * \
-            c.building_efficiency * df.weighted_rent.values / c.cap_rate
+            c.building_efficiency * df.weighted_rent.values
 
         # profit for each form
         profit = building_revenue - total_costs
