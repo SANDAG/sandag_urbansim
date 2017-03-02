@@ -70,6 +70,8 @@ def to_database(scenario=' ', rng=range(0, 0), urbansim_connection=get_connectio
                 df['parent_scenario_id'] = parent_scenario_id[0]
                 if x == 'buildings':
                     df = df[df.new_units > 0]
+                    df.sch_dev = df.sch_dev.astype(int)
+                    df.new_bldg = df.new_bldg.astype(int)
                 elif x == 'feasibility':
                         df = df[df.addl_units > 0]
                         df['existing_units'] = np.where(df['new_built_units'] == 0, df['total_residential_units'], \
