@@ -336,7 +336,10 @@ def scheduled_development_events(scheduled_development_events, buildings, parcel
         b = buildings.to_frame(buildings.local_columns)
         if 'residential_price' in b.columns:
             sched_dev['residential_price'] = 0
+        if 'non_residential_price' in b.columns:
+            sched_dev['non_residential_price'] = 0
         all_buildings = developer.Developer.merge(b,sched_dev[b.columns])
+        all_buildings = all_buildings.fillna(0)
         orca.add_table("buildings", all_buildings)
 
 
@@ -367,9 +370,9 @@ def feasibility2(parcels, settings,
     setattr(config, 'forms', types)
     run_feasibility(parcels,
                           parcel_sales_price_sqft_func,
-                          parcel_is_allowed_func, parcel_filter = 'scheduled_development==False and addl_units > 0',
-                          config=config, forms_to_test=['residential'],
-                          pass_through=['parcel_size','land_cost','weighted_rent','building_purchase_price','building_purchase_price_sqft','total_sqft','parcel_avg_price_residential', 'addl_units', "new_built_units", 'max_res_units'],
+                          parcel_is_allowed_func, parcel_filter = 'scheduled_development==False',
+                          config=config,
+                          pass_through=['parcel_size','land_cost','weighted_rent','building_purchase_price','building_purchase_price_sqft','total_sqft','parcel_avg_price_residential', 'addl_units', "new_built_units", 'max_res_units', 'development_type_id'],
                           **kwargs)
 
 
