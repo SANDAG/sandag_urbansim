@@ -3,6 +3,7 @@ from sqlalchemy import create_engine
 from pysandag.database import get_connection_string
 import pandas as pd
 from urbansim_defaults import datasources
+import os
 
 urbansim_engine = create_engine(get_connection_string("configs/dbconfig.yml", 'urbansim_database'))
 
@@ -113,6 +114,8 @@ edges_df.sort_values(['from', 'to'], inplace=True)
 zoning_df = zoning_df.set_index('zoning_id')
 zoning_df['zone'] = zoning_df['zone'].astype(str)
 
+if not os.path.exists('data'):
+    os.makedirs('data')
 
 with pd.HDFStore('data/urbansim.h5', mode='w') as store:
     store.put('nodes', nodes_df, format='t')
