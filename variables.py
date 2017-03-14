@@ -80,6 +80,9 @@ def is_office(buildings):
 def is_retail(buildings):
     return (buildings.building_type_id == 5).astype('int')
 
+@orca.column('buildings', 'jurisdiction_id')
+def jurisdiction_id(buildings,parcels):
+    return misc.reindex(parcels.jurisdiction_id, buildings.parcel_id).fillna(0)
 
 @orca.column('buildings', 'luz_id')
 def luz_id(buildings, parcels):
@@ -102,8 +105,18 @@ def sqft_per_job(buildings, building_sqft_per_job):
 
 @orca.column('buildings', 'sqft_per_unit', cache=True)
 def unit_sqft(buildings):
-    return (buildings.residential_sqft /
-            buildings.residential_units.replace(0, 1)).fillna(0).astype('int')
+    x = (buildings.residential_sqft / buildings.residential_units.replace(0, 1)).fillna(0).astype('int')
+    x[x > 3000] = 3000
+    return x
+
+
+@orca.column('buildings', 'residential_sqft2', cache= True)
+def res_sqft(buildings):
+    bldgs = buildings.to_frame(['residential_units', 'residential_sqft'])
+    bldgs['sqft_per_unit'] = (bldgs.residential_sqft / bldgs.residential_units.replace(0, 1)).fillna(0).astype('int')
+    bldgs['res'] = bldgs.sqft_per_unit * bldgs.residential_units
+    x = bldgs.loc[:, ['res', 'residential_sqft']].min(axis=1)
+    return x
 
 
 @orca.column('buildings', 'vacant_residential_units')
@@ -150,7 +163,7 @@ def year_built_1980to1990(buildings):
 def income_quartile(households):
     hh_inc = households.to_frame(['household_id', 'income'])
     bins = [hh_inc.income.min()-1, 30000, 59999, 99999, 149999, hh_inc.income.max()+1]
-    group_names = range(1,6)
+    group_names = range(1,     6)
     return pd.cut(hh_inc.income, bins, labels=group_names).astype('int64')
 
 
@@ -166,16 +179,37 @@ def res_occupancy_10000ft(nodes):
 
 
 ###### PARCELS ######
+##################### Building purchase price based on parcel avg price ##
+@orca.column('parcels', 'parcel_avg_price_residential')
+def parcel_avg_price_residential(settings):
+    return parcel_average_price("residential")
+
+
+@orca.column('parcels', 'building_purchase_price_sqft')
+def building_purchase_price_sqft(settings):
+    return parcel_average_price("residential") * settings['parcel_avg_pr_mult']
+
+
 @orca.column('parcels', 'building_purchase_price')
 def building_purchase_price(parcels):
     return (parcels.total_sqft * parcels.building_purchase_price_sqft).\
         reindex(parcels.index).fillna(0)
+##########################################################################
 
 
-@orca.column('parcels', 'building_purchase_price_sqft')
-def building_purchase_price_sqft():
-    return parcel_average_price("residential") * .81
+##################### Building purchase price based on res hedonic #######
+# avg price buildings on parcel instead of parcel avg for rent calc
+# @orca.column('parcels', 'avg_residential_price')
+# def avg_residential_price(parcels, buildings):
+#     return buildings.to_frame().residential_price.\
+#         groupby(buildings.parcel_id).mean().reindex(parcels.index).fillna(0)
+#
+# @orca.column('parcels', 'building_purchase_price')
+# def building_purchase_price(parcels, buildings):
+#     return (buildings.residential_price * buildings.building_sqft).\
+#         groupby(buildings.parcel_id).sum().reindex(parcels.index).fillna(0)
 
+##########################################################################
 
 @orca.column('parcels', 'distance_to_onramp')
 def parcels_distance_to_onramp(settings, net, parcels):
@@ -209,26 +243,43 @@ def parcels_distance_to_transit(settings, net, parcels):
     return misc.reindex(distance_df.distance_to_transit, parcels.node_id)
 
 
+# @orca.column('parcels', 'land_cost')
+# def parcel_land_cost(settings, parcels):
+#     return parcels.building_purchase_price + parcels.parcel_size * settings['default_land_cost']
+
+
 @orca.column('parcels', 'land_cost')
 def parcel_land_cost(settings, parcels):
-    return parcels.building_purchase_price + parcels.parcel_size * settings['default_land_cost']
+    return np.where(parcels['building_purchase_price'] == 0,
+                    (parcels.parcel_size * settings['default_land_cost']),
+                     parcels['building_purchase_price'])
 
 
-@orca.column('parcels', 'max_dua', cache=True)
+@orca.column('parcels', 'max_dua_zoning', cache=True)
 def parcel_max_dua(parcels, zoning):
-    sr = misc.reindex(zoning.max_dua, parcels.zoning_id)
-    return sr.apply(np.floor).fillna(0).astype('int32')
+    return misc.reindex(zoning.max_dua, parcels.zoning_id)
+
+
+@orca.column('parcels', 'zoned_du', cache=True)
+def zoned_du(parcels):
+    return (parcels.max_dua_zoning * parcels.parcel_acres).\
+        reindex(parcels.index).fillna(0).round().astype('int')
 
 
 @orca.column('parcels', 'max_far', cache=True)
-def parcel_max_far(parcels, zoning):
-    sr = misc.reindex(zoning.max_far, parcels.zoning_id)
-    return sr.fillna(1).astype('int32')
+def parcel_max_far(parcels, zoning, settings):
+    return misc.reindex(zoning.max_far, parcels.zoning_id).fillna(settings['sqftproforma_config']['fars'][-1])
+
 
 ##Placeholder-  building height currently unconstrained (very high limit-  1000 ft.)
 @orca.column('parcels', 'max_height', cache=True)
 def parcel_max_height(parcels, zoning):
     return misc.reindex(zoning.max_height, parcels.zoning_id).fillna(350)
+
+
+@orca.column('parcels', 'max_res_units', cache=True)
+def parcel_max_res_units(parcels, zoning):
+    return misc.reindex(zoning.max_res_units, parcels.zoning_id)
 
 
 @orca.column('parcels', 'newest_building')
@@ -255,6 +306,17 @@ def log_size_per_unit(parcels):
 @orca.column('parcels', 'total_sqft', cache=True)
 def total_sqft(parcels, buildings):
     return buildings.building_sqft.groupby(buildings.parcel_id).sum().\
+        reindex(parcels.index).fillna(0)
+
+@orca.column('parcels', 'new_built_units', cache=False)
+def new_units(parcels, buildings):
+    return buildings.new_units.groupby(buildings.parcel_id).sum().\
+        reindex(parcels.index).fillna(0)
+
+
+@orca.column('parcels', 'job_spaces', cache=False)
+def new_units(parcels, buildings):
+    return buildings.job_spaces.groupby(buildings.parcel_id).sum().\
         reindex(parcels.index).fillna(0)
 
 
@@ -288,18 +350,21 @@ def form_to_btype(row):
     if row.form == 'residential':
         return 19
 
-
-
+    
 @orca.injectable('parcel_sales_price_sqft_func', autocall=False)
 def parcel_sales_price_sqft(use):
     s = parcel_average_price(use)
-    if use == "residential": s *= 1.2
+    settings = orca.get_injectable('settings')
+    # s = orca.get_table('parcels').avg_residential_price
+    if use == "residential": s *= settings['res_sales_price_multiplier']
     return s
 
 
 @orca.injectable('parcel_average_price', autocall=False)
 def parcel_average_price(use):
     if len(orca.get_table('nodes').index) == 0:
+        return pd.Series(0, orca.get_table('parcels').index)
+    if not use in orca.get_table('nodes').columns:
         return pd.Series(0, orca.get_table('parcels').index)
     return misc.reindex(orca.get_table('nodes')[use],
                         orca.get_table('parcels').node_id)
@@ -324,6 +389,8 @@ def parcel_is_allowed(form):
         allowed = zoning_allowed_uses[4]
     elif form == 'retail':
         allowed = zoning_allowed_uses[5]
+    # elif form == 'residential':
+     #   allowed = zoning_allowed_uses[19] | zoning_allowed_uses[20] | zoning_allowed_uses[21]
     else:
         df = pd.DataFrame(index=parcels.index)
         df['allowed'] = True

@@ -15,6 +15,11 @@ def building_sqft_per_job(store):
     return store['building_sqft_per_job']
 
 
+@orca.table('capacity', cache=True)
+def capacity(store):
+    return store['capacity']
+
+
 @orca.table('employment_controls', cache=True)
 def employment_controls(store):
     return store['employment_controls']
