@@ -60,7 +60,7 @@ runs
 
 
 data/
-notebooks/
+# notebooks/
 docs/~*.docx
 
 dbconfig.yml
