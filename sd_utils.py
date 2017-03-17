@@ -39,16 +39,8 @@ def to_database(scenario=' ', rng=range(0, 0), urbansim_connection=get_connectio
     scenario_sql = "SELECT scenario_id, parent_scenario_id FROM urbansim_output.parent_scenario WHERE scenario_name='%s'" %scenario
     scenario_num= pd.read_sql(scenario_sql, urbansim_engine)
 
-    for year in rng:
-        if year == 0 and scenario_id[0] == 1:
-            for x in ['parcels', 'buildings']:
 
-                print 'exporting to db: ' + x + ' for year ' + str(rng[-1]) + ' (scenario ' + str(scenario_num.iloc[0]['scenario_id']) + ')'
-
-                df = pd.read_hdf('data\\results.h5', 'base/' + x)
-                df['parent_scenario_id'] = parent_scenario_id[0]
-                df.to_sql(x + '_base', urbansim_connection, schema=default_schema, if_exists='append')
-        elif year == rng[len(rng)-1]:
+        
             for x in ['buildings','feasibility']:
                 print 'exporting to db: ' + x + ' for year ' + str(rng[-1]) + ' (scenario ' + str(scenario_num.iloc[0]['scenario_id']) + ')'
 
