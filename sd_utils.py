@@ -21,17 +21,14 @@ def get_git_hash(model='residential'):
 
 def to_database(scenario=' ', rng=range(0, 0), urbansim_connection=get_connection_string("configs/dbconfig.yml", 'urbansim_database'),
                 default_schema='urbansim_output'):
-    """ df_name:
-            Required parameter, is the name of the table that will be read from the H5 file,
-            Also first half of the table name to be stored in the database
-        urbansim_connection:
-            sql connection, default is for urbansim_database
-        year:
-            year of information to be caputured, should be pass the same range as simulation period
-            minus first and last year.
-        defalut_schema:
+    """ scenario:
+            string scenario description set in simulation.py
+        rng:
+            range of simulation, writing last year in range to db
+        default_schema:
             The schema name under which to save the data, default is urbansim_output
     """
+
     # connect to database
     db = get_connection_string("configs/dbconfig.yml",'urbansim_database')
     urbansim_engine = create_engine(db)
@@ -41,18 +38,18 @@ def to_database(scenario=' ', rng=range(0, 0), urbansim_connection=get_connectio
 
     for x in ['buildings','feasibility']:
         print 'exporting to db: ' + x + ' for year ' + str(rng[-1]) + ' (scenario ' + str(scenario_num.iloc[0]['scenario_id']) + ')'
-
+        # read data from h5 output file (data for each year is saved)
         df = pd.read_hdf('data\\results.h5', str(year) + '/' + x)
         if x == 'feasibility':
-            df = df['residential']
+            df = df['residential'] # only residential feasibility
             df.rename(columns={'total_sqft': 'total_sqft_existing_bldgs'}, inplace=True)
-            df = df[df.addl_units > 0]
+            df = df[df.addl_units > 0] # only buildings with capacity
             df['existing_units'] = np.where(df['new_built_units'] == 0, df['total_residential_units'], \
                                             df['total_residential_units'] - df['addl_units'])
         if x == 'buildings':
-            df = df[(df.new_units > 0) | (df.job_spaces > 0)]
-            df.sch_dev = df.sch_dev.astype(int)
-            df.new_bldg = df.new_bldg.astype(int)
+            df.sch_dev = df.sch_dev.astype(int) # change boolean t/f to 1/0
+            df.new_bldg = df.new_bldg.astype(int) # change boolean t/f to 1/0
+            df = df[(df.new_bldg == 1)]  # new buildings only to database
         df['year'] = rng[-1]
         df['scenario_id'] = scenario_num.iloc[0]['scenario_id']
         df['parent_scenario_id'] = scenario_num.iloc[0]['parent_scenario_id']
