@@ -8,8 +8,7 @@ import datetime
 import numpy as np
 from urbansim_defaults import datasources
 
-with open('configs/settings.yaml', 'r') as f:
-    settings = yaml.load(f)
+
 
 
 def get_git_hash(model='residential'):
@@ -18,11 +17,6 @@ def get_git_hash(model='residential'):
     return git_hash
 
 
-def get_jurisdiction_name(code=1):
-    engine = sqlalchemy.create_engine('mssql://sql2014a8/data_cafe?trusted_connection=yes')
-    sql_query = 'SELECT name FROM ref.geography_zone WHERE geography_type_id = 136 and zone =' + str(code)
-    df = pd.read_sql(sql_query, engine)
-    return df.name[0]
 
 
 def to_database(scenario=' ', rng=range(0, 0), urbansim_connection=get_connection_string("configs/dbconfig.yml", 'urbansim_database'),
@@ -38,9 +32,9 @@ def to_database(scenario=' ', rng=range(0, 0), urbansim_connection=get_connectio
         defalut_schema:
             The schema name under which to save the data, default is urbansim_output
     """
-    conn = psycopg2.connect(database="urbansim", user="urbansim_user", password="urbansim", host="socioeca8",
-                            port="5432")
-    cursor = conn.cursor()
+    # connect to database
+    db = get_connection_string("configs/dbconfig.yml",'urbansim_database')
+    urbansim_engine = create_engine(db)
     t = (scenario,)
     cursor.execute('SELECT scenario_id FROM urbansim_output.parent_scenario WHERE scenario_name=%s', t)
     scenario_id = cursor.fetchone()
