@@ -39,27 +39,25 @@ def to_database(scenario=' ', rng=range(0, 0), urbansim_connection=get_connectio
     scenario_sql = "SELECT scenario_id, parent_scenario_id FROM urbansim_output.parent_scenario WHERE scenario_name='%s'" %scenario
     scenario_num= pd.read_sql(scenario_sql, urbansim_engine)
 
+    for x in ['buildings','feasibility']:
+        print 'exporting to db: ' + x + ' for year ' + str(rng[-1]) + ' (scenario ' + str(scenario_num.iloc[0]['scenario_id']) + ')'
 
-        
-            for x in ['buildings','feasibility']:
-                print 'exporting to db: ' + x + ' for year ' + str(rng[-1]) + ' (scenario ' + str(scenario_num.iloc[0]['scenario_id']) + ')'
-
-                df = pd.read_hdf('data\\results.h5', str(year) + '/' + x)
-                if x == 'feasibility':
-                    df = df['residential']
-                    df.rename(columns={'total_sqft': 'total_sqft_existing_bldgs'}, inplace=True)
-                df['year'] = rng[-1]
-                df['scenario_id'] = scenario_num.iloc[0]['scenario_id']
-                df['parent_scenario_id'] = scenario_num.iloc[0]['parent_scenario_id']
-                if x == 'buildings':
-                    df = df[(df.new_units > 0) | (df.job_spaces > 0)]
-                    df.sch_dev = df.sch_dev.astype(int)
-                    df.new_bldg = df.new_bldg.astype(int)
-                elif x == 'feasibility':
-                        df = df[df.addl_units > 0]
-                        df['existing_units'] = np.where(df['new_built_units'] == 0, df['total_residential_units'], \
-                                                        df['total_residential_units'] - df['addl_units'])
-                df.to_sql(x, urbansim_connection, schema=default_schema, if_exists='append')
+        df = pd.read_hdf('data\\results.h5', str(year) + '/' + x)
+        if x == 'feasibility':
+            df = df['residential']
+            df.rename(columns={'total_sqft': 'total_sqft_existing_bldgs'}, inplace=True)
+        df['year'] = rng[-1]
+        df['scenario_id'] = scenario_num.iloc[0]['scenario_id']
+        df['parent_scenario_id'] = scenario_num.iloc[0]['parent_scenario_id']
+        if x == 'buildings':
+            df = df[(df.new_units > 0) | (df.job_spaces > 0)]
+            df.sch_dev = df.sch_dev.astype(int)
+            df.new_bldg = df.new_bldg.astype(int)
+        elif x == 'feasibility':
+                df = df[df.addl_units > 0]
+                df['existing_units'] = np.where(df['new_built_units'] == 0, df['total_residential_units'], \
+                                                df['total_residential_units'] - df['addl_units'])
+        df.to_sql(x, urbansim_connection, schema=default_schema, if_exists='append')
 
 
 
