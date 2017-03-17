@@ -7,8 +7,7 @@ import yaml
 import datetime
 import numpy as np
 from urbansim_defaults import datasources
-
-
+from sqlalchemy import create_engine
 
 
 def get_git_hash(model='residential'):
@@ -17,10 +16,7 @@ def get_git_hash(model='residential'):
     return git_hash
 
 
-
-
-def to_database(scenario=' ', rng=range(0, 0), urbansim_connection=get_connection_string("configs/dbconfig.yml", 'urbansim_database'),
-                default_schema='urbansim_output'):
+def to_database(scenario=' ', rng=range(0, 0), default_schema='urbansim_output'):
     """ scenario:
             string scenario description set in simulation.py
         rng:
@@ -32,6 +28,7 @@ def to_database(scenario=' ', rng=range(0, 0), urbansim_connection=get_connectio
     # connect to database
     db = get_connection_string("configs/dbconfig.yml",'urbansim_database')
     urbansim_engine = create_engine(db)
+
     # get scenario run num
     scenario_sql = "SELECT scenario_id, parent_scenario_id FROM urbansim_output.parent_scenario WHERE scenario_name='%s'" %scenario
     scenario_num= pd.read_sql(scenario_sql, urbansim_engine)
@@ -39,7 +36,7 @@ def to_database(scenario=' ', rng=range(0, 0), urbansim_connection=get_connectio
     for x in ['buildings','feasibility']:
         print 'exporting to db: ' + x + ' for year ' + str(rng[-1]) + ' (scenario ' + str(scenario_num.iloc[0]['scenario_id']) + ')'
         # read data from h5 output file (data for each year is saved)
-        df = pd.read_hdf('data\\results.h5', str(year) + '/' + x)
+        df = pd.read_hdf('data\\results.h5', str(rng[-1]) + '/' + x)
         if x == 'feasibility':
             df = df['residential'] # only residential feasibility
             df.rename(columns={'total_sqft': 'total_sqft_existing_bldgs'}, inplace=True)
