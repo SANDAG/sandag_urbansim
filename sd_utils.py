@@ -112,24 +112,6 @@ def update_scenario(scenario=' '):
     conn.commit()
 
 
-    cursor.execute('''CREATE TABLE IF NOT EXISTS urbansim_output.households_base
-          (
-                      household_id bigint PRIMARY KEY,
-                      building_id bigint,
-                      persons bigint,
-                      age_of_head bigint,
-                      income bigint,
-                      children bigint,
-                      node_id bigint,
-                      income_quartile bigint,
-                      zone_id text,
-                      parent_scenario_id bigint,
-                      FOREIGN KEY (parent_scenario_id)
-                      REFERENCES urbansim_output.parent_scenario(parent_scenario_id)
-                    )'''
-                   )
-
-    conn.commit()
 
     cursor.execute('''CREATE TABLE IF NOT EXISTS  urbansim_output.buildings
                 (
@@ -183,26 +165,6 @@ def update_scenario(scenario=' '):
 
     conn.commit()
 
-    cursor.execute('''CREATE TABLE IF NOT EXISTS urbansim_output.households
-          (
-                      household_id bigint,
-                      building_id bigint,
-                      persons bigint,
-                      age_of_head bigint,
-                      income bigint,
-                      children bigint,
-                      income_quartile bigint,
-                      node_id bigint,
-                      zone_id text,
-                      year bigint,
-                      scenario_id bigint,
-                      parent_scenario_id bigint,
-                      FOREIGN KEY (parent_scenario_id, scenario_id)
-                      REFERENCES urbansim_output.scenario(parent_scenario_id, scenario_id)
-                    )'''
-                   )
-
-    conn.commit()
     cursor.execute('''CREATE TABLE IF NOT EXISTS urbansim_output.parcels
           (
                       parcel_id bigint,
