@@ -112,24 +112,6 @@ def update_scenario(scenario=' '):
     conn.commit()
 
 
-    cursor.execute('''CREATE TABLE IF NOT EXISTS urbansim_output.households_base
-          (
-                      household_id bigint PRIMARY KEY,
-                      building_id bigint,
-                      persons bigint,
-                      age_of_head bigint,
-                      income bigint,
-                      children bigint,
-                      node_id bigint,
-                      income_quartile bigint,
-                      zone_id text,
-                      parent_scenario_id bigint,
-                      FOREIGN KEY (parent_scenario_id)
-                      REFERENCES urbansim_output.parent_scenario(parent_scenario_id)
-                    )'''
-                   )
-
-    conn.commit()
 
 
     cursor.execute('''CREATE TABLE IF NOT EXISTS  urbansim_output.buildings
@@ -184,74 +166,6 @@ def update_scenario(scenario=' '):
 
     conn.commit()
 
-    cursor.execute('''CREATE TABLE IF NOT EXISTS urbansim_output.households
-          (
-                      household_id bigint,
-                      building_id bigint,
-                      persons bigint,
-                      age_of_head bigint,
-                      income bigint,
-                      children bigint,
-                      income_quartile bigint,
-                      node_id bigint,
-                      zone_id text,
-                      year bigint,
-                      scenario_id bigint,
-                      parent_scenario_id bigint,
-                      FOREIGN KEY (parent_scenario_id, scenario_id)
-                      REFERENCES urbansim_output.scenario(parent_scenario_id, scenario_id)
-                    )'''
-                   )
-
-    conn.commit()
-    cursor.execute('''CREATE TABLE IF NOT EXISTS urbansim_output.parcels
-          (
-                      parcel_id bigint,
-                      zoning_schedule_id integer,
-                      development_type_id bigint,
-                      luz_id bigint,
-                      acres double precision,
-                      zoning_id text,
-                      siteid integer,
-                      x double precision,
-                      y double precision,
-                      distance_to_coast double precision,
-                      distance_to_freeway double precision,
-                      node_id bigint,
-                      distance_to_park real,
-                      total_job_spaces double precision,
-                      total_sqft double precision,
-                      distance_to_school real,
-                      lot_size_per_unit double precision,
-                      building_purchase_price_sqft double precision,
-                      max_far integer,
-                      building_purchase_price double precision,
-                      avg_residential_price double precision,
-                      zoned_du integer,
-                      ave_unit_size real,
-                      distance_to_onramp real,
-                      max_dua_zoning integer,
-                      newest_building double precision,
-                      distance_to_transit real,
-                      max_height double precision,
-                      parcel_size double precision,
-                      parcel_acres double precision,
-                      ave_sqft_per_unit real,
-                      zone_id text,
-                      total_residential_units double precision,
-                      land_cost double precision,
-                      max_res_units double precision,
-                      zoned_du_underbuild double precision,
-                      oldest_building double precision,
-                      year bigint,
-                      scenario_id bigint,
-                      parent_scenario_id bigint,
-                      FOREIGN KEY (parent_scenario_id, scenario_id)
-                      REFERENCES urbansim_output.scenario(parent_scenario_id, scenario_id)
-                    )'''
-                   )
-
-    conn.commit()
 
     t = (scenario,)
     cursor.execute('SELECT scenario_id FROM urbansim_output.parent_scenario WHERE scenario_name=%s', t)
