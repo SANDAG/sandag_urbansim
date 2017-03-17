@@ -46,9 +46,6 @@ def to_database(scenario=' ', rng=range(0, 0), urbansim_connection=get_connectio
         if x == 'feasibility':
             df = df['residential']
             df.rename(columns={'total_sqft': 'total_sqft_existing_bldgs'}, inplace=True)
-        df['year'] = rng[-1]
-        df['scenario_id'] = scenario_num.iloc[0]['scenario_id']
-        df['parent_scenario_id'] = scenario_num.iloc[0]['parent_scenario_id']
         if x == 'buildings':
             df = df[(df.new_units > 0) | (df.job_spaces > 0)]
             df.sch_dev = df.sch_dev.astype(int)
@@ -57,6 +54,9 @@ def to_database(scenario=' ', rng=range(0, 0), urbansim_connection=get_connectio
                 df = df[df.addl_units > 0]
                 df['existing_units'] = np.where(df['new_built_units'] == 0, df['total_residential_units'], \
                                                 df['total_residential_units'] - df['addl_units'])
+        df['year'] = rng[-1]
+        df['scenario_id'] = scenario_num.iloc[0]['scenario_id']
+        df['parent_scenario_id'] = scenario_num.iloc[0]['parent_scenario_id']
         df.to_sql(x, urbansim_connection, schema=default_schema, if_exists='append')
 
 
