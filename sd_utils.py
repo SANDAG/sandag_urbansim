@@ -78,17 +78,7 @@ def to_database(scenario=' ', rng=range(0, 0), urbansim_connection=get_connectio
                                                         df['total_residential_units'] - df['addl_units'])
                 df.to_sql(x, urbansim_connection, schema=default_schema, if_exists='append')
 
-    conn = psycopg2.connect(database="urbansim", user="urbansim_user", password="urbansim", host="socioeca8",
-                            port="5432")
-    print "Opened database successfully"
-    
-    print "Deleted any old building that existed in the base table"
-    cursor.execute('''DELETE FROM urbansim_output.parcels WHERE parcel_id +  total_residential_units IN(
-                      SELECT parcel_id +  total_residential_units FROM urbansim_output.parcels_base
-                          )''')
-    conn.commit()
-    print "Deleted parcels where no buildings were made"
-    conn.close()
+
 
 
 def update_scenario(scenario=' '):
@@ -133,52 +123,6 @@ def update_scenario(scenario=' '):
                       node_id bigint,
                       income_quartile bigint,
                       zone_id text,
-                      parent_scenario_id bigint,
-                      FOREIGN KEY (parent_scenario_id)
-                      REFERENCES urbansim_output.parent_scenario(parent_scenario_id)
-                    )'''
-                   )
-
-    conn.commit()
-    cursor.execute('''CREATE TABLE IF NOT EXISTS urbansim_output.parcels_base
-          (
-                      parcel_id bigint PRIMARY KEY,
-                      zoning_schedule_id integer,
-                      development_type_id bigint,
-                      luz_id bigint,
-                      acres double precision,
-                      zoning_id text,
-                      siteid integer,
-                      x double precision,
-                      y double precision,
-                      distance_to_coast double precision,
-                      distance_to_freeway double precision,
-                      node_id bigint,
-                      distance_to_park real,
-                      total_job_spaces double precision,
-                      total_sqft double precision,
-                      distance_to_school real,
-                      lot_size_per_unit double precision,
-                      building_purchase_price_sqft double precision,
-                      max_far integer,
-                      building_purchase_price double precision,
-                      avg_residential_price double precision,
-                      zoned_du integer,
-                      ave_unit_size double precision,
-                      distance_to_onramp real,
-                      max_dua_zoning integer,
-                      newest_building double precision,
-                      distance_to_transit real,
-                      max_height double precision,
-                      parcel_size double precision,
-                      parcel_acres double precision,
-                      ave_sqft_per_unit double precision,
-                      zone_id text,
-                      total_residential_units double precision,
-                      land_cost double precision,
-                      max_res_units double precision,
-                      zoned_du_underbuild double precision,
-                      oldest_building double precision,
                       parent_scenario_id bigint,
                       FOREIGN KEY (parent_scenario_id)
                       REFERENCES urbansim_output.parent_scenario(parent_scenario_id)
