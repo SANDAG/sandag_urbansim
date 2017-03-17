@@ -81,10 +81,7 @@ def to_database(scenario=' ', rng=range(0, 0), urbansim_connection=get_connectio
     conn = psycopg2.connect(database="urbansim", user="urbansim_user", password="urbansim", host="socioeca8",
                             port="5432")
     print "Opened database successfully"
-    cursor = conn.cursor()
-    cursor.execute('''DELETE FROM urbansim_output.buildings WHERE building_id + residential_units in (
-                      SELECT building_id + residential_units FROM urbansim_output.buildings_base)''')
-    conn.commit()
+    
     print "Deleted any old building that existed in the base table"
     cursor.execute('''DELETE FROM urbansim_output.parcels WHERE parcel_id +  total_residential_units IN(
                       SELECT parcel_id +  total_residential_units FROM urbansim_output.parcels_base
@@ -124,54 +121,6 @@ def update_scenario(scenario=' '):
 
     conn.commit()
 
-    cursor.execute('''CREATE TABLE IF NOT EXISTS urbansim_output.buildings_base
-            (
-                          building_id bigint PRIMARY KEY,
-                          parcel_id bigint,
-                          building_type_id bigint,
-                          residential_units bigint,
-                          residential_sqft bigint,
-                          non_residential_sqft bigint,
-                          non_residential_rent_per_sqft bigint,
-                          year_built bigint,
-                          stories bigint,
-                          distance_to_park real,
-                          distance_to_onramp_mi double precision,
-                          distance_to_school real,
-                          lot_size_per_unit double precision,
-                          vacant_residential_units bigint,
-                          building_sqft bigint,
-                          structure_age bigint,
-                          distance_to_freeway double precision,
-                          vacant_job_spaces double precision,
-                          is_office integer,
-                          distance_to_coast_mi double precision,
-                          year_built_1960to1970 boolean,
-                          distance_to_onramp real,
-                          year_built_1980to1990 boolean,
-                          year_built_1970to1980 boolean,
-                          residential_price_adj double precision,
-                          distance_to_transit real,
-                          year_built_1950to1960 boolean,
-                          parcel_size double precision,
-                          general_type text,
-                          distance_to_coast double precision,
-                          node_id bigint,
-                          year_built_1940to1950 boolean,
-                          zone_id text,
-                          luz_id bigint,
-                          is_retail integer,
-                          sqft_per_job double precision,
-                          job_spaces integer,
-                          sqft_per_unit integer,
-                          distance_to_transit_mi double precision,
-                          parent_scenario_id bigint,
-                          FOREIGN KEY (parent_scenario_id)
-                          REFERENCES urbansim_output.parent_scenario(parent_scenario_id)
-                        )'''
-                   )
-
-    conn.commit()
 
     cursor.execute('''CREATE TABLE IF NOT EXISTS urbansim_output.households_base
           (
