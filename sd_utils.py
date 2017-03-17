@@ -35,33 +35,30 @@ def to_database(scenario=' ', rng=range(0, 0), urbansim_connection=get_connectio
     # connect to database
     db = get_connection_string("configs/dbconfig.yml",'urbansim_database')
     urbansim_engine = create_engine(db)
-    t = (scenario,)
-    cursor.execute('SELECT scenario_id FROM urbansim_output.parent_scenario WHERE scenario_name=%s', t)
-    scenario_id = cursor.fetchone()
-    cursor.execute('SELECT parent_scenario_id FROM urbansim_output.parent_scenario WHERE scenario_name=%s', t)
-    parent_scenario_id = cursor.fetchone()
-    conn.close()
+    # get scenario run num
+    scenario_sql = "SELECT scenario_id, parent_scenario_id FROM urbansim_output.parent_scenario WHERE scenario_name='%s'" %scenario
+    scenario_num= pd.read_sql(scenario_sql, urbansim_engine)
 
     for year in rng:
         if year == 0 and scenario_id[0] == 1:
             for x in ['parcels', 'buildings']:
 
-                print 'exporting ' + x + str(year) + ' ' + str(scenario_id[0])
+                print 'exporting to db: ' + x + ' for year ' + str(rng[-1]) + ' (scenario ' + str(scenario_num.iloc[0]['scenario_id']) + ')'
 
                 df = pd.read_hdf('data\\results.h5', 'base/' + x)
                 df['parent_scenario_id'] = parent_scenario_id[0]
                 df.to_sql(x + '_base', urbansim_connection, schema=default_schema, if_exists='append')
         elif year == rng[len(rng)-1]:
             for x in ['buildings','feasibility']:
-                print 'exporting ' + x + str(year) + ' ' + str(scenario_id[0])
+                print 'exporting to db: ' + x + ' for year ' + str(rng[-1]) + ' (scenario ' + str(scenario_num.iloc[0]['scenario_id']) + ')'
 
                 df = pd.read_hdf('data\\results.h5', str(year) + '/' + x)
                 if x == 'feasibility':
                     df = df['residential']
                     df.rename(columns={'total_sqft': 'total_sqft_existing_bldgs'}, inplace=True)
-                df['year'] = year
-                df['scenario_id'] = scenario_id[0]
-                df['parent_scenario_id'] = parent_scenario_id[0]
+                df['year'] = rng[-1]
+                df['scenario_id'] = scenario_num.iloc[0]['scenario_id']
+                df['parent_scenario_id'] = scenario_num.iloc[0]['parent_scenario_id']
                 if x == 'buildings':
                     df = df[(df.new_units > 0) | (df.job_spaces > 0)]
                     df.sch_dev = df.sch_dev.astype(int)
