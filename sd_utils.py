@@ -47,12 +47,12 @@ def to_database(scenario=' ', rng=range(0, 0), default_schema='urbansim_output')
             df.sch_dev = df.sch_dev.astype(int) # change boolean t/f to 1/0
             df.new_bldg = df.new_bldg.astype(int) # change boolean t/f to 1/0
             df = df[(df.new_bldg == 1)]  # new buildings only to database
+
         df['year'] = rng[-1]
         df['scenario_id'] = scenario_num.iloc[0]['scenario_id']
         df['parent_scenario_id'] = scenario_num.iloc[0]['parent_scenario_id']
-        df.to_sql(x, urbansim_connection, schema=default_schema, if_exists='append')
 
-
+        df.to_sql(x, urbansim_engine, schema=default_schema, if_exists='append')
 
 
 def update_scenario(scenario=' '):
