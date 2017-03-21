@@ -6,7 +6,7 @@ SELECT jurisdiction_id,
        SUM(buildings_res_units) as sr13_res_units_wo_sched_dev,
        SUM(addl_units) as sr13_addl_units_wo_sched_dev 
   FROM urbansim_output.res_capacity
-  WHERE not scheduled_development and source_zoning_schedule_id = 2 and schedule_id = 2 
+  WHERE not scheduled_development and source_zoning_schedule_id = 1 and schedule_id = 1 
   GROUP BY jurisdiction_id, schedule_id), 
 
 ka as (
@@ -17,7 +17,7 @@ SELECT jurisdiction_id,
        SUM(buildings_res_units) as sr13_and_new_parcel_ids_res_units,
        SUM(addl_units) as sr13_and_new_parcel_ids_addl_units 
   FROM urbansim_output.res_capacity w
-  WHERE schedule_id = 2
+  WHERE schedule_id = 1
   GROUP BY jurisdiction_id, schedule_id 
   ORDER BY jurisdiction_id, schedule_id), 
 
@@ -29,7 +29,7 @@ SELECT jurisdiction_id,
        SUM(buildings_res_units) as sr13_res_units,
        SUM(addl_units) as sr13_addl_units
   FROM urbansim_output.res_capacity o
-  WHERE source_zoning_schedule_id = 2 and schedule_id = 2
+  WHERE source_zoning_schedule_id = 1 and schedule_id = 1
   GROUP BY jurisdiction_id, schedule_id 
   ORDER BY jurisdiction_id, schedule_id), 
 
@@ -38,7 +38,7 @@ SELECT jurisdiction_id,
        schedule_id,
        COUNT(parcel_id) as count_sr13_parcel_ids_wo_sched_dev_w_capacity
   FROM urbansim_output.res_capacity
-  WHERE not scheduled_development and source_zoning_schedule_id = 2 and addl_units > 0 and schedule_id = 2
+  WHERE not scheduled_development and source_zoning_schedule_id = 1 and addl_units > 0 and schedule_id = 1
   GROUP BY jurisdiction_id, schedule_id)
   
 
