@@ -1,19 +1,21 @@
 USE spacecore
 
---IF OBJECT_ID('urbansim.parcels') IS NOT NULL
---    DROP TABLE urbansim.parcels
---GO
+/*
+IF OBJECT_ID('urbansim.parcels') IS NOT NULL
+   DROP TABLE urbansim.parcels
+GO
+*/
 
 CREATE TABLE urbansim.parcels (
-    objectid int not null --PLACEHOLDER FOR OPERATIONS BELOW. DROP AT END OF LOAD
-    ,parcel_id int NOT NULL
+    --objectid int not null --PLACEHOLDER FOR OPERATIONS BELOW. DROP AT END OF LOAD		--***
+    parcel_id int NOT NULL
 	,block_id nvarchar(15) --NOT NULL
 	,development_type_id int
     ,land_value float
     ,parcel_acres float
     ,region_id integer
     ,mgra_id integer
-    ,zoning_id varchar(35)
+    --,zone varchar(35)
     ,luz_id smallint
     ,msa_id smallint
     ,proportion_undevelopable float
@@ -22,34 +24,67 @@ CREATE TABLE urbansim.parcels (
     ,distance_to_onramp float
 	,distance_to_coast float
     ,distance_to_transit float
-    ,apn nvarchar(10) --This doesn't really work for condo lots
+    --,apn nvarchar(10) --This doesn't really work for condo lots
     ,shape geometry
     ,centroid geometry --Placeholder for spatial operations
 )
 
---INSERT WILL THROW A WARNING ABOUT SUMMING ASR_LAND BECAUSE OF NULLS --- THAT'S OKAY
-INSERT INTO urbansim.parcels WITH (TABLOCK) (objectid, parcel_id, land_value, region_id, tax_exempt_status)
-SELECT 
-    min(objectid) objectid
-    ,parcelid
-    ,sum(ASR_LAND) as land_value
-    ,1 as region_id
-    ,CASE max(NULLIF(taxstat, 'N')) WHEN 'N' THEN 1 ELSE 0 END as tax_exempt_status
+--INSERT FROM LUDU2015: SHAPE
+INSERT INTO urbansim.parcels WITH (TABLOCK) (parcel_id, shape)
+SELECT
+    parcelID
+	,geometry::UnionAggregate(Shape)
 FROM
-    GIS.parcels
-GROUP BY 
-    parcelid
+    GIS.ludu2015
+GROUP BY
+	parcelID
 
---SET THE SHAPE, CENTROID, AND ACREAGE
+--UPDATE ACREAGE
 UPDATE
-  usp
+	usp
 SET
-    usp.shape = tmp.shape
-    ,usp.centroid = tmp.centroid
-    ,usp.parcel_acres = tmp.shape.STArea() / 43560.
+	parcel_acres = Shape.STArea() / 43560.
 FROM
-    urbansim.parcels usp
-JOIN (SELECT OBJECTID, shape, geometry::Point(X_COORD, Y_COORD, 2230) as centroid FROM gis.parcels WHERE OBJECTID IN (SELECT objectid FROM urbansim.parcels)) tmp ON usp.OBJECTID = tmp.OBJECTID
+	urbansim.parcels AS usp
+
+--UPDATE CENTROID
+WITH cent AS(
+	SELECT
+		ROW_NUMBER() OVER (PARTITION BY ParcelID ORDER BY ParcelID, acres DESC) row_id
+		,ParcelID
+		,LCKey
+		,centroid
+		,acres
+	FROM GIS.ludu2015points
+)
+UPDATE
+	usp
+SET
+	centroid = cent.centroid
+FROM urbansim.parcels AS usp
+JOIN cent ON cent.parcelID  = usp.parcel_id
+WHERE cent.row_id = 1
+
+--UPDATE ASR, INSERT WILL THROW A WARNING ABOUT SUMMING ASR_LAND BECAUSE OF NULLS --- THAT'S OKAY
+WITH asr AS(
+	SELECT 
+		parcelid
+		,sum(ASR_LAND) as land_value
+		,CASE max(NULLIF(taxstat, 'N')) WHEN 'N' THEN 1 ELSE 0 END as tax_exempt_status
+	FROM
+		GIS.parcels
+	GROUP BY 
+		parcelid
+)
+UPDATE
+	usp
+SET
+    usp.land_value = asr.land_value
+	,usp.tax_exempt_status = asr.tax_exempt_status 
+    ,region_id = 1
+FROM
+	urbansim.parcels AS usp
+JOIN asr ON asr.parcelid = usp.parcel_id
 
 --SET THE DEVELOPMENT TYPE ID FROM PRIORITY
 UPDATE
@@ -64,7 +99,7 @@ LEFT JOIN (
 		  ,dev.development_type_id dev_type_id
 		  ,dev.name dev_type
 		FROM
-		  (SELECT lc.parcelID, MIN(dev.priority) p FROM gis.landcore lc
+		  (SELECT lc.parcelID, MIN(dev.priority) p FROM gis.ludu2015 lc
 				INNER JOIN ref.development_type_lu_code xref ON lc.lu = xref.lu_code
 				INNER JOIN ref.development_type dev ON xref.development_type_id = dev.development_type_id
 				GROUP BY lc.parcelID) p_dev_type
@@ -72,9 +107,11 @@ LEFT JOIN (
 		  ) dev
 ON usp.parcel_id = dev.parcelID
 
+/*
 --EXCLUDE ROAD RIGHT OF WAY RECORDS
 DELETE FROM urbansim.parcels
 WHERE development_type_id = 24 --Transportation Right of Way
+*/
 
 --CREATE A PRIMARY KEY SO WE CAN CREATE A SPATIAL INDEX
 ALTER TABLE urbansim.parcels ADD CONSTRAINT pk_urbansim_parcels_parcel_id PRIMARY KEY CLUSTERED (parcel_id) 
@@ -109,6 +146,35 @@ FROM
     urbansim.parcels usp
 LEFT JOIN (SELECT BLOCKID10 blockid, Shape FROM ref.blocks) b ON b.shape.STIntersects(usp.centroid) = 1
 
+--SPATIAL GET NEAREST BLOCKID, IF NULL
+--SELECT * FROM urbansim.parcels WHERE block_id IS NULL
+WITH near AS(
+	SELECT row_id, parcel_id, block_id, dist 
+	FROM (
+		SELECT
+			ROW_NUMBER() OVER (PARTITION BY parcels.parcel_id ORDER BY parcels.parcel_id, parcels.centroid.STDistance(blocks.shape)) row_id
+			,parcels.parcel_id
+			,blocks.blockid10 AS block_id
+			,parcels.centroid.STDistance(blocks.shape) AS dist
+		FROM urbansim.parcels 
+			JOIN ref.blocks
+			ON parcels.centroid.STBuffer(300).STIntersects(blocks.shape) = 1	--CHECK IF BUFFERDIST IS SUFFICIENT
+		WHERE parcels.block_id IS NULL
+			) x
+	WHERE row_id = 1
+)
+UPDATE
+    usp 
+SET
+    usp.block_id = near.block_id
+FROM
+    urbansim.parcels usp
+	,near
+WHERE
+	usp.parcel_id = near.parcel_id
+AND
+	usp.block_id IS NULL
+
 --SPATIAL CREATE MGRA FIELD
 UPDATE
     usp 
@@ -128,16 +194,46 @@ FROM
     urbansim.parcels usp
 LEFT JOIN data_cafe.ref.vi_xref_geography_mgra_13 xref ON usp.mgra_id = xref.mgra_13
 
-
---SPATIAL Zoning
+/*
+--SPATIAL ZONING
 UPDATE
 	usp
 SET
-    usp.zoning_id = usz.zoning_id
+    usp.zone = usz.zone
 FROM
 	urbansim.parcels usp
-	LEFT JOIN urbansim.zoning usz ON usz.shape.STIntersects(usp.centroid) = 1
+	LEFT JOIN [ws].[staging].[zoning_base] usz ON usz.[geom].STIntersects(usp.centroid) = 1
 
+--SPATIAL GET NEAREST ZONING, IF NULL
+--SELECT * FROM urbansim.parcels WHERE zone IS NULL
+
+WITH near AS(
+	SELECT row_id, parcel_id, zone, dist 
+	FROM (
+		SELECT
+			ROW_NUMBER() OVER (PARTITION BY parcels.parcel_id ORDER BY parcels.parcel_id, parcels.centroid.STDistance(zoning.geom)) row_id
+			,parcels.parcel_id
+			,zoning.zone
+			,parcels.centroid.STDistance(zoning.geom) AS dist
+		FROM urbansim.parcels 
+			JOIN [ws].[staging].[zoning_base] AS zoning
+			ON parcels.centroid.STBuffer(300).STIntersects(zoning.geom) = 1	--CHECK IF BUFFERDIST IS SUFFICIENT
+		WHERE parcels.zone IS NULL
+			) x
+	WHERE row_id = 1
+)
+UPDATE
+    usp 
+SET
+    usp.zone = near.zone
+FROM
+    urbansim.parcels usp
+	,near
+WHERE
+	usp.parcel_id = near.parcel_id
+AND
+	usp.zone IS NULL
+*/
 
 --CREATE CONSTRAINTS
 UPDATE
@@ -182,6 +278,7 @@ FROM
 WHERE
 	development_type_id = 29
 
+/*
 --SET APN
 UPDATE
 	usp
@@ -196,3 +293,4 @@ FROM
 				WHERE APN IS NOT NULL
 				GROUP BY parcelid) gip
 	ON usp.parcel_id = gip.PARCELID 
+*/
