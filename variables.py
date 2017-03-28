@@ -308,6 +308,7 @@ def total_sqft(parcels, buildings):
     return buildings.building_sqft.groupby(buildings.parcel_id).sum().\
         reindex(parcels.index).fillna(0)
 
+
 @orca.column('parcels', 'new_built_units', cache=False)
 def new_units(parcels, buildings):
     return buildings.new_units.groupby(buildings.parcel_id).sum().\
@@ -315,9 +316,15 @@ def new_units(parcels, buildings):
 
 
 @orca.column('parcels', 'job_spaces', cache=False)
-def new_units(parcels, buildings):
+def job_spaces(parcels, buildings):
     return buildings.job_spaces.groupby(buildings.parcel_id).sum().\
         reindex(parcels.index).fillna(0)
+
+
+@orca.column('parcels', 'sqft_per_job', cache=False)
+def sqft_per_job(parcels, buildings):
+    return buildings.sqft_per_job.groupby(buildings.parcel_id).mean().\
+        reindex(parcels.index).fillna(400).round().astype('int')
 
 
 @orca.column('parcels', 'zone_id', cache=True)

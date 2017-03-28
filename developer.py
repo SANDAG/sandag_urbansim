@@ -180,15 +180,16 @@ class Developer(object):
         df["parcel_size"] = parcel_size
         df['current_units'] = current_units
         df = df[df.parcel_size < max_parcel_size]
-        df['job_spaces'] = (df.non_residential_sqft / bldg_sqft_per_job).round()
 
         if residential:
             df['units_from_min_unit_size'] = (df['residential_sqft'] / min_unit_size).round()
-            df['net_units'] = df[['addl_units', 'units_from_min_unit_size']].min(axis=1) - df["new_built_units"] + df['current_units']
-            df['residential_units'] = df['addl_units'] + df['current_units']
-            df = df[df.net_units - df.current_units > 0]
+            df['net_units'] = df[['addl_units', 'units_from_min_unit_size']].min(axis=1) - df["new_built_units"]
+            df['residential_units'] = df[['addl_units', 'units_from_min_unit_size']].min(axis=1) + df['current_units']
+            df = df[df.net_units > 0]
         else:
-            df['net_units'] = df.job_spaces - df.current_units
+            df['job_spaces_capacity'] = (df.non_residential_sqft / df.sqft_per_job).round()
+            df['net_units'] = df.job_spaces_capacity - df.job_spaces
+            df.job_spaces = df.job_spaces_capacity
         df = df[df.net_units > 0]
 
         if len(df) == 0:

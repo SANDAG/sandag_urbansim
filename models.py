@@ -372,7 +372,7 @@ def feasibility2(parcels, settings,
                           parcel_sales_price_sqft_func,
                           parcel_is_allowed_func, parcel_filter = 'scheduled_development==False',
                           config=config,
-                          pass_through=['parcel_size','land_cost','weighted_rent','building_purchase_price','building_purchase_price_sqft','total_sqft','parcel_avg_price_residential', 'addl_units', "new_built_units", 'max_res_units', 'development_type_id'],
+                          pass_through=['parcel_size','land_cost','weighted_rent','building_purchase_price','building_purchase_price_sqft','total_sqft','parcel_avg_price_residential', 'addl_units', "new_built_units", 'max_res_units', 'development_type_id', 'job_spaces', 'luz_id', 'sqft_per_job'],
                           **kwargs)
 
 
@@ -606,17 +606,17 @@ def run_developer(forms, agents, buildings,supply_fname, parcel_size,
 
     print "Adding {:,} buildings with {:,} {}".\
         format(len(new_buildings),
-               int(new_buildings[supply_fname].sum()),
+               int(new_buildings['net_units'].sum()),
                supply_fname)
 
     print "{:,} feasible buildings after running developer".format(
           len(dev.feasibility))
+    new_buildings['new_units'] = new_buildings['net_units']
 
     old_buildings = buildings.to_frame(buildings.local_columns)
     new_buildings = new_buildings[buildings.local_columns]
     new_buildings['new_bldg'] = True
     new_buildings['sch_dev'] = False
-    new_buildings['new_units'] = new_buildings['residential_units']
     if remove_developed_buildings:
         old_buildings = \
             utils._remove_developed_buildings(old_buildings, new_buildings, unplace_agents)
@@ -694,7 +694,7 @@ def non_residential_developer(feasibility, jobs, buildings, parcels, year,
         "job_spaces",
         parcels.parcel_size,
         parcels.ave_sqft_per_unit,
-        parcels.total_job_spaces,
+        parcels.job_spaces,
         feasibility,
         parcels.max_dua_zoning,
         parcels.max_res_units,
