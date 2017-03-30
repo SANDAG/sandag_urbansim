@@ -24,6 +24,7 @@ CREATE TABLE urbansim.buildings(
 	,data_source nvarchar(50)
 	,subparcel_assignment nvarchar(50)
 	,floorspace_source nvarchar(50)
+	,sqft_source nvarchar(50)
 )
 INSERT INTO urbansim.buildings WITH (TABLOCK) (
 	building_id
@@ -99,6 +100,7 @@ SET
 								ELSE 0
 							END
 	,usb.year_built = a.year_built
+	,sqft_source = 'par'
 
 FROM
 	urbansim.buildings usb
@@ -163,6 +165,7 @@ SET
 						WHEN c.stories > 0 THEN c.stories
 						ELSE 1
 					END	
+	,sqft_source = 'costar'
 FROM
 	urbansim.buildings usb
 	LEFT JOIN 
@@ -178,6 +181,12 @@ FROM
 		FROM input.costar
 		GROUP BY parcel_id) c
 	ON usb.parcel_id = c.parcel_id
+
+--CHECK PAR AND COSTAR SQFT RESULTS
+SELECT *
+FROM urbansim.buildings
+WHERE ISNULL([residential_sqft], 0) + ISNULL([non_residential_sqft], 0) <= 0
+AND sqft_source IS NOT NULL
 
 
 /*#################### START RES AND EMP SPACE ####################*/
@@ -279,6 +288,7 @@ HAVING lc.du <> SUM(residential_units)
 /*############ STEP 12: UPDATE RESIDENTIAL SQ FT WHERE DATA AVAILABLE ###### */
 UPDATE usb
 	SET usb.residential_sqft = usb.residential_units * asr_units.avg_unit_size
+	,sqft_source = 'avg_asr_unit_size'
 FROM
 	urbansim.buildings usb
 	INNER JOIN gis.ludu2015 lc ON usb.subparcel_id = lc.subParcel
@@ -294,6 +304,7 @@ FROM
 		ON p.PARCELID = bldgs.parcelID
 		WHERE TOTAL_LVG_AREA IS NOT NULL AND TOTAL_LVG_AREA > 0) asr_units 
 	ON lc.parcelID = asr_units.PARCELID
+WHERE sqft_source IS NULL
 
 
 /*################ STEP 13: SOME MORE FINAL CHECKS TO ENSURE MGRA AND REGIONAL UNIT CONSISTENCY ######################*/
@@ -314,17 +325,20 @@ UPDATE
 	usb
 SET
 	residential_sqft = residential_units * avgres.avg_unit_size
+	,sqft_source = 'avg_res_unit_size'
 FROM urbansim.buildings AS usb
 	,avgres
 WHERE residential_units > 0 AND residential_sqft <= 0
+AND sqft_source IS NULL
 
 SELECT * 
 FROM
-  (SELECT MGRA, SUM(residential_units) housing_units FROM urbansim.buildings usb INNER JOIN gis.ludu2015 lc ON usb.subparcel_id = lc.subParcel GROUP BY MGRA) urbansim
-  INNER JOIN (SELECT mgra_id % 1300000 mgra, SUM(units) housing_units, SUM(occupied) housholds FROM demographic_warehouse.fact.housing WHERE datasource_id = 19 GROUP BY mgra_id) estimates
-    ON urbansim.MGRA = estimates.mgra
+	(SELECT MGRA, SUM(residential_units) housing_units FROM urbansim.buildings usb INNER JOIN gis.ludu2015 lc ON usb.subparcel_id = lc.subParcel GROUP BY MGRA) urbansim
+	INNER JOIN (SELECT mgra_id % 1300000 mgra, SUM(units) housing_units, SUM(occupied) housholds FROM demographic_warehouse.fact.housing WHERE datasource_id = 19 GROUP BY mgra_id) estimates
+		ON urbansim.MGRA = estimates.mgra
 WHERE
-  urbansim.housing_units <> estimates.housing_units
+	urbansim.housing_units <> estimates.housing_units
+
 
 /*################ STEP 14: LOAD HOUSEHOLD TABLE ######################*/
 /*
@@ -583,95 +597,76 @@ WHERE usb.block_id IS NULL
 
 /*################### ARBITRARILY ADD MORE SPACE FOR LEHD  ###########################*/
 WITH bldg AS (
-SELECT
-  usb.building_id
-  ,deficit.block_id
-  ,deficit.deficit
-  ,deficit.deficit/ COUNT(*) OVER (PARTITION BY deficit.block_id) +
-     CASE 
-       WHEN ROW_NUMBER() OVER (PARTITION BY deficit.block_id ORDER BY usb.job_spaces desc) <= (deficit.deficit % COUNT(*) OVER (PARTITION BY deficit.block_id)) THEN 1 
-       ELSE 0 
-	 END jobs
-FROM 
-  urbansim.buildings usb 
-  INNER JOIN (SELECT bldg.block_id,  CAST(ROUND((jobs.jobs - bldg.spaces) * 1.5,0) as INT) deficit FROM
-				(SELECT block_id, COUNT(*) jobs FROM spacecore.input.jobs_wac_2013 GROUP BY block_id) jobs
-				FULL OUTER JOIN (SELECT block_id, SUM(job_spaces) spaces FROM urbansim.buildings GROUP BY block_id) bldg ON jobs.block_id = bldg.block_id
-				WHERE jobs.jobs > bldg.spaces) deficit ON usb.block_id = deficit.block_id
-WHERE
-  usb.job_spaces > 0
+	SELECT
+	  usb.building_id
+	  ,deficit.block_id
+	  ,deficit.deficit
+	  ,deficit.deficit/ COUNT(*) OVER (PARTITION BY deficit.block_id) +
+		 CASE 
+		   WHEN ROW_NUMBER() OVER (PARTITION BY deficit.block_id ORDER BY usb.job_spaces desc) <= (deficit.deficit % COUNT(*) OVER (PARTITION BY deficit.block_id)) THEN 1 
+		   ELSE 0 
+		 END jobs
+	FROM 
+		urbansim.buildings usb 
+		INNER JOIN (SELECT bldg.block_id, jobs, spaces,  CAST(ROUND((jobs.jobs - bldg.spaces) ,0) as INT) deficit, CAST(ROUND((jobs.jobs - bldg.spaces) * 1.5 ,0) as INT) deficit15
+					FROM (SELECT block_id, COUNT(*) jobs FROM spacecore.input.jobs_wac_2013 GROUP BY block_id) jobs												--13,695 blocks	--1,377,100 jobs
+					JOIN (SELECT block_id, SUM(job_spaces) spaces FROM urbansim.buildings GROUP BY block_id) bldg ON jobs.block_id = bldg.block_id				--30,307 blocks	--1,929,835 spaces
+					WHERE jobs.jobs > bldg.spaces
+					) deficit																																	--146 blocks	--2,197 deficit*1.5	--1,434 deficit
+		ON usb.block_id = deficit.block_id
 )
-
 UPDATE usb
-  SET usb.job_spaces = usb.job_spaces + jobs
+  SET usb.job_spaces = ISNULL(usb.job_spaces, 0) + jobs
 FROM
-  urbansim.buildings usb INNER JOIN
+  urbansim.buildings usb 
+INNER JOIN
   bldg ON usb.building_id = bldg.building_id
+WHERE ISNULL(usb.job_spaces, 0) + jobs > 0
 ;
 
-WITH bldg AS (
-SELECT
-  usb.building_id
-  ,deficit.block_id
-  ,deficit.deficit
-  ,deficit.deficit/ COUNT(*) OVER (PARTITION BY deficit.block_id) +
-     CASE 
-       WHEN ROW_NUMBER() OVER (PARTITION BY deficit.block_id ORDER BY usb.job_spaces desc) <= (deficit.deficit % COUNT(*) OVER (PARTITION BY deficit.block_id)) THEN 1 
-       ELSE 0 
-	 END jobs
-FROM 
-  urbansim.buildings usb 
-  INNER JOIN (SELECT bldg.block_id,  CAST(ROUND((jobs.jobs - bldg.spaces) * 1.5,0) as INT) deficit FROM
-				(SELECT block_id, COUNT(*) jobs FROM spacecore.input.jobs_wac_2013 GROUP BY block_id) jobs
-				FULL OUTER JOIN (SELECT block_id, SUM(job_spaces) spaces FROM urbansim.buildings GROUP BY block_id) bldg ON jobs.block_id = bldg.block_id
-				WHERE jobs.jobs > bldg.spaces) deficit ON usb.block_id = deficit.block_id
-)
-
-UPDATE usb
-  SET usb.job_spaces = usb.job_spaces + jobs
-FROM
-  urbansim.buildings usb INNER JOIN
-  bldg ON usb.building_id = bldg.building_id
-;
 
 /*##### JOBS TABLE #####*/
 TRUNCATE TABLE urbansim.jobs;
 WITH bldg as (
-SELECT
-  ROW_NUMBER() OVER (PARTITION BY block_id ORDER BY building_id) idx
-  ,building_id
-  ,block_id
-FROM
-(SELECT
-  building_id
-  ,subparcel_id
-  ,job_spaces
-  ,block_id
-FROM
-urbansim.buildings
-,spacecore.ref.numbers n
-WHERE n.numbers <= job_spaces) bldgs
+	SELECT
+	  ROW_NUMBER() OVER (PARTITION BY block_id ORDER BY building_id) idx
+	  ,building_id
+	  ,block_id
+	FROM
+		(SELECT
+		  building_id
+		  ,subparcel_id
+		  ,job_spaces
+		  ,block_id
+		FROM
+		urbansim.buildings
+		,spacecore.ref.numbers n
+		WHERE n.numbers <= job_spaces) bldgs
 ),
 jobs AS (
-SELECT 
-  ROW_NUMBER() OVER (PARTITION BY block_id ORDER BY job_id) idx
-  ,job_id
-  ,block_id
-  ,sector_id
-FROM
-  spacecore.input.jobs_wac_2013
+	SELECT 
+	  ROW_NUMBER() OVER (PARTITION BY block_id ORDER BY job_id) idx
+	  ,job_id
+	  ,block_id
+	  ,sector_id
+	FROM
+	  spacecore.input.jobs_wac_2013
 )
 INSERT INTO urbansim.jobs (job_id, sector_id, building_id)
 SELECT jobs.job_id
 	,jobs.sector_id
 	,bldg.building_id
 FROM bldg
-INNER JOIN jobs
+RIGHT JOIN jobs
 ON bldg.block_id = jobs.block_id
 AND bldg.idx = jobs.idx
 
 
 /***#################### WHERE SQFT IS NULL, DERIVE FROM UNITS, JOB_SPACES ####################***/
+SELECT * FROM urbansim.buildings 
+WHERE ISNULL([residential_sqft], 0) + ISNULL([non_residential_sqft], 0) = 0
+	AND ISNULL([residential_units], 0) + ISNULL([job_spaces], 0) > 0
+--UPDATE
 UPDATE urbansim.buildings
 SET [floorspace_source] = 'units_jobs_derived'
 	,[residential_sqft] = [residential_units] * 300
