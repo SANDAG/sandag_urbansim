@@ -12,7 +12,7 @@ with open('configs/settings.yaml', 'r') as f:
     settings = yaml.load(f)
 
 
-def get_git_hash(model='residential'):
+def get_git_hash(model='master'):
     x = file('.git/refs/heads/' + model)
     git_hash = x.read()
     return git_hash
@@ -23,6 +23,15 @@ def get_jurisdiction_name(code=1):
     sql_query = 'SELECT name FROM ref.geography_zone WHERE geography_type_id = 136 and zone =' + str(code)
     df = pd.read_sql(sql_query, engine)
     return df.name[0]
+
+
+def get_max_job_id():
+    conn = psycopg2.connect(database="urbansim", user="urbansim_user", password="urbansim", host="socioeca8",
+                            port="5432")
+    cursor = conn.cursor()
+    cursor.execute('SELECT max(job_id) as job_id FROM urbansim.jobs')
+    job_id = cursor.fetchone()
+    return job_id[0]
 
 
 def to_database(scenario=' ', rng=range(0, 0), urbansim_connection=get_connection_string("configs/dbconfig.yml", 'urbansim_database'),
@@ -50,7 +59,7 @@ def to_database(scenario=' ', rng=range(0, 0), urbansim_connection=get_connectio
 
     for year in rng:
         if year == 0 and scenario_id[0] == 1:
-            for x in ['parcels', 'buildings']:
+            for x in ['parcels', 'buildings', 'jobs']:
 
                 print 'exporting ' + x + str(year) + ' ' + str(scenario_id[0])
 
@@ -58,27 +67,29 @@ def to_database(scenario=' ', rng=range(0, 0), urbansim_connection=get_connectio
                 df['parent_scenario_id'] = parent_scenario_id[0]
                 df.to_sql(x + '_base', urbansim_connection, schema=default_schema, if_exists='append')
         elif year == rng[len(rng)-1]:
-            for x in ['buildings','feasibility']:
+            for x in ['buildings', 'feasibility', 'jobs']:
                 print 'exporting ' + x + str(year) + ' ' + str(scenario_id[0])
 
                 df = pd.read_hdf('data\\results.h5', str(year) + '/' + x)
                 if x == 'feasibility':
                     df = df['residential']
                     df.rename(columns={'total_sqft': 'total_sqft_existing_bldgs'}, inplace=True)
-                df['year'] = year
-                df['scenario_id'] = scenario_id[0]
-                df['parent_scenario_id'] = parent_scenario_id[0]
-                if x == 'buildings':
+                    df = df[df.addl_units > 0]
+                    df['existing_units'] = np.where(df['new_built_units'] == 0, df['total_residential_units'], \
+                                                    df['total_residential_units'] - df['addl_units'])
+
+                elif x == 'buildings':
                     df = df[df.new_bldg == 1]
                     df.sch_dev = df.sch_dev.astype(int)
                     df.new_bldg = df.new_bldg.astype(int)
-                elif x == 'feasibility':
-                        df = df[df.addl_units > 0]
-                        df['existing_units'] = np.where(df['new_built_units'] == 0, df['total_residential_units'], \
-                                                        df['total_residential_units'] - df['addl_units'])
+
+                elif x == 'jobs':
+                    df = df[df.index > get_max_job_id()]
+                df['year'] = year
+                df['scenario_id'] = scenario_id[0]
+                df['parent_scenario_id'] = parent_scenario_id[0]
+
                 df.to_sql(x, urbansim_connection, schema=default_schema, if_exists='append')
-
-
 
 
 def update_scenario(scenario=' '):

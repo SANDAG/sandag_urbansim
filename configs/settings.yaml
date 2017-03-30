@@ -76,7 +76,7 @@ residential_developer:
 #  use_max_res_units: False
 
 non_residential_developer:
-  target_vacancy: .25
+  target_vacancy: .15
   bldg_sqft_per_job: 400
 
 
@@ -167,3 +167,6 @@ price_to_rent_ratio: 50
 zoning_schedule_id: 2
 
 jurisdiction: 11
+
+#jobs settings
+job_space_multiplier: .85

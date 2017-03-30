@@ -1,9 +1,12 @@
-
+import yaml
 from sqlalchemy import create_engine
 from pysandag.database import get_connection_string
 import pandas as pd
 from urbansim_defaults import datasources
 import os
+
+with open('configs/settings.yaml', 'r') as f:
+    settings = yaml.load(f)
 
 urbansim_engine = create_engine(get_connection_string("configs/dbconfig.yml", 'urbansim_database'))
 
@@ -33,7 +36,7 @@ buildings_sql = '''SELECT building_id, parcel_id,
                           COALESCE(residential_units, 0) as residential_units,
                           COALESCE(residential_sqft, 0) as residential_sqft,
                           COALESCE(non_residential_sqft,0) as non_residential_sqft,
-                          COALESCE(job_spaces,0) as job_spaces,
+                          COALESCE(round((''' + str(settings['job_space_multiplier']) + '''*job_spaces),0),0) as job_spaces,
                           0 as non_residential_rent_per_sqft,
                           COALESCE(year_built, 0) year_built,
                           COALESCE(stories, 1) as stories,
