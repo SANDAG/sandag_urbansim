@@ -296,6 +296,7 @@ def feasibility(parcels, settings, fee_schedule,
     sim.add_table("feasibility", far_predictions)
 """
 
+
 @orca.step('jobs_transition')
 def jobs_transition(jobs, employment_controls, year, settings):
     return utils.full_transition(jobs,
@@ -309,6 +310,7 @@ def jobs_transition(jobs, employment_controls, year, settings):
 def nrh_simulate2(buildings, aggregations):
     return utils.hedonic_simulate("nrh2.yaml", buildings, aggregations,
                                   "non_residential_price")
+
 
 # residential only
 @orca.step('scheduled_development_events')
@@ -611,12 +613,13 @@ def run_developer(forms, agents, buildings,supply_fname, parcel_size,
 
     print "{:,} feasible buildings after running developer".format(
           len(dev.feasibility))
-    new_buildings['new_units'] = new_buildings['net_units']
 
     old_buildings = buildings.to_frame(buildings.local_columns)
     new_buildings = new_buildings[buildings.local_columns]
     new_buildings['new_bldg'] = True
     new_buildings['sch_dev'] = False
+    new_buildings['new_units'] = new_buildings['residential_units']
+
     if remove_developed_buildings:
         old_buildings = \
             utils._remove_developed_buildings(old_buildings, new_buildings, unplace_agents)
