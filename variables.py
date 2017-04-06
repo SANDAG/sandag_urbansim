@@ -388,9 +388,9 @@ def parcel_is_allowed(form):
     elif form == 'retail':
         allowed = zoning_allowed_uses[5]
     elif form == 'mixedresidential':
-        allowed = (zoning_allowed_uses[19] | zoning_allowed_uses[20] | zoning_allowed_uses[21]) * zoning_allowed_uses[5]
+        allowed = (zoning_allowed_uses[19] | zoning_allowed_uses[20] | zoning_allowed_uses[21]) & zoning_allowed_uses[5]
     elif form == 'mixedoffice':
-        allowed = (zoning_allowed_uses[19] | zoning_allowed_uses[20] | zoning_allowed_uses[21]) * zoning_allowed_uses[4]
+        allowed = (zoning_allowed_uses[19] | zoning_allowed_uses[20] | zoning_allowed_uses[21]) & zoning_allowed_uses[4]
     else:
         df = pd.DataFrame(index=parcels.index)
         df['allowed'] = True

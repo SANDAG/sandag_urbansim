@@ -76,7 +76,7 @@ residential_developer:
 #  use_max_res_units: False
 
 non_residential_developer:
-  target_vacancy: .49
+  target_vacancy: .10
   bldg_sqft_per_job: 400
 
 

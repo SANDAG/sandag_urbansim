@@ -22,10 +22,12 @@ parcels_sql = '''SELECT p.parcel_id, p.development_type_id,p.jurisdiction_id,
                         ST_Y(ST_Transform(centroid::geometry, 2230)) as y,
                         COALESCE(p.distance_to_coast,10000) as distance_to_coast, COALESCE(p.distance_to_freeway,10000) as distance_to_freeway,
                         sp.siteid
-                       ,zp.zoning_schedule_id,zp.zoning_id
+                       ,zp.zoning_schedule_id,zp.zoning_id as zoning_parcels_zoning_id,coalesce(zoning.parent_zoning_id, zoning.zoning_id) as zoning_id
                    FROM urbansim.parcels p
                    JOIN urbansim.zoning_parcels zp
                      ON p.parcel_id = zp.parcel_id
+                   JOIN urbansim.zoning zoning
+                     ON zp.zoning_id =  zoning.zoning_id
                    LEFT JOIN urbansim.scheduled_development_parcels sp
                           ON p.parcel_id = sp.parcel_id
                    WHERE zp.zoning_schedule_id = ''' + str(zsid)
@@ -42,7 +44,8 @@ buildings_sql = '''SELECT building_id, parcel_id,
                           FALSE as new_bldg,
                           FALSE as sch_dev,
                            0 as new_units,
-                          NULL as residential_price
+                          NULL as residential_price,
+                          NULL as non_residential_price
                      FROM urbansim.buildings'''
 
 households_sql = 'SELECT household_id, building_id, persons, age_of_head, income, children FROM urbansim.households'
@@ -88,6 +91,7 @@ edges_df = pd.read_sql(edges_sql, urbansim_engine)
 parcels_df = pd.read_sql(parcels_sql, urbansim_engine, index_col='parcel_id')
 buildings_df = pd.read_sql(buildings_sql, urbansim_engine, index_col='building_id')
 buildings_df['residential_price'] = buildings_df['residential_price'] .astype(float)
+buildings_df['non_residential_price'] = buildings_df['non_residential_price'] .astype(float)
 households_df = pd.read_sql(households_sql, urbansim_engine, index_col='household_id')
 jobs_df = pd.read_sql(jobs_sql, urbansim_engine, index_col='job_id')
 building_sqft_per_job_df = pd.read_sql(building_sqft_per_job_sql, urbansim_engine)

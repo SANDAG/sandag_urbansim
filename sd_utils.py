@@ -73,9 +73,9 @@ def to_database(scenario=' ', rng=range(0, 0), urbansim_connection=get_connectio
 
                 df = pd.read_hdf('data\\results.h5', str(year) + '/' + x)
                 if x == 'feasibility':
-                    # df = df['residential']
+                    df = df['residential']
                     df.rename(columns={'total_sqft': 'total_sqft_existing_bldgs'}, inplace=True)
-                    # df = df[(df.addl_units > 0) or (df.non_residential_sqft > 0)]
+                    df = df[(df.addl_units > 0) or (df.non_residential_sqft > 0)]
                     df['existing_units'] = np.where(df['new_built_units'] == 0, df['total_residential_units'], \
                                                     df['total_residential_units'] - df['addl_units'])
 
