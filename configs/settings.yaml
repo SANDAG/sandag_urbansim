@@ -167,3 +167,6 @@ price_to_rent_ratio: 50
 zoning_schedule_id: 2
 
 jurisdiction: 11
+
+#jobs settings
+job_space_multiplier: 1

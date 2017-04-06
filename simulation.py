@@ -25,7 +25,7 @@ orca.run(['build_networks'])
 
 
 orca.run(['scheduled_development_events',
-         'neighborhood_vars', 'rsh_simulate', 'nrh_simulate2', 'jobs_transition', "elcm_simulate",
+          'neighborhood_vars', 'rsh_simulate', 'nrh_simulate', 'nrh_simulate2',  'jobs_transition', "elcm_simulate",
           'households_transition', "hlcm_simulate", "price_vars", "feasibility2",
           "residential_developer", "non_residential_developer"
           ], iter_vars=rng, data_out='data\\results.h5', out_interval=1)

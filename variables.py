@@ -298,14 +298,29 @@ def total_sqft(parcels, buildings):
     return buildings.building_sqft.groupby(buildings.parcel_id).sum().\
         reindex(parcels.index).fillna(0)
 
+
 @orca.column('parcels', 'new_built_units', cache=False)
 def new_units(parcels, buildings):
     return buildings.new_units.groupby(buildings.parcel_id).sum().\
         reindex(parcels.index).fillna(0)
 
+
+@orca.column('parcels', 'job_spaces', cache=False)
+def job_spaces(parcels, buildings):
+    return buildings.job_spaces.groupby(buildings.parcel_id).sum(). \
+        reindex(parcels.index).fillna(0)
+
+
+@orca.column('parcels', 'sqft_per_job', cache=False)
+def sqft_per_job(parcels, buildings):
+    return buildings.sqft_per_job.groupby(buildings.parcel_id).mean(). \
+        reindex(parcels.index).fillna(400).round().astype('int')
+
+
 @orca.column('parcels', 'zone_id', cache=True)
 def parcel_zone_id(parcels):
     return parcels.zoning_id
+
 
 ###### MISCELLANEOUS #######
 @orca.injectable('add_extra_columns_func', autocall=False)
@@ -364,16 +379,18 @@ def parcel_is_allowed(form):
         allowed = zoning_allowed_uses[20]
     elif form == 'mf_residential':
         allowed = zoning_allowed_uses[21]
-    elif form == 'light_industrial':
-        allowed = zoning_allowed_uses[2]
-    elif form == 'heavy_industrial':
-        allowed = zoning_allowed_uses[3]
+    # elif form == 'light_industrial':
+       # allowed = zoning_allowed_uses[2]
+    elif form == 'industrial':
+        allowed = zoning_allowed_uses[3] | zoning_allowed_uses[2]
     elif form == 'office':
         allowed = zoning_allowed_uses[4]
     elif form == 'retail':
         allowed = zoning_allowed_uses[5]
-    # elif form == 'residential':
-     #   allowed = zoning_allowed_uses[19] | zoning_allowed_uses[20] | zoning_allowed_uses[21]
+    elif form == 'mixedresidential':
+        allowed = (zoning_allowed_uses[19] | zoning_allowed_uses[20] | zoning_allowed_uses[21]) and zoning_allowed_uses[5]
+    elif form == 'mixedoffice':
+        allowed = (zoning_allowed_uses[19] | zoning_allowed_uses[20] | zoning_allowed_uses[21]) and zoning_allowed_uses[4]
     else:
         df = pd.DataFrame(index=parcels.index)
         df['allowed'] = True
