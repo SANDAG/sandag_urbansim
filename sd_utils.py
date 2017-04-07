@@ -75,7 +75,7 @@ def to_database(scenario=' ', rng=range(0, 0), urbansim_connection=get_connectio
                 if x == 'feasibility':
                     df = df['residential']
                     df.rename(columns={'total_sqft': 'total_sqft_existing_bldgs'}, inplace=True)
-                    df = df[(df.addl_units > 0) or (df.non_residential_sqft > 0)]
+                    df = df[(df.addl_units > 0) | (df.non_residential_sqft > 0)]
                     df['existing_units'] = np.where(df['new_built_units'] == 0, df['total_residential_units'], \
                                                     df['total_residential_units'] - df['addl_units'])
 
@@ -91,21 +91,6 @@ def to_database(scenario=' ', rng=range(0, 0), urbansim_connection=get_connectio
                 df['parent_scenario_id'] = parent_scenario_id[0]
 
                 df.to_sql(x, urbansim_connection, schema=default_schema, if_exists='append')
-
-    conn = psycopg2.connect(database="urbansim", user="urbansim_user", password="urbansim", host="socioeca8",
-                            port="5432")
-    print "Opened database successfully"
-    cursor = conn.cursor()
-    cursor.execute('''DELETE FROM urbansim_output.buildings WHERE building_id + residential_units in (
-                      SELECT building_id + residential_units FROM urbansim_output.buildings_base)''')
-    conn.commit()
-    print "Deleted any old building that existed in the base table"
-    cursor.execute('''DELETE FROM urbansim_output.parcels WHERE parcel_id +  total_residential_units IN(
-                      SELECT parcel_id +  total_residential_units FROM urbansim_output.parcels_base
-                          )''')
-    conn.commit()
-    print "Deleted parcels where no buildings were made"
-    conn.close()
 
 
 def update_scenario(scenario=' '):
