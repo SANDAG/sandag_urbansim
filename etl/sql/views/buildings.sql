@@ -1,9 +1,18 @@
+/*
+OUTPUT:
+[urbansim].[households]
+[urbansim].[jobs]
+[urbansim].[buildings]
+*/
+
 USE spacecore
---IF OBJECT_ID('urbansim.buildings') IS NOT NULL
---    DROP TABLE urbansim.buildings
---GO
+
+IF OBJECT_ID('urbansim.buildings') IS NOT NULL
+    DROP TABLE urbansim.buildings
+GO
+
 CREATE TABLE urbansim.buildings(
-	building_id int NOT NULL
+	building_id bigint NOT NULL
 	,development_type_id smallint
 	,subparcel_id int NULL
 	,parcel_id int NOT NULL
@@ -197,27 +206,22 @@ AND sqft_source IS NOT NULL
 --INSERT PLACEHOLDER CENTROIDS
 INSERT INTO urbansim.buildings (building_id, development_type_id, subparcel_id, parcel_id, mgra_id, shape, centroid, data_source, subparcel_assignment)
 SELECT 
-	lc.subParcel + 2000000 AS building_id		--INSERTED BUILDING_ID > 2,000,000
+	lc.LCKey + 2000000 AS building_id		--INSERTED BUILDING_ID > 2,000,000
 	,dev.development_type_id
-	,lc.subParcel
+	,lc.LCKey
 	,parcelID
 	,MGRA
-	,lc.Shape.STPointOnSurface().STBuffer(1) AS shape		--TEMP
-	,lc.Shape.STBuffer(-2).STPointOnSurface() AS centroid
+	,lc.centroid.STBuffer(1) AS shape
+	,lc.centroid
 	,'PLACEHOLDER' AS data_source
 	,'PLACEHOLDER_RES' AS subparcel_assignment
 FROM 
-	gis.ludu2015 lc
-	LEFT JOIN urbansim.buildings usb ON lc.subParcel = usb.subparcel_id
+	gis.ludu2015points lc
+	LEFT JOIN urbansim.buildings usb ON lc.LCKey = usb.subparcel_id
 	LEFT JOIN ref.development_type_lu_code dev ON lc.lu = dev.lu_code
 WHERE
-	du > 0
+	lc.du > 0
 	AND usb.subparcel_id is null
-
---UPDATE PLACEHOLDER SHAPES TO MATCH CENTROIDS
-UPDATE urbansim.buildings
-SET shape = centroid.STBuffer(1)
-WHERE subparcel_assignment = 'PLACEHOLDER_RES'
 
 /*################## STEP 7: VERIFY THAT ALL SUB-PARCEL WITH DU HAVE A BUILDING  ###################*/
 SELECT COUNT(*) missing_res_building FROM 
@@ -245,6 +249,7 @@ FROM
 WHERE
   usb.subparcel_id IN (SELECT subparcel_id FROM urbansim.buildings usb GROUP BY subparcel_id HAVING count(*) > 1)
   AND lc.du = 0
+;
 
 /*########### STEP 10: EVENLY DISTRIBUTE RESIDENTIAL UNITS ON BLDG SIZE WHERE BLDG COUNT > 1 ON SUBPARCEL ############*/
 -----MAY WANT TO THINK ABOUT EXCLUDING REALLY SMALL BUILDINGS FROM THIS QUERY
@@ -261,17 +266,19 @@ WITH bldgs AS (
     urbansim.buildings usb
     INNER JOIN gis.ludu2015 lc ON usb.subparcel_id = lc.subParcel
   WHERE
-    subparcel_id IN (SELECT subparcel_id FROM urbansim.buildings usb WHERE usb.residential_units is null GROUP BY subparcel_id HAVING count(*) > 1))
+    subparcel_id IN (SELECT subparcel_id FROM urbansim.buildings usb WHERE usb.residential_units is null GROUP BY subparcel_id HAVING count(*) > 1)
+)
 UPDATE usb
   SET usb.residential_units = bldgs.units
 FROM
 	urbansim.buildings usb
 	INNER JOIN bldgs ON usb.building_id = bldgs.building_id
+;
 
 /*################ STEP 11: SOME FINAL CHECKS TO ENSURE MGRA AND REGIONAL UNIT CONSISTENCY ######################*/
 SELECT SUM(residential_units) bldg_units FROM urbansim.buildings
 SELECT SUM(du) lc_units FROM gis.ludu2015
-
+;
 SELECT 
   usb.subparcel_id
   ,lc.du lc_units
@@ -283,7 +290,7 @@ GROUP BY
   usb.subparcel_id
   ,lc.du
 HAVING lc.du <> SUM(residential_units)
-
+;
 
 /*############ STEP 12: UPDATE RESIDENTIAL SQ FT WHERE DATA AVAILABLE ###### */
 UPDATE usb
@@ -305,7 +312,7 @@ FROM
 		WHERE TOTAL_LVG_AREA IS NOT NULL AND TOTAL_LVG_AREA > 0) asr_units 
 	ON lc.parcelID = asr_units.PARCELID
 WHERE sqft_source IS NULL
-
+;
 
 /*################ STEP 13: SOME MORE FINAL CHECKS TO ENSURE MGRA AND REGIONAL UNIT CONSISTENCY ######################*/
 SELECT building_id, residential_units, residential_sqft FROM urbansim.buildings usb WHERE residential_units > 0 AND residential_sqft <= 0;
@@ -330,6 +337,7 @@ FROM urbansim.buildings AS usb
 	,avgres
 WHERE residential_units > 0 AND residential_sqft <= 0
 AND sqft_source IS NULL
+;
 
 SELECT * 
 FROM
@@ -338,7 +346,7 @@ FROM
 		ON urbansim.MGRA = estimates.mgra
 WHERE
 	urbansim.housing_units <> estimates.housing_units
-
+;
 
 /*################ STEP 14: LOAD HOUSEHOLD TABLE ######################*/
 /*
@@ -367,6 +375,12 @@ SELECT
 	cars 
 FROM spacecore.input.vi_households
 */
+
+IF OBJECT_ID('urbansim.households') IS NOT NULL
+    DROP TABLE urbansim.households
+GO
+;
+
 SELECT *
 INTO urbansim.households
 FROM spacecore.input.vi_households
@@ -385,39 +399,39 @@ FROM
 )
 --SELECT * FROM urbansim.households WHERE household_id IN (SELECT household_id FROM hh WHERE idx > housing_units)
 DELETE FROM urbansim.households WHERE household_id IN (SELECT household_id FROM hh WHERE idx > housing_units)
-
+;
 
 /*################ STEP 16: EVENLY DISTRIBUTE HOUSEHOLDS ONTO BUILDINGS BY MGRA ######################*/
 WITH bldg as (
-SELECT
-  ROW_NUMBER() OVER (PARTITION BY mgra ORDER BY building_id) idx
-  ,building_id
-  ,mgra
-FROM
-	(SELECT
-	  building_id
-	  ,subparcel_id
-	  ,residential_units
-	FROM
-	urbansim.buildings
-	,ref.numbers n
-	WHERE n.numbers <= residential_units) bldgs
-INNER JOIN gis.ludu2015 lc ON lc.subParcel = bldgs.subparcel_id),
-hh AS (
-	SELECT 
-	  ROW_NUMBER() OVER (PARTITION BY mgra ORDER BY household_id) idx
-	  ,household_id
+	SELECT
+	  ROW_NUMBER() OVER (PARTITION BY mgra ORDER BY building_id) idx
+	  ,building_id
 	  ,mgra
 	FROM
-	  urbansim.households
-	)
-
+		(SELECT
+		  building_id
+		  ,subparcel_id
+		  ,residential_units
+		FROM
+		urbansim.buildings
+		,ref.numbers n
+		WHERE n.numbers <= residential_units) bldgs
+	INNER JOIN gis.ludu2015 lc ON lc.subParcel = bldgs.subparcel_id),
+	hh AS (
+		SELECT 
+		  ROW_NUMBER() OVER (PARTITION BY mgra ORDER BY household_id) idx
+		  ,household_id
+		  ,mgra
+		FROM
+		  urbansim.households
+)
 UPDATE h
 SET h.building_id = bldg.building_id
 FROM
   urbansim.households h
   INNER JOIN hh ON h.household_id = hh.household_id
   INNER JOIN bldg ON bldg.MGRA = hh.mgra AND bldg.idx = hh.idx
+;
 
 /*################ STEP 17: SOME MORE FINAL CHECKS TO ENSURE MGRA AND REGIONAL UNIT CONSISTENCY ######################*/
 SELECT COUNT(*) FROM urbansim.households WHERE building_id = 0
@@ -428,7 +442,7 @@ INNER JOIN (SELECT SUM(residential_units) units, mgra FROM urbansim.buildings IN
 WHERE hh > units
 
 /*#################### EMP SPACE PROCESSING ####################*/
-DECLARE @employment_vacancy float = 0.3;
+DECLARE @employment_vacancy float = 0.1;
 
 /* ##### INSERT PLACEHOLDER BUILDINGS FOR EMP ##### */
 INSERT INTO urbansim.buildings(
@@ -454,7 +468,7 @@ INSERT INTO urbansim.buildings(
 	)
 SELECT
 	dev.development_type_id
-	,lc.subParcel + 4000000 AS building_id
+	,lc.LCKey + 4000000 AS building_id
 	,lc.parcelID
 	,lc.mgra as mgra
 	,NULL AS improvement_value
@@ -466,31 +480,122 @@ SELECT
 	,NULL AS price_per_sqft
 	,NULL AS stories
 	,NULL AS year_built
-	,lc.Shape.STPointOnSurface().STBuffer(1) AS shape		--TEMP
-	,lc.Shape.STBuffer(-2).STPointOnSurface() AS centroid
+	,lc.centroid.STBuffer(1) AS shape
+	,lc.centroid
 	,'PLACEHOLDER' AS data_source
 	,'PLACEHOLDER_EMP' AS subparcel_assignment
-	,lc.subParcel
+	,lc.LCKey
 	,NULL AS luz_id
-FROM gis.ludu2015 lc
-INNER JOIN (SELECT lc.subparcel, SUM(emp.emp_adj) emp_adj		--GROUP BY SUBPARCEL FOR UNIQUE BUILDING_ID
+FROM gis.ludu2015points lc
+INNER JOIN (SELECT lc.subParcel, SUM(emp.emp_adj) emp_adj		--GROUP BY SUBPARCEL FOR UNIQUE BUILDING_ID
 			FROM socioec_data.ca_edd.emp_2013 emp
 			JOIN gis.ludu2015 lc							--XX INCLUDES ALL 'LU'; ROW
 			ON lc.Shape.STContains(emp.shape) = 1
 			GROUP BY lc.subparcel) emp
-ON lc.subparcel = emp.subparcel
+ON lc.LCKey = emp.subparcel
 LEFT JOIN (SELECT subparcel_id FROM urbansim.buildings GROUP BY subparcel_id) usb
-ON lc.subParcel = usb.subparcel_id
+ON lc.LCKey = usb.subparcel_id
 JOIN ref.development_type_lu_code dev
 ON lc.lu = dev.lu_code
 WHERE emp.emp_adj IS NOT NULL
 AND usb.subparcel_id IS NULL
+;
 
+/* ##### ASSIGN BLOCK ID ##### */
+UPDATE
+	usb
+SET
+	usb.block_id = b.blockid10
+FROM
+	urbansim.buildings usb
+JOIN ref.blocks b
+ON b.Shape.STContains(usb.shape.STCentroid()) = 1
+WHERE usb.block_id IS NULL 
+;
+
+/* ##### INSERT PLACEHOLDER BUILDINGS FOR EMP FOR BLOCKS WITH EMP BUT NO JOB_SPACES ##### */
+WITH lc AS(
+	SELECT 
+		lc.subParcel
+		,lc.parcelID
+		,lc.mgra
+		,lc.lu
+		,lc.shape
+		,jobs.block_id
+		,jobs.jobs
+		,jobs.shape AS shape_b
+	FROM gis.ludu2015 lc
+	JOIN (
+		SELECT 
+			wac.block_id
+			,jobs
+			,b.Shape
+		FROM (SELECT j.block_id, COUNT(*) jobs
+				FROM spacecore.input.jobs_wac_2013 AS j
+				GROUP BY block_id) wac
+		FULL OUTER JOIN (SELECT block_id, SUM(job_spaces) spaces FROM urbansim.buildings GROUP BY block_id) bldg 
+		ON wac.block_id = bldg.block_id
+		JOIN ref.blocks AS b ON wac.block_id = b.BLOCKID10
+		WHERE jobs > 0 AND ISNULL(spaces, 0) = 0
+		--ORDER BY block_id
+		)AS jobs
+	ON lc.shape.STContains(jobs.shape.STCentroid()) = 1
+)
+INSERT INTO urbansim.buildings(
+	development_type_id
+	,building_id
+	,parcel_id
+	,block_id
+	,mgra_id
+	,improvement_value
+	,residential_units
+	,residential_sqft
+	,non_residential_sqft
+	,job_spaces
+	,non_residential_rent_per_sqft
+	,price_per_sqft
+	,stories
+	,year_built
+	,shape
+	,centroid
+	,data_source
+	,subparcel_assignment
+	,subparcel_id
+	,luz_id
+	)
+SELECT
+	dev.development_type_id
+	,CAST(lc.block_id AS bigint) + 5000000000000000 AS building_id
+	,lc.parcelID
+	,lc.block_id AS block_id
+	,lc.mgra as mgra
+	,NULL AS improvement_value
+	,0 AS residential_units
+	,0 AS residential_sqft
+	,NULL AS non_residential_sqft
+	,lc.jobs AS job_spaces
+	,NULL AS non_residential_rent_per_sqft
+	,NULL AS price_per_sqft
+	,NULL AS stories
+	,NULL AS year_built
+	,lcp.centroid.STBuffer(1) AS shape
+	,lcp.centroid
+	,'PLACEHOLDER_BLOCK' AS data_source
+	,'PLACEHOLDER_EMP' AS subparcel_assignment
+	,lc.subParcel
+	,NULL AS luz_id
+FROM lc
+JOIN gis.ludu2015points lcp
+	ON lc.subParcel= lcp.LCKey
+JOIN ref.development_type_lu_code dev
+	ON lc.lu = dev.lu_code
+;
 --CHECK FOR BUILDINGS ASSIGNED TO NON-DEVELOPABLE PARCELS; ROW^^
 SELECT COUNT(*) 
 FROM urbansim.buildings 
 WHERE subparcel_assignment = 'PLACEHOLDER_EMP'
 AND development_type_id = 24					--ROAD RIGHT OF WAY
+;
 --QUICK-FIX BUILDINGS ASSIGNED TO NON-DEVELOPABLE PARCELS
 WITH near AS(
 	SELECT row_id, building_id, parcel_id, development_type_id, dist 
@@ -503,7 +608,7 @@ WITH near AS(
 			,usb.centroid.STDistance(usp.shape) AS dist
 		FROM urbansim.buildings AS usb
 			JOIN (SELECT * FROM urbansim.parcels WHERE development_type_id <> 24) AS usp
-			ON usb.centroid.STBuffer(200).STIntersects(usp.shape) = 1	--CHECK IF BUFFERDIST IS SUFFICIENT
+			ON usb.centroid.STBuffer(1000).STIntersects(usp.shape) = 1	--CHECK IF BUFFERDIST IS SUFFICIENT
 		WHERE usb.subparcel_assignment = 'PLACEHOLDER_EMP'
 		AND usb.development_type_id = 24
 			) x
@@ -522,15 +627,10 @@ WHERE
 	usb.building_id = near.building_id
 	AND usb.subparcel_assignment = 'PLACEHOLDER_EMP'
 	AND usb.development_type_id = 24
-
---UPDATE PLACEHOLDER SHAPES TO MATCH CENTROIDS
-UPDATE urbansim.buildings
-SET shape = centroid.STBuffer(1)
-WHERE subparcel_assignment = 'PLACEHOLDER_EMP';
-
-/*#################### ASSIGN JOBS ####################*/
---DECLARE @employment_vacancy float = 0.3;
-/* ##### ASSIGN JOBS TO SINGLE BUILDING SUBPARCELS ##### */
+;
+/*#################### ASSIGN JOB_SPACES ####################*/
+--DECLARE @employment_vacancy float = 0.1;
+/* ##### ASSIGN JOB_SPACES TO SINGLE BUILDING SUBPARCELS ##### */
 WITH single_bldg_jobs AS (
 	SELECT lc.subParcel AS subparcel_id
 		,SUM(CAST(ROUND(emp_adj*(1+@employment_vacancy),0)AS int)) emp
@@ -552,8 +652,8 @@ JOIN single_bldg_jobs sb
 ON usb.subparcel_id = sb.subparcel_id
 ;
 
-/* ##### ASSIGN JOBS TO MULTIPLE BUILDING SUBPARCELS ##### */
---DECLARE @employment_vacancy float = 0.3;
+/* ##### ASSIGN JOB_SPACES TO MULTIPLE BUILDING SUBPARCELS ##### */
+--DECLARE @employment_vacancy float = 0.1;
 -----MAY WANT TO THINK ABOUT EXCLUDING REALLY SMALL BUILDINGS FROM THIS QUERY
 WITH bldgs AS (
   SELECT
@@ -576,24 +676,14 @@ WITH bldgs AS (
   WHERE
     usb.subparcel_id IN (SELECT subparcel_id FROM urbansim.buildings usb GROUP BY subparcel_id HAVING count(*) > 1)
 	)
-
-UPDATE usb
-  SET usb.job_spaces = bldgs.jobs
+UPDATE
+	usb
+SET
+	usb.job_spaces = bldgs.jobs
 FROM
 	urbansim.buildings usb
 	INNER JOIN bldgs ON usb.building_id = bldgs.building_id
 ;
-
-/* ##### ASSIGN BLOCK ID ##### */
-UPDATE
-	usb
-SET
-	usb.block_id = b.blockid10
-FROM
-	urbansim.buildings usb
-JOIN ref.blocks b
-ON b.Shape.STContains(usb.shape.STCentroid()) = 1
-WHERE usb.block_id IS NULL 
 
 /*################### ARBITRARILY ADD MORE SPACE FOR LEHD  ###########################*/
 WITH bldg AS (
@@ -608,7 +698,7 @@ WITH bldg AS (
 		 END jobs
 	FROM 
 		urbansim.buildings usb 
-		INNER JOIN (SELECT bldg.block_id, jobs, spaces,  CAST(ROUND((jobs.jobs - bldg.spaces) ,0) as INT) deficit, CAST(ROUND((jobs.jobs - bldg.spaces) * 1.5 ,0) as INT) deficit15
+		INNER JOIN (SELECT bldg.block_id, jobs, spaces,  CAST(ROUND((jobs.jobs - bldg.spaces) ,0) as INT) deficit, CAST(ROUND((jobs.jobs - bldg.spaces) * 1.3 ,0) as INT) deficit15
 					FROM (SELECT block_id, COUNT(*) jobs FROM spacecore.input.jobs_wac_2013 GROUP BY block_id) jobs												--13,695 blocks	--1,377,100 jobs
 					JOIN (SELECT block_id, SUM(job_spaces) spaces FROM urbansim.buildings GROUP BY block_id) bldg ON jobs.block_id = bldg.block_id				--30,307 blocks	--1,929,835 spaces
 					WHERE jobs.jobs > bldg.spaces
@@ -625,8 +715,10 @@ WHERE ISNULL(usb.job_spaces, 0) + jobs > 0
 ;
 
 
-/*##### JOBS TABLE #####*/
+/*################### ALLOCATE JOBS INTO JOB_SPACES  ###########################*/
+/*##### GENERATE JOBS TABLE #####*/
 TRUNCATE TABLE urbansim.jobs;
+--WRITE TABLE
 WITH bldg as (
 	SELECT
 	  ROW_NUMBER() OVER (PARTITION BY block_id ORDER BY building_id) idx
