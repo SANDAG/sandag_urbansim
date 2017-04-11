@@ -80,6 +80,12 @@ def is_office(buildings):
 def is_retail(buildings):
     return (buildings.building_type_id == 5).astype('int')
 
+
+@orca.column('buildings', 'job_spaces', cache=True)
+def job_spaces(buildings):
+    return (buildings.job_spaces_original * 1).fillna(0).astype('int')
+
+
 @orca.column('buildings', 'jurisdiction_id')
 def jurisdiction_id(buildings,parcels):
     return misc.reindex(parcels.jurisdiction_id, buildings.parcel_id).fillna(0)
