@@ -32,7 +32,7 @@ parcels_sql = '''SELECT p.parcel_id, p.development_type_id,p.jurisdiction_id,
                           ON p.parcel_id = sp.parcel_id
                    WHERE zp.zoning_schedule_id = ''' + str(zsid)
 
-buildings_sql = '''SELECT building_id, parcel_id, job_spaces as job_space_original,
+buildings_sql = '''SELECT building_id, parcel_id, job_spaces as job_spaces_original,
                           COALESCE(development_type_id,0) as building_type_id,
                           COALESCE(residential_units, 0) as residential_units,
                           COALESCE(residential_sqft, 0) as residential_sqft,

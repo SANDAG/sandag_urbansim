@@ -316,12 +316,13 @@ def scheduled_development_events(scheduled_development_events, buildings, parcel
     year = get_year()
     sched_dev = scheduled_development_events.to_frame()
     sched_dev = sched_dev.groupby('siteID').apply(lambda x: x.iloc[np.random.randint(0, len(x))])
-    phasein = phase_in.to_frame() #pd.read_csv('data/schdev.csv')
+    phasein = phase_in.to_frame()
     sched_dev = sched_dev.merge(phasein,left_on = 'siteID',right_on = 'siteID')
     sched_dev = sched_dev.loc[sched_dev['Units'] > 0]
     sched_dev = sched_dev[sched_dev.Year==year]
     #TODO: The simple division here is not consistent with other job_spaces calculations
     sched_dev['job_spaces'] = sched_dev.non_residential_sqft/400
+    sched_dev['job_spaces_original'] = sched_dev['job_spaces']
     if len(sched_dev) > 0:
         max_bid = buildings.index.values.max()
         idx = np.arange(max_bid + 1,max_bid+len(sched_dev)+1)
@@ -402,7 +403,7 @@ def target_avg_unit_size():
     return 2000
 
 
-def run_developer(forms, agents, buildings,supply_fname, parcel_size,
+def run_developer(forms, agents, buildings, supply_fname, parcel_size,
                   ave_unit_size, total_units, feasibility,
                   max_dua_zoning, max_res_units, addl_units,year=None,
                   target_vacancy=.1, use_max_res_units=False,
@@ -617,6 +618,8 @@ def run_developer(forms, agents, buildings,supply_fname, parcel_size,
     new_buildings['new_bldg'] = True
     new_buildings['sch_dev'] = False
     new_buildings['new_units'] = new_buildings['residential_units']
+    if not residential:
+        new_buildings['job_spaces_original'] = new_buildings['job_spaces']
     if remove_developed_buildings:
         old_buildings = \
             utils._remove_developed_buildings(old_buildings, new_buildings, unplace_agents)
@@ -676,6 +679,33 @@ def residential_developer(feasibility, households, buildings, parcels, year,
         year=year,
         form_to_btype_callback=form_to_btype_func,
         add_more_columns_callback=add_extra_columns_func,
+        **kwargs)
+
+    summary.add_parcel_output(new_buildings)
+
+
+@orca.step('non_residential_developer')
+def non_residential_developer(feasibility, jobs, buildings, parcels, year,
+                              settings, summary, form_to_btype_func,
+                              add_extra_columns_func):
+
+    kwargs = settings['non_residential_developer']
+    new_buildings = run_developer(
+        ["office", "retail", "industrial"],
+        jobs,
+        buildings,
+        "job_spaces",
+        parcels.parcel_size,
+        parcels.ave_sqft_per_unit,
+        parcels.job_spaces,
+        feasibility,
+        parcels.max_dua_zoning,
+        parcels.max_res_units,
+        parcels.addl_units,
+        year=year,
+        form_to_btype_callback=form_to_btype_func,
+        add_more_columns_callback=add_extra_columns_func,
+        residential=False,
         **kwargs)
 
     summary.add_parcel_output(new_buildings)
