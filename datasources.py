@@ -44,6 +44,11 @@ def scheduled_development_events(store):
     return store['scheduled_development_events']
 
 
+@orca.table('phase_in', cache=True)
+def scheduled_development_events(store):
+    return store['phase_in']
+
+
 @orca.table('zoning', cache=True)
 def zoning(store):
     return store['zoning']

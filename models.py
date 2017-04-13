@@ -312,11 +312,11 @@ def nrh_simulate2(buildings, aggregations):
 
 # residential only
 @orca.step('scheduled_development_events')
-def scheduled_development_events(scheduled_development_events, buildings, parcels):
+def scheduled_development_events(scheduled_development_events, buildings, parcels, phase_in):
     year = get_year()
     sched_dev = scheduled_development_events.to_frame()
     sched_dev = sched_dev.groupby('siteID').apply(lambda x: x.iloc[np.random.randint(0, len(x))])
-    phasein = pd.read_csv('data/schdev.csv')
+    phasein = phase_in.to_frame() #pd.read_csv('data/schdev.csv')
     sched_dev = sched_dev.merge(phasein,left_on = 'siteID',right_on = 'siteID')
     sched_dev = sched_dev.loc[sched_dev['Units'] > 0]
     sched_dev = sched_dev[sched_dev.Year==year]

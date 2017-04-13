@@ -85,6 +85,10 @@ zoning_sql =    '''SELECT zoning.zoning_schedule_id, zoning.zone, zoning.zoning_
 
 capacity_sql = 'SELECT parcel_id, scheduled_development, addl_units FROM urbansim_output.res_capacity where schedule_id = ' + str(zsid)
 
+phase_in_sql = '''SELECT "siteID", "Year", "Htype", "Units"
+                  FROM urbansim_output.phase_in_sch_dev'''
+phase_in_df = pd.read_sql(phase_in_sql, urbansim_engine)
+
 nodes_df = pd.read_sql(nodes_sql, urbansim_engine, index_col='node_id')
 intersection_df = pd.read_sql(intersection_sql, urbansim_engine, index_col='intersection_id')
 edges_df = pd.read_sql(edges_sql, urbansim_engine)
@@ -139,3 +143,4 @@ with pd.HDFStore('data/urbansim.h5', mode='w') as store:
     store.put('zoning_allowed_uses', zoning_allowed_uses_df, format='t')
     store.put('fee_schedule', fee_schedule_df, format='t')
     store.put('zoning', zoning_df, format='t')
+    store.put('phase_in', phase_in_df)

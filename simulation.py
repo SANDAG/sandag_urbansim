@@ -18,7 +18,7 @@ try:
 except OSError:
     pass
 
-rng = range(2015, 2020)
+rng = range(2015, 2050)
 scenario = 'Solana_Beach_zsid1'
 
 orca.run(['build_networks'])
