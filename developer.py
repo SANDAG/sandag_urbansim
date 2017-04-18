@@ -187,6 +187,7 @@ class Developer(object):
             df['residential_units'] = df[['addl_units', 'units_from_min_unit_size']].min(axis=1) + df['current_units']
             df = df[df.net_units - df.current_units > 0]
             df['net_units'] = df.net_units - df.current_units
+            df.job_spaces = (df.non_residential_sqft / df.sqft_per_job).round()
         else:
             df['job_spaces_capacity'] = (df.non_residential_sqft / df.sqft_per_job).round()
             df['net_units'] = df.job_spaces_capacity - df.job_spaces
@@ -194,6 +195,8 @@ class Developer(object):
             # df.sandag_job_spaces = df.job_spaces_capacity
             df = df[df.net_units > 0]
             df.job_spaces = df.job_spaces_capacity
+            df['units_from_min_unit_size'] = (df['residential_sqft'] / min_unit_size).round()
+            df['residential_units'] = df[['addl_units', 'units_from_min_unit_size']].min(axis=1) + df['current_units']
 
         if len(df) == 0:
             print "WARNING THERE ARE NO FEASIBLE BUILDING TO CHOOSE FROM"

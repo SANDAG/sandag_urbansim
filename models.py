@@ -665,7 +665,7 @@ def residential_developer(feasibility, households, buildings, parcels, year,
                           add_extra_columns_func):
     kwargs = settings['residential_developer']
     new_buildings = run_developer(
-        "residential",
+        ["residential", "mixedresidential", "mixedoffice"],
         households,
         buildings,
         "residential_units",
@@ -691,7 +691,7 @@ def non_residential_developer(feasibility, jobs, buildings, parcels, year,
 
     kwargs = settings['non_residential_developer']
     new_buildings = run_developer(
-        ["office", "retail", "industrial"],
+        ["office", "retail", "industrial", "mixedresidential", "mixedoffice"],
         jobs,
         buildings,
         "job_spaces",
