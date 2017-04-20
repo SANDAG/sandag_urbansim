@@ -602,9 +602,11 @@ class SqFtProForma(object):
         # parcel sizes * possible fars
         building_bulks = (fars * df.parcel_size.values)
         if form == 'residential':
-            building_bulks[building_bulks * c.building_efficiency / (df.addl_units.values + df.total_residential_units.values) > settings['max_unit_size']] = 0
-            building_bulks[building_bulks * c.building_efficiency / (df.addl_units.values + df.total_residential_units.values) < settings['residential_developer']['min_unit_size']] = 0
+            building_bulks[building_bulks * c.building_efficiency / (df.addl_units.values + df.total_residential_units.values) > settings['max_unit_size']] = -999999
+            building_bulks[building_bulks * c.building_efficiency / (df.addl_units.values + df.total_residential_units.values) < settings['residential_developer']['min_unit_size']] = -999999
         # cost to build the new building
+        elif form == 'mixedresidential' or form == 'mixedoffice':
+            building_bulks[building_bulks * df.addl_units.values == 0] = -999999
         building_costs = building_bulks * cost_sqft_col
 
         # add cost to buy the current building
