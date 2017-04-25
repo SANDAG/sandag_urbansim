@@ -18,6 +18,7 @@ CREATE TABLE urbansim.parcels (
     --,zone varchar(35)
     ,luz_id smallint
     ,msa_id smallint
+	,jurisdiction_id smallint
     ,proportion_undevelopable float
     ,tax_exempt_status bit
     ,distance_to_freeway float
@@ -46,8 +47,8 @@ SET
 	parcel_acres = Shape.STArea() / 43560.
 FROM
 	urbansim.parcels AS usp
-
---UPDATE CENTROID
+;
+--UPDATE CENTROID FROM LARGEST SUBPARCEL
 WITH cent AS(
 	SELECT
 		ROW_NUMBER() OVER (PARTITION BY ParcelID ORDER BY ParcelID, acres DESC) row_id
@@ -64,7 +65,7 @@ SET
 FROM urbansim.parcels AS usp
 JOIN cent ON cent.parcelID  = usp.parcel_id
 WHERE cent.row_id = 1
-
+;
 --UPDATE ASR, INSERT WILL THROW A WARNING ABOUT SUMMING ASR_LAND BECAUSE OF NULLS --- THAT'S OKAY
 WITH asr AS(
 	SELECT 
@@ -85,7 +86,7 @@ SET
 FROM
 	urbansim.parcels AS usp
 JOIN asr ON asr.parcelid = usp.parcel_id
-
+;
 --SET THE DEVELOPMENT TYPE ID FROM PRIORITY
 UPDATE
     usp
@@ -106,7 +107,7 @@ LEFT JOIN (
 		  INNER JOIN ref.development_type dev ON p_dev_type.p = dev.priority
 		  ) dev
 ON usp.parcel_id = dev.parcelID
-
+;
 /*
 --EXCLUDE ROAD RIGHT OF WAY RECORDS
 DELETE FROM urbansim.parcels
@@ -128,7 +129,7 @@ CREATE SPATIAL INDEX [ix_spatial_urbansim_parcels_centroid] ON [urbansim].[parce
 ) USING  GEOMETRY_GRID
     WITH (BOUNDING_BOX =(6152300, 1775400, 6613100, 2129400), GRIDS =(LEVEL_1 = MEDIUM,LEVEL_2 = MEDIUM,LEVEL_3 = MEDIUM,LEVEL_4 = MEDIUM), 
     CELLS_PER_OBJECT = 16, PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
-
+;
 CREATE SPATIAL INDEX [ix_spatial_urbansim_parcels_shape] ON [urbansim].[parcels]
 (
     [shape]
@@ -145,7 +146,7 @@ SET
 FROM
     urbansim.parcels usp
 LEFT JOIN (SELECT BLOCKID10 blockid, Shape FROM ref.blocks) b ON b.shape.STIntersects(usp.centroid) = 1
-
+;
 --SPATIAL GET NEAREST BLOCKID, IF NULL
 --SELECT * FROM urbansim.parcels WHERE block_id IS NULL
 WITH near AS(
@@ -174,7 +175,7 @@ WHERE
 	usp.parcel_id = near.parcel_id
 AND
 	usp.block_id IS NULL
-
+;
 --SPATIAL CREATE MGRA FIELD
 UPDATE
     usp 
@@ -183,7 +184,7 @@ SET
 FROM
     urbansim.parcels usp
 LEFT JOIN (SELECT zone as mgra, shape FROM data_cafe.ref.geography_zone z INNER JOIN data_cafe.ref.geography_type t ON z.geography_type_id = t.geography_type_id WHERE t.geography_type = 'mgra' and t.vintage = 13) mgra ON mgra.shape.STIntersects(usp.centroid) = 1
-
+;
 --USE DATA_CAFE XREF TO BUILD ZONE FIELDS
 UPDATE
     usp
@@ -193,7 +194,7 @@ SET
 FROM
     urbansim.parcels usp
 LEFT JOIN data_cafe.ref.vi_xref_geography_mgra_13 xref ON usp.mgra_id = xref.mgra_13
-
+;
 /*
 --SPATIAL ZONING
 UPDATE
@@ -202,11 +203,11 @@ SET
     usp.zone = usz.zone
 FROM
 	urbansim.parcels usp
-	LEFT JOIN [ws].[staging].[zoning_base] usz ON usz.[geom].STIntersects(usp.centroid) = 1
-
---SPATIAL GET NEAREST ZONING, IF NULL
---SELECT * FROM urbansim.parcels WHERE zone IS NULL
-
+	LEFT JOIN [spacecore].[staging].[zoning_from_postgres] usz ON usz.[geom].STIntersects(usp.centroid) = 1
+;
+*/
+/*
+--IF ZONING IS NULL, GRAB NEAREST
 WITH near AS(
 	SELECT row_id, parcel_id, zone, dist 
 	FROM (
@@ -216,7 +217,7 @@ WITH near AS(
 			,zoning.zone
 			,parcels.centroid.STDistance(zoning.geom) AS dist
 		FROM urbansim.parcels 
-			JOIN [ws].[staging].[zoning_base] AS zoning
+			JOIN [spacecore].[staging].[zoning_from_postgres] AS zoning
 			ON parcels.centroid.STBuffer(300).STIntersects(zoning.geom) = 1	--CHECK IF BUFFERDIST IS SUFFICIENT
 		WHERE parcels.zone IS NULL
 			) x
@@ -233,6 +234,16 @@ WHERE
 	usp.parcel_id = near.parcel_id
 AND
 	usp.zone IS NULL
+*/
+		
+/*
+--JURISDICTION ID FROM ZONE
+UPDATE
+	usp
+SET
+	usp.jurisdiction_id = LEFT(usp.zone, CHARINDEX('_', usp.zone) - 1)
+FROM
+	urbansim.parcels AS usp
 */
 
 --CREATE CONSTRAINTS

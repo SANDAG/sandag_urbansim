@@ -19,6 +19,7 @@ CREATE TABLE urbansim.buildings(
 	,block_id bigint
 	,mgra_id int
 	,luz_id int
+	,jurisdiction_id smallint
 	,improvement_value float
 	,residential_units smallint
 	,residential_sqft int
@@ -384,7 +385,7 @@ GO
 SELECT *
 INTO urbansim.households
 FROM spacecore.input.vi_households
-
+;
 /*################ STEP 15: THIS IS A 2010 HH FILE WITH 2015 BUILDINGS, SHAVE OFF HH WHERE BUILDINGS WERE DEMOLISHED SINCE 2010 ######################*/
 WITH hh AS (
 SELECT
@@ -767,7 +768,17 @@ WHERE ISNULL([residential_sqft], 0) + ISNULL([non_residential_sqft], 0) = 0
 	AND ISNULL([residential_units], 0) + ISNULL([job_spaces], 0) > 0
 ;
 
-
+/*** PARCELS DATA ***/
+--GET PARCEL DATA: JURISDICTION ID
+UPDATE
+	usb
+SET
+	usb.jurisdiction_id = p.jurisdiction_id
+FROM
+	urbansim.buildings usb
+JOIN urbansim.parcels AS p
+ON usb.parcel_id = p.parcel_id
+--PROCEED TO PARCEL LEVEL ADJUSTMENTS
 
 /***#################### CHECKS ####################***/
 SELECT SUM(emp_adj)
@@ -788,6 +799,11 @@ FROM urbansim.buildings
 
 SELECT COUNT(*)
 FROM urbansim.households
+
+SELECT jurisdiction_id, SUM(residential_units) residential_units
+FROM urbansim.buildings
+GROUP BY jurisdiction_id
+ORDER BY jurisdiction_id
 
 
 /*** CHECK AT MGRA LEVEL ***/
