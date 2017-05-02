@@ -76,7 +76,7 @@ residential_developer:
 #  use_max_res_units: False
 
 non_residential_developer:
-  target_vacancy: .10
+  target_vacancy: .20
   bldg_sqft_per_job: 400
 
 
@@ -155,13 +155,14 @@ sqftproforma_config:
   parking_sqft_d: {'surface': 300.0, 'deck': 250.0, 'underground': 250.0}
   parking_cost_d: {'surface': 30, 'deck': 90, 'underground': 110}
   height_per_story: 12.0
-  max_retail_height: 2.0
-  max_industrial_height: 2.0
+  max_retail_height: 20000.0
+  max_industrial_height: 20000.0
 
 #yaml values for hard code values in variables.py
 
 parcel_avg_pr_mult: .81
 res_sales_price_multiplier: 2.5
+nonres_sales_price_multiplier: 2.5
 price_to_rent_ratio: 50
 
 zoning_schedule_id: 2
@@ -170,3 +171,4 @@ jurisdiction: 11
 
 #jobs settings
 job_space_multiplier: 1
+sql_connection: 'mssql://sql2014a8/spacecore?trusted_connection=yes'

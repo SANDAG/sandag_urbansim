@@ -534,8 +534,10 @@ class SqFtProForma(object):
         df = df.copy()
 
         c = self.config
-
+        # First convert  residential prices to rent
+        df.residential = df.residential * c.cap_rate
         # weighted rent for this form
+
         df['weighted_rent'] = np.dot(df[c.uses], c.forms[form])
 
         # min between max_fars and max_heights
@@ -602,8 +604,8 @@ class SqFtProForma(object):
         # parcel sizes * possible fars
         building_bulks = (fars * df.parcel_size.values)
         if form == 'residential':
-            building_bulks[building_bulks * c.building_efficiency / (df.addl_units.values + df.total_residential_units.values) > settings['max_unit_size']] = -999999
-            building_bulks[building_bulks * c.building_efficiency / (df.addl_units.values + df.total_residential_units.values) < settings['residential_developer']['min_unit_size']] = -999999
+            building_bulks[building_bulks * c.building_efficiency / (df.addl_units.values + df.total_residential_units.values + .001) > settings['max_unit_size']] = -999999
+            building_bulks[building_bulks * c.building_efficiency / (df.addl_units.values + df.total_residential_units.values + .001) < settings['residential_developer']['min_unit_size']] = -999999
         # cost to build the new building
         elif form == 'mixedresidential' or form == 'mixedoffice':
             building_bulks[building_bulks * df.addl_units.values == 0] = -999999
@@ -613,10 +615,10 @@ class SqFtProForma(object):
         total_costs = building_costs + df.land_cost.values
 
         # rent to make for the new building
-        building_revenue = building_bulks * (1-parking_sqft_ratio) * \
-            c.building_efficiency * df.weighted_rent.values
+        building_revenue = building_bulks * (1 - parking_sqft_ratio) * c.building_efficiency * df.weighted_rent.values \
+                             * (settings['res_sales_price_multiplier'] * resratio + settings['nonres_sales_price_multiplier'] * nonresratio)/ c.cap_rate
 
-        # profit for each form
+        # profit for each for
         profit = building_revenue - total_costs
 
         profit = profit.astype('float')

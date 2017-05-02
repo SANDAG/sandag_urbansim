@@ -94,6 +94,7 @@ def to_database(scenario=' ', rng=range(0, 0), urbansim_connection=get_connectio
                     df.new_bldg = df.new_bldg.astype(int)
 
                 elif x == 'jobs':
+                    df.index.names = ['job_id']
                     df = df[df.index > get_max_job_id()]
                 df['year'] = year
                 df['scenario_id'] = scenario_id[0]
