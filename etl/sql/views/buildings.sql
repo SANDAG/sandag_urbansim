@@ -836,21 +836,21 @@ WHERE ISNULL(usb.job_spaces, 0) + jobs > 0
 TRUNCATE TABLE urbansim.jobs;
 --WRITE TO TABLE
 WITH bldg as (
+SELECT 
+	ROW_NUMBER() OVER (PARTITION BY block_id ORDER BY row_space, job_spaces ) AS idx	--row_block
+	,block_id
+	,building_id
+FROM(
 	SELECT
-	  ROW_NUMBER() OVER (PARTITION BY block_id ORDER BY shape.STArea() DESC) idx
-	  ,building_id
-	  ,block_id
-	FROM
-		(SELECT
-		  building_id
-		  ,subparcel_id
-		  ,job_spaces
-		  ,block_id
-		  ,shape
-		FROM
-		urbansim.buildings
-		,spacecore.ref.numbers n
-		WHERE n.numbers <= job_spaces) bldgs
+		ROW_NUMBER() OVER (PARTITION BY building_id ORDER BY job_spaces)*100/job_spaces AS row_space
+		,block_id
+		,parcel_id
+		,building_id
+		,job_spaces
+	FROM urbansim.buildings
+	JOIN ref.numbers AS n ON n.numbers <= job_spaces
+	WHERE parcel_id = 61
+) x
 ),
 jobs AS (
 	SELECT 
