@@ -837,7 +837,7 @@ TRUNCATE TABLE urbansim.jobs;
 --WRITE TO TABLE
 WITH bldg as (
 SELECT 
-	ROW_NUMBER() OVER (PARTITION BY block_id ORDER BY row_space, job_spaces ) AS idx	--row_block
+	ROW_NUMBER() OVER (PARTITION BY parcel_id, block_id ORDER BY row_space, job_spaces ) AS idx	--row_block
 	,block_id
 	,building_id
 FROM(
@@ -849,7 +849,6 @@ FROM(
 		,job_spaces
 	FROM urbansim.buildings
 	JOIN ref.numbers AS n ON n.numbers <= job_spaces
-	WHERE parcel_id = 61
 ) x
 ),
 jobs AS (
