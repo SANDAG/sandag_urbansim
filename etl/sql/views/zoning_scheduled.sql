@@ -153,7 +153,8 @@ SET IDENTITY_INSERT urbansim.zoning_allowed_use OFF;
 
 CREATE TABLE urbansim.parcel_zoning_schedule2
 (
-    zoning_schedule_id int REFERENCES urbansim.zoning_schedule
+    pzs2_id int IDENTITY NOT NULL
+	,zoning_schedule_id int REFERENCES urbansim.zoning_schedule
     ,parcel_id int REFERENCES urbansim.parcels (parcel_id)
     ,zoning_id int REFERENCES urbansim.zoning (zoning_id)
     ,zone nvarchar(MAX)
