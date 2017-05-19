@@ -30,13 +30,13 @@ DECLARE @table nvarchar(35)
 DECLARE @pkey nvarchar(35)
 
 /*#################### SET TABLES, RUN ONE AT A TIME ####################*/
---/*
+/*
 --PARCELS TEST
 SET @source = 'spacecore.urbansim.parcels_test';	--SPACECORE DATABASE SCHEMA TABLE
 SET @target = 'urbansim.urbansim.parcels_test';		--URBANSIM DATABASE SCHEMA TABLE
 SET @table = 'parcels_test';						--URBANSIM TABLE
 SET @pkey = 'parcel_id';							--URBANSIM PRIMARY KEY
---*/
+*/
 /*
 --PARCEL
 SET @source = 'spacecore.urbansim.parcels';			--SPACECORE DATABASE SCHEMA TABLE
@@ -66,11 +66,11 @@ SET @table = 'job';									--URBANSIM TABLE
 SET @pkey = 'job_id';								--URBANSIM PRIMARY KEY
 */
 /*
---BUILDING_SQFT_PER_JOB
-SET @source = 'spacecore.urbansim.building_sqft_per_job';	--SPACECORE DATABASE SCHEMA TABLE
-SET @target = 'urbansim.urbansim.building_sqft_per_job';	--URBANSIM DATABASE SCHEMA TABLE
-SET @table = 'building_sqft_per_job';						--URBANSIM TABLE
-SET @pkey = 'parcel_id';									--URBANSIM PRIMARY KEY
+--BUILDING_SQFT_PER_JOB																							--???
+SET @source = 'spacecore.urbansim.building_sqft_per_job';		--SPACECORE DATABASE SCHEMA TABLE
+SET @target = 'urbansim.urbansim.building_sqft_per_job';		--URBANSIM DATABASE SCHEMA TABLE
+SET @table = 'building_sqft_per_job';							--URBANSIM TABLE
+SET @pkey = 'parcel_id';										--URBANSIM PRIMARY KEY
 */
 /*
 --NETWORK NODE
@@ -88,10 +88,46 @@ SET @pkey = 'edge';									--URBANSIM PRIMARY KEY
 */
 /*
 --ZONING
+SET @source = 'spacecore.urbansim.parcel_zoning_schedule2';		--SPACECORE DATABASE SCHEMA TABLE
+SET @target = 'urbansim.urbansim.parcel_zoning_schedule2';		--URBANSIM DATABASE SCHEMA TABLE
+SET @table = 'parcel_zoning_schedule2';							--URBANSIM TABLE
+SET @pkey = 'pzs2_id';											--URBANSIM PRIMARY KEY
+*/
+/*
+--ZONING
+SET @source = 'spacecore.urbansim.zoning_allowed_use';			--SPACECORE DATABASE SCHEMA TABLE
+SET @target = 'urbansim.urbansim.zoning_allowed_use';			--URBANSIM DATABASE SCHEMA TABLE
+SET @table = 'zoning_allowed_use';								--URBANSIM TABLE
+SET @pkey = 'zoning_allowed_use_id';							--URBANSIM PRIMARY KEY
+*/
+/*
+--ZONING
 SET @source = 'spacecore.urbansim.zoning';			--SPACECORE DATABASE SCHEMA TABLE
 SET @target = 'urbansim.urbansim.zoning';			--URBANSIM DATABASE SCHEMA TABLE
 SET @table = 'zoning';								--URBANSIM TABLE
-SET @pkey = 'zone';									--URBANSIM PRIMARY KEY-*/
+SET @pkey = 'zoning_id';							--URBANSIM PRIMARY KEY
+*/
+/*
+--ZONING
+SET @source = 'spacecore.urbansim.zoning_schedule';				--SPACECORE DATABASE SCHEMA TABLE
+SET @target = 'urbansim.urbansim.zoning_schedule';				--URBANSIM DATABASE SCHEMA TABLE
+SET @table = 'zoning_schedule';									--URBANSIM TABLE
+SET @pkey = 'zoning_schedule_id';								--URBANSIM PRIMARY KEY
+*/
+/*
+--ZONING
+SET @source = 'spacecore.urbansim.zoning_parcels';				--SPACECORE DATABASE SCHEMA TABLE
+SET @target = 'urbansim.urbansim.zoning_parcels';				--URBANSIM DATABASE SCHEMA TABLE
+SET @table = 'zoning_parcels';									--URBANSIM TABLE
+SET @pkey = 'zoning_parcels_id';								--URBANSIM PRIMARY KEY
+*/
+--/*
+--SCHEDULED DEVELOPMENT
+SET @source = 'spacecore.urbansim.scheduled_development_parcels';	--SPACECORE DATABASE SCHEMA TABLE
+SET @target = 'urbansim.urbansim.scheduled_development_parcel';		--URBANSIM DATABASE SCHEMA TABLE
+SET @table = 'scheduled_development_parcel';						--URBANSIM TABLE
+SET @pkey = 'parcel_id';											--URBANSIM PRIMARY KEY
+--*/
 
 --EXEC('SELECT * FROM '+ @source)
 
@@ -108,7 +144,12 @@ END
 EXEC(
 	'SELECT * INTO ' + @target + ' FROM ' + @source
 )
-
+/*
+--SET ID COLUMN TO NOT NULL SO WE CAN CREATE  PRIMARY KEY
+EXEC(
+	'ALTER TABLE ' + @target + ' ALTER COLUMN ' + @pkey + ' int NOT NULL' 
+)
+*/
 --CREATE PRIMARY KEY SO WE CAN CREATE SPATIAL INDEXES
 EXEC(
 	'ALTER TABLE ' + @target + ' ADD CONSTRAINT pk_urbansim_' + @table +'_'+ @pkey + ' PRIMARY KEY CLUSTERED (' + @pkey + ')' 
