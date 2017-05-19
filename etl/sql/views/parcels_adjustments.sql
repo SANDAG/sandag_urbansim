@@ -106,3 +106,9 @@ SET
 FROM 
 	urbansim.buildings AS usb
 	JOIN #adjust AS a ON usb.parcel_id = a.parcel_id
+
+--BUILDING CLEANUP
+--SELECT *
+DELETE
+FROM urbansim.buildings
+WHERE parcel_id =712885
