@@ -121,14 +121,55 @@ SET @target = 'urbansim.urbansim.zoning_parcels';				--URBANSIM DATABASE SCHEMA 
 SET @table = 'zoning_parcels';									--URBANSIM TABLE
 SET @pkey = 'zoning_parcels_id';								--URBANSIM PRIMARY KEY
 */
---/*
+/*
 --SCHEDULED DEVELOPMENT
 SET @source = 'spacecore.urbansim.scheduled_development_parcels';	--SPACECORE DATABASE SCHEMA TABLE
 SET @target = 'urbansim.urbansim.scheduled_development_parcel';		--URBANSIM DATABASE SCHEMA TABLE
 SET @table = 'scheduled_development_parcel';						--URBANSIM TABLE
 SET @pkey = 'parcel_id';											--URBANSIM PRIMARY KEY
---*/
-
+*/
+/*
+--REF DEVELOPMENT TYPE
+SET @source = 'spacecore.ref.development_type';		--SPACECORE DATABASE SCHEMA TABLE
+SET @target = 'urbansim.ref.development_type';		--URBANSIM DATABASE SCHEMA TABLE
+SET @table = 'development_type';					--URBANSIM TABLE
+SET @pkey = 'development_type_id';					--URBANSIM PRIMARY KEY
+*/
+/*
+--REF DEVELOPMENT TYPE LU CODE
+SET @source = 'spacecore.ref.development_type_lu_code';		--SPACECORE DATABASE SCHEMA TABLE
+SET @target = 'urbansim.ref.development_type_lu_code';		--URBANSIM DATABASE SCHEMA TABLE
+SET @table = 'development_type_lu_code';					--URBANSIM TABLE
+SET @pkey = 'lu_code';					--URBANSIM PRIMARY KEY
+*/
+/*
+--REF DEVELOPMENT TYPE LU CODE
+SET @source = 'spacecore.ref.development_type_lu_code';		--SPACECORE DATABASE SCHEMA TABLE
+SET @target = 'urbansim.ref.development_type_lu_code';		--URBANSIM DATABASE SCHEMA TABLE
+SET @table = 'development_type_lu_code';					--URBANSIM TABLE
+SET @pkey = 'lu_code';					--URBANSIM PRIMARY KEY
+*/
+/*
+--REF JURISDICTION
+SET @source = 'spacecore.ref.jurisdiction';		--SPACECORE DATABASE SCHEMA TABLE
+SET @target = 'urbansim.ref.jurisdiction';		--URBANSIM DATABASE SCHEMA TABLE
+SET @table = 'jurisdiction';					--URBANSIM TABLE
+SET @pkey = 'jurisdiction_id';					--URBANSIM PRIMARY KEY
+*/
+/*
+--REF LU CODE
+SET @source = 'spacecore.ref.lu_code';		--SPACECORE DATABASE SCHEMA TABLE
+SET @target = 'urbansim.ref.lu_code';		--URBANSIM DATABASE SCHEMA TABLE
+SET @table = 'lu_code';					--URBANSIM TABLE
+SET @pkey = 'lu_code';					--URBANSIM PRIMARY KEY
+*/
+/*
+--REF SR13 CAPACITY
+SET @source = 'spacecore.ref.sr13_capacity';		--SPACECORE DATABASE SCHEMA TABLE
+SET @target = 'urbansim.ref.sr13_capacity';		--URBANSIM DATABASE SCHEMA TABLE
+SET @table = 'sr13_capacity';					--URBANSIM TABLE
+SET @pkey = 'sr13_capacity_id';					--URBANSIM PRIMARY KEY
+*/
 --EXEC('SELECT * FROM '+ @source)
 
 /*#################### BEGIN LOAD ####################*/
