@@ -25,7 +25,7 @@ CREATE TABLE urbansim.parcels (
     ,distance_to_onramp float
 	,distance_to_coast float
     ,distance_to_transit float
-    --,apn nvarchar(10) --This doesn't really work for condo lots
+    ,apn nvarchar(8) --This doesn't really work for condo lots
     ,shape geometry
     ,centroid geometry --Placeholder for spatial operations
 )
@@ -289,19 +289,25 @@ FROM
 WHERE
 	development_type_id = 29
 
-/*
+--/*
 --SET APN
 UPDATE
 	usp
 SET
-	usp.apn  = gip.apn
+	usp.apn  = lcp.apn
 FROM 
 	urbansim.parcels usp
-	LEFT JOIN (SELECT MIN(APN) apn
-				,parcelid
-				--,SHAPE.STArea() / 43560. ACRES
-				FROM GIS.parcels
-				WHERE APN IS NOT NULL
-				GROUP BY parcelid) gip
-	ON usp.parcel_id = gip.PARCELID 
-*/
+	LEFT JOIN (SELECT 
+					APN
+					,parcelid
+				FROM(
+					SELECT
+						APN
+						,parcelid
+						,ROW_NUMBER() OVER(PARTITION BY parcelid ORDER BY APN) AS row_num
+					FROM GIS.ludu2015
+					WHERE APN > 0) x
+				WHERE row_num = 1
+				) lcp
+	ON usp.parcel_id = lcp.PARCELID 
+--*/

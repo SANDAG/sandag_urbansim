@@ -190,7 +190,7 @@ FROM
 		GROUP BY parcel_id) b
 	 ON usb.parcel_id = b.parcel_id
 	LEFT JOIN
-		(SELECT p.parcelID
+		(SELECT lc.parcelID
 			--,LEFT(par.apn,8) apn8
 			,SUM([CURRENT_IMPS]) imps
 			,SUM([TOTAL_LVG_AREA]+[ADDITION_AREA]) sqft
@@ -200,14 +200,9 @@ FROM
 				END ) year_built
 			,COUNT(*) num
 		FROM spacecore.input.assessor_par par
-		JOIN
-			(SELECT par.apn
-				,parcelID
-			FROM GIS.parcels AS p				--ASSESOR PARCELS
-			JOIN input.assessor_par AS par
-				ON p.APN = par.APN) p
-		ON p.apn = par.apn
-		GROUP BY p.parcelID
+		JOIN GIS.ludu2015 AS lc											--APN TO PARCELID FROM LUDU
+		ON lc.APN = LEFT(par.APN, 8)
+		GROUP BY lc.parcelID
 		) a
 	ON usb.parcel_id = a.parcelID
 
