@@ -5,7 +5,7 @@ WHERE parcelId NOT IN (SELECT parcelID FROM [gis].[ludu2015])
 
 
 SELECT TOP 100 * FROM [spacecore].[input].[forecast_landcore]
-SELECT TOP 100 * FROM [regional_forecast].[sr13_final].[capacity]
+SELECT TOP 100 * FROM [regional_forecast].[sr13_final].[capacity] WHERE scenario = 0 AND Increment =2012 AND LCKey = 458945
 
 /*
 --PARCEL LEVEL
@@ -55,34 +55,34 @@ SELECT --COUNT(*), SUM(du) AS du, SUM(cap_hs) AS cap_hs
 		,shape
 --INTO spacecore.staging.sr13_missing_LCKey
 FROM sr13
-WHERE parcelID NOT IN (SELECT parcelID FROM GIS.ludu2015)
+WHERE parcelID NOT IN (SELECT DISTINCT parcelID FROM GIS.ludu2015)
 ORDER BY row_num DESC, parcelID DESC
 
 
 --LCKey LEVEL centroid
-WITH ludu12 AS(
+WITH ludu15 AS(
 	SELECT sr13.[LCKey]
-		  ,ludu12.shape AS centroid
+		  ,ludu15.centroid
 	  FROM [spacecore].[staging].[sr13_missing_LCKey] sr13
-	JOIN [GIS].[ludu2012points] ludu12
-	ON sr13.LCKey = ludu12.LCKey
-	--ORDER BY ludu12.du
+	JOIN [GIS].[ludu2015points] ludu15
+	ON sr13.LCKey = ludu15.LCKey
+	--ORDER BY ludu15.du
 ),
 cent AS(
 	SELECT LCKey
 		,sr13.shape.STCentroid() AS centroid
 	FROM [spacecore].[staging].[sr13_missing_LCKey] sr13
-	WHERE LCKey NOT IN (SELECT LCKey FROM [GIS].[ludu2012points])
+	WHERE LCKey NOT IN (SELECT LCKey FROM [GIS].[ludu2015points])
 )
 SELECT sr13.LCKey
 	,sr13.[parcelID]
 	,sr13.[du]
 	,sr13.[cap_hs]
 	,sr13.[shape]
-	,COALESCE(ludu12.centroid, cent.centroid) AS centroid
-INTO staging.sr13_missing_LCKey_centroid
+	,COALESCE(ludu15.centroid, cent.centroid) AS centroid
+--INTO staging.sr13_missing_LCKey_centroid
 FROM [spacecore].[staging].[sr13_missing_LCKey] sr13
-LEFT JOIN ludu12 ON sr13.LCKey = ludu12.LCKey
+LEFT JOIN ludu15 ON sr13.LCKey = ludu15.LCKey
 LEFT JOIN cent ON sr13.LCKey = cent.LCKey
 
 
@@ -111,11 +111,15 @@ SELECT
 	,match.subParcel
 	,sr13.du
 	,sr13.cap_hs
-INTO [staging].[sr13_missing_match]
+--INTO [staging].[sr13_missing_match]
 FROM [staging].[sr13_missing_LCKey_centroid] AS sr13
 JOIN match ON sr13.LCKey = match.LCKey
 
 --CHECK TABLE AND FIX
+SELECT * 
+FROM [spacecore].[staging].[sr13_missing_match]
+WHERE subParcel IS NULL
+
 UPDATE [spacecore].[staging].[sr13_missing_match]
 SET subParcel = ######
 WHERE subParcel IS NULL
@@ -149,9 +153,9 @@ FROM [input].[forecast_landcore] AS ludu
 			FROM [regional_forecast].[sr13_final].[capacity]
 			WHERE scenario = 0 AND Increment =2012) AS cap
 		ON ludu.LCKey = cap.LCKey
-WHERE parcelId IN (SELECT parcelID FROM [gis].[ludu2015])
+WHERE parcelId IN (SELECT DISTINCT parcelID FROM [gis].[ludu2015])
 GROUP BY parcelId
-
+;
 
 --UPDATE LCKey TO parcel FOR RECORDS NOT FOUND IN ludu2015 AND ALREADY ADDED
 WITH sr13 AS(
@@ -252,13 +256,15 @@ SET
 					END
 
 
--- REVISE PARCELS WHERE cap_hs CHANGED
+-- REVIEW PARCELS WHERE cap_hs CHANGED
 SELECT * FROM ref.sr13capacity_ludu2015
 WHERE sr13_cap_hs_with_negatives <> sr13_cap_hs_growth_adjusted
+AND sr13_cap_hs_growth_adjusted > 1
+--WHERE sr13_cap_hs_with_negatives - sr13_cap_hs_growth_adjusted > 1
 ORDER BY sr13_cap_hs_growth_adjusted DESC
+;
 
-
---REVISE PARCELS WITH LARGE cap_hs BY CITY
+--REVIEW PARCELS WITH LARGE cap_hs BY CITY
 WITH c AS(
 	SELECT * FROM ref.sr13capacity_ludu2015 AS c
 	JOIN (SELECT parcelID, mgra FROM gis.ludu2015) AS m
@@ -271,19 +277,26 @@ SELECT
 FROM c
 JOIN OPENQUERY(sql2014b8, 'SELECT * FROM [lis].[gis].[MGRA13]') AS m
 	ON c.mgra = m.mgra
-WHERE m.city IN(6, 16)
-ORDER BY c.sr13_cap_hs_with_negatives DESC
+WHERE m.city IN(7, 16)
+ORDER BY c.sr13_cap_hs_growth_adjusted DESC
 
 
 /*** ADJUST ***/
 --TO ADJUST cap_hs TO 0, CREATE .csv FILE WITH parcel_id
+IF OBJECT_ID('staging.sr13_cap_adjust') IS NOT NULL
+    DROP TABLE staging.sr13_cap_adjust
+GO
+;
 CREATE TABLE staging.sr13_cap_adjust (
 parcel_id int NOT NULL
 );
 
+SELECT * FROM staging.sr13_cap_adjust
 --ADD parcel_id THAT ARE NOT IN ORIGINAL CAPACITY, INTO .csv
+TRUNCATE TABLE staging.sr13_cap_adjust
 
 --ADJUST [sr13_cap_hs_growth_adjusted] AND TAKE NOTE [adjusted_cap_hs]
+--LOAD REVISED
 BULK INSERT staging.sr13_cap_adjust
 FROM '\\nasb8\Shared\TEMP\esa\cap_hs\cap_hs_sr13_to_ludu15_adjust.csv'	--NETWORK
 WITH
@@ -293,6 +306,17 @@ WITH
 	ROWTERMINATOR = '\n',   --Use to shift the control to next row
 	TABLOCK
 )
+
+/*** FOR CONSISTENCY WITH LUDU2015, REMOVE FROM ADJUST TABLE ALL RECORDS WHERE CURRENT DU IS 0 ***/
+--
+SELECT cap.parcel_id
+FROM staging.sr13_cap_adjust AS cap
+WHERE EXISTS (SELECT parcelID parcel_id, SUM(du) du FROM gis.ludu2015 WHERE cap.parcel_id = gis.ludu2015.parcelID GROUP BY parcelID HAVING SUM(du) = 0)
+
+DELETE cap
+FROM staging.sr13_cap_adjust AS cap
+WHERE EXISTS (SELECT parcelID parcel_id, SUM(du) du FROM gis.ludu2015 WHERE cap.parcel_id = gis.ludu2015.parcelID GROUP BY parcelID HAVING SUM(du) = 0)
+
 
 --JOIN TABLES FOR ADDITIONAL parcel_id
 SELECT
@@ -336,13 +360,41 @@ FROM ref.sr13capacity_ludu2015 AS c
 FULL OUTER JOIN staging.sr13_cap_adjust AS a
 ON c.ludu2015_parcel_id = a.parcel_id
 WHERE a.parcel_id IS NOT NULL	--DO FOR UPDATE TABLE
+;
+-- CHECK FOR AND DELETE DUPLICATES [parcel_id]
+WITH r AS(
+	SELECT 
+		ludu2015_parcel_id AS parcel_id
+		,ROW_NUMBER() OVER(PARTITION BY ludu2015_parcel_id ORDER BY ludu2015_parcel_id) AS rownum
+	FROM ref.sr13capacity_ludu2015
+	--ORDER BY rownumber DESC, ludu2015_parcel_id
+)
+--SELECT
+--	parcel_id
+--	,rownum
+DELETE
+FROM r
+WHERE rownum > 1
 
+--FIX ALL WHERE CAP WAS 2 AND 1 WAS BUILT
+SELECT *
+FROM ref.sr13capacity_ludu2015
+WHERE sr13_du = 0
+	AND sr13_cap_hs_with_negatives = 2
+	AND ludu2015_du = 1
 
-SELECT SUM([sr13_cap_hs_growth_adjusted])	--383,235
-FROM [ref].[sr13capacity_ludu2015]
+UPDATE ref.sr13capacity_ludu2015
+SET sr13_cap_hs_growth_adjusted = 0
+	,[revised] = 'Y'
+WHERE sr13_du = 0
+	AND sr13_cap_hs_with_negatives = 2
+	AND ludu2015_du = 1
 
 
 /* CHECKS */
+SELECT SUM([sr13_cap_hs_growth_adjusted])
+FROM [ref].[sr13capacity_ludu2015]
+
 SELECT 
 	SUM(sr13_du) AS sr13_du
 	,SUM(sr13_cap_hs_with_negatives) AS sr13_cap_hs_with_negatives
@@ -353,3 +405,9 @@ FROM ref.sr13capacity_ludu2015
 SELECT * FROM ref.sr13capacity_ludu2015
 WHERE sr13_du <> ludu2015_du
 
+SELECT * FROM ref.sr13capacity_ludu2015
+WHERE sr13_cap_hs_with_negatives <> sr13_cap_hs_growth_adjusted
+
+
+SELECT * FROM ref.sr13capacity_ludu2015
+WHERE revised = 'Y'
