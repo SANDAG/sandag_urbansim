@@ -51,12 +51,23 @@ FROM
 --UPDATE CENTROID FROM LARGEST SUBPARCEL
 WITH cent AS(
 	SELECT
-		ROW_NUMBER() OVER (PARTITION BY ParcelID ORDER BY ParcelID, acres DESC) row_id
+		ROW_NUMBER() OVER (PARTITION BY ParcelID ORDER BY lu_case, acres DESC) row_id
 		,ParcelID
 		,LCKey
 		,centroid
 		,acres
-	FROM GIS.ludu2015points
+	FROM
+		(SELECT
+			ParcelID
+			,LCKey
+			,lu
+			,CASE WHEN lu IN(4110, 4112, 4117, 4118) THEN 2
+				ELSE 1
+			END AS lu_case				 
+			,centroid
+			,acres
+		FROM GIS.ludu2015points) x
+
 )
 UPDATE
 	usp
