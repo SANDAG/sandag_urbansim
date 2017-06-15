@@ -4,7 +4,7 @@ OUTPUT:
 [urbansim].[jobs]
 [urbansim].[buildings]
 */
-*
+
 USE spacecore
 
 IF OBJECT_ID('urbansim.buildings') IS NOT NULL
@@ -508,7 +508,7 @@ INNER JOIN (SELECT SUM(residential_units) units, mgra FROM urbansim.buildings IN
 WHERE hh > units
 
 /*######################################## EMP SPACE PROCESSING ########################################*/
-DECLARE @employment_vacancy float = 0.1;
+--DECLARE @employment_vacancy float = 0.1;
 
 /*** INSERT PLACEHOLDER FOR MILITARY EMP AT MGRA LEVEL ***/
 --INSERT BUILDING IN MGRA WHERE MIL EMP AND CURRENTLY NO BUILDING
@@ -548,7 +548,7 @@ WHERE mgra13 NOT IN 									--CURRENTLY NO BUILDING
 					AND COALESCE(residential_units, 0) = 0
 					AND COALESCE(residential_sqft, 0) = 0
 					)
-
+;
 --SELECT LARGEST BUILDING FROM MGRA AND OVERWRITE DATA SOURCE TO MIL
 WITH mgra_b AS(
 	SELECT building_id, mgra_id, data_source, assign_jobs
@@ -644,7 +644,7 @@ FROM urbansim.buildings AS usb
 JOIN gis.ludu2015 AS lc ON usb.centroid.STWithin(lc.shape) = 1
 JOIN ref.development_type_lu_code dev ON lc.lu = dev.lu_code
 WHERE data_source = 'PLACEHOLDER_BLOCK'
-
+;
 
 /*#################### ASSIGN JOB_SPACES FROM EMP ####################*/
 DECLARE @employment_vacancy float = 0.1;
@@ -675,7 +675,7 @@ ON usb.subparcel_id = sb.subparcel_id
 ;
 
 /* ##### ASSIGN JOB_SPACES TO MULTIPLE BUILDING SUBPARCELS ##### */
-DECLARE @employment_vacancy float = 0.1;
+--DECLARE @employment_vacancy float = 0.1;
 -----MAY WANT TO THINK ABOUT EXCLUDING REALLY SMALL BUILDINGS FROM THIS QUERY
 WITH bldgs AS (
   SELECT
@@ -717,7 +717,7 @@ FROM (SELECT block_id, SUM(COALESCE(job_spaces, 0)) AS job_spaces FROM urbansim.
 JOIN (SELECT block_id, COUNT(*) AS job_spaces FROM input.jobs_wac_2013 GROUP BY block_id) AS wac
 	ON usb.block_id = wac.block_id
 WHERE wac.job_spaces > usb.job_spaces
-
+;
 --UPDATE JOB SPACES TO ACCOMMODATE WAC
 WITH b AS(
 	SELECT building_id, block_id, job_sp, data_source
