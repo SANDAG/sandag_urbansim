@@ -157,7 +157,7 @@ SET
 	usb.mgra_id = lc.mgra
 	,usb.development_type_id = dev.development_type_id
 FROM
-	(SELECT * FROM urbansim.buildings WHERE assign_jobs = 1) usb		--DO NOT USE MIL/PF BUILDINGS
+	(SELECT * FROM urbansim.buildings WHERE assign_jobs = 1 AND mgra_id IS NULL AND development_type_id IS NULL) usb		--DO NOT USE MIL/PF BUILDINGS
 JOIN gis.ludu2015 lc
 ON usb.subparcel_id = lc.subParcel
 JOIN ref.development_type_lu_code dev											--_XX WILL NOT JOIN TO LANDCORE WHEN NO MATCH IN LU
@@ -549,35 +549,56 @@ WHERE mgra13 NOT IN 									--CURRENTLY NO BUILDING
 					AND COALESCE(residential_sqft, 0) = 0
 					)
 ;
---SELECT LARGEST BUILDING FROM MGRA AND OVERWRITE DATA SOURCE TO MIL
-WITH mgra_b AS(
-	SELECT building_id, mgra_id, data_source, assign_jobs
+--SELECT BUILDING FROM MGRA, SORTED BY DEVELOPMENT TYPE AND FROM LARGEST, AND OVERWRITE DATA SOURCE TO MIL
+WITH mgra_b AS (
+	SELECT building_id, mgra_id, data_source, assign_jobs,development_type_id
 	FROM (
-		SELECT ROW_NUMBER() OVER (PARTITION BY mgra_id ORDER BY shape.STArea() DESC) AS row_num
+		SELECT 
+			ROW_NUMBER() OVER(PARTITION BY mgra_id ORDER BY dev_case, area DESC) row_num
 			,building_id
 			,mgra_id
 			,data_source
 			,assign_jobs
-			,residential_units
-		FROM urbansim.buildings
-		WHERE data_source IN ('Sampled footprint', 'SANDAG BLDG FOOTPRINT', 'SANDAG Camp Pendleton Digitized Bldg', 'MilitaryEmp_MGRAs')		--CURRENTLY NO BUILDING	--INCLUDE ADDED MIL
+			,development_type_id
+			,dev_case
+			,area
+		FROM
+			(SELECT
+				building_id
+				,mgra_id
+				,data_source
+				,assign_jobs
+				,development_type_id
+				,shape
+				,CAST(shape.STArea() AS int) AS area
+				,CASE development_type_id
+					WHEN 29 THEN 1			--Military Reservation
+					WHEN 23 THEN 2			--Military Residential (Non GQ)
+					WHEN 16 THEN 3			--Government Operations
+					WHEN 3 THEN 4			--Heavy Industry
+					WHEN 2 THEN 5			--Light Industrial
+					WHEN 4 THEN 6			--Office
+					WHEN 6 THEN 7			--Depot
+					WHEN 5 THEN 8			--Retail
+					WHEN 32 THEN 7			--GQ - Non-Institutional - Other
+					ELSE 10
+				END AS dev_case
+			FROM urbansim.buildings
+			WHERE data_source IN ('Sampled footprint', 'SANDAG BLDG FOOTPRINT', 'SANDAG Camp Pendleton Digitized Bldg', 'MilitaryEmp_MGRAs')		--CURRENTLY NO BUILDING	--INCLUDE ADDED MIL
 			AND development_type_id NOT IN (19, 20, 21)		--NON RES>>
 			AND COALESCE(residential_units, 0) = 0
 			AND COALESCE(residential_sqft, 0) = 0
 			AND mgra_id IN (SELECT mgra13 FROM gis.buildings_military_emp_mgra)
+			) AS usb
+		JOIN GIS.buildings_military_emp_mgra AS mil
+			ON usb.mgra_id = mil.mgra13
 		) x
 	WHERE row_num = 1
 )
-/*
-SELECT mgra_b.building_id, mgra_b.mgra_id, mgra_b.data_source, mgra_b.assign_jobs, residential_units
-FROM urbansim.buildings usb
-JOIN mgra_b ON usb.building_id = mgra_b.building_id
-*/
 UPDATE
 	usb
 SET
-	data_source = 'MilitaryEmp_MGRAs'
-	,subparcel_assignment = 'PLACEHOLDER_MIL'
+	subparcel_assignment = 'PLACEHOLDER_MIL'
 	,assign_jobs = 0
 FROM
 	urbansim.buildings AS usb
