@@ -534,7 +534,7 @@ SELECT
 	,employment					--job_spaces
 	,ogr_geometry.STCentroid().STBuffer(1)				--shape
 	,ogr_geometry.STCentroid()	--centroid
-	,'MilitaryEmp_MGRAs'		--dataSource
+	,'PLACEHOLDER_MilitaryEmp_MGRAs'		--dataSource
 	,'PLACEHOLDER_MIL'			--subparcel_assignment
 	,0							--assign_jobs
 FROM gis.buildings_military_emp_mgra AS bme
@@ -584,7 +584,7 @@ WITH mgra_b AS (
 					ELSE 10
 				END AS dev_case
 			FROM urbansim.buildings
-			WHERE data_source IN ('Sampled footprint', 'SANDAG BLDG FOOTPRINT', 'SANDAG Camp Pendleton Digitized Bldg', 'MilitaryEmp_MGRAs')		--CURRENTLY NO BUILDING	--INCLUDE ADDED MIL
+			WHERE data_source IN ('Sampled footprint', 'SANDAG BLDG FOOTPRINT', 'SANDAG Camp Pendleton Digitized Bldg', 'PLACEHOLDER_MilitaryEmp_MGRAs')		--CURRENTLY NO BUILDING	--INCLUDE ADDED MIL
 			AND development_type_id NOT IN (19, 20, 21)		--NON RES>>
 			AND COALESCE(residential_units, 0) = 0
 			AND COALESCE(residential_sqft, 0) = 0
