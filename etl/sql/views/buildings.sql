@@ -880,6 +880,80 @@ SELECT COUNT(*) FROM spacecore.urbansim.jobs
 SELECT COUNT(*) FROM input.jobs_wac_2012_2016 WHERE yr = 2015 AND job_id NOT IN (SELECT job_id FROM urbansim.jobs)
 
 
+/*##### ALLOCATE GOV JOBS BY LOCATION #####*/
+WITH spaces as (
+	SELECT *
+	FROM urbansim.buildings
+	--WHERE data_source = 'SANDAG Public Facility 2016 Geocoding 042617'		--USE BUILDINGS THAT ARE PUBLIC FACILITIES
+	--OR development_type_id IN(8, 9, 10 ,16, 29)								--USE BUILDINGS WITH COMPATIBLE DEV TYPES
+
+	WHERE development_type_id NOT IN(7, 19, 20, 21, 22, 28)						--DO NOT USE BUILDINGS RESIDENTIAL AND SIMILAR
+	AND subparcel_assignment <> 'PLACEHOLDER_MIL'								--DO NOT USE MILITARY PLACEHOLDERS
+),
+jobs AS (
+	SELECT *
+	FROM input.vi_jobs_gov_2012_2016
+	WHERE yr = 2015
+),
+jobs_loc AS (
+	SELECT id.id, shape
+	FROM (	
+		SELECT id, MIN(job_id) AS job_id
+		FROM input.vi_jobs_gov_2012_2016
+		WHERE yr = 2015
+		GROUP BY id
+		) AS id
+	JOIN (
+		SELECT id, job_id, shape
+		FROM input.vi_jobs_gov_2012_2016
+		WHERE yr = 2015
+		) AS loc
+		ON id.job_id = loc.job_id
+), match AS(
+	SELECT row_id, id, building_id, dist
+		, development_type_id, data_source, subparcel_assignment
+	FROM(
+		SELECT
+			ROW_NUMBER() OVER (PARTITION BY jobs_loc.id ORDER BY jobs_loc.id, jobs_loc.shape.STDistance(spaces.shape)) row_id
+			,jobs_loc.id
+			,spaces.building_id
+			,jobs_loc.shape.STDistance(spaces.shape) AS dist
+			, development_type_id, data_source, subparcel_assignment
+		FROM jobs_loc
+		JOIN spaces
+			ON jobs_loc.shape.STBuffer(15000).STIntersects(spaces.shape) = 1	--CHECK IF BUFFERDIST IS SUFFICIENT
+		) x
+	WHERE row_id = 1
+	--ORDER BY dist DESC
+)
+--INSERT INTO urbansim.jobs (job_id, sector_id, building_id)
+SELECT j.job_id, usb.building_id, sector_id--, j.id
+FROM urbansim.buildings AS usb
+JOIN (
+	SELECT m.id, m.building_id, j.job_id, j.sector_id
+	FROM match AS m
+	RIGHT JOIN (SELECT *  FROM input.vi_jobs_gov_2012_2016 WHERE yr = 2015) AS j
+	ON m.id = j.id
+	) AS j
+	ON usb.building_id = j.building_id
+ORDER BY j.id, j.job_id
+
+
+/***#################### WHERE SQFT IS NULL, DERIVE FROM UNITS, JOB_SPACES ####################***/
+SELECT * FROM urbansim.buildings 
+WHERE assign_jobs = 1
+	AND ISNULL([residential_sqft], 0) + ISNULL([non_residential_sqft], 0) = 0
+	AND ISNULL([residential_units], 0) + ISNULL([job_spaces], 0) > 0
+
+--UPDATE
+UPDATE usb
+SET [floorspace_source] = 'units_jobs_derived'
+	,[residential_sqft] = [residential_units] * 400
+	,[non_residential_sqft] = [job_spaces] * 400
+FROM (SELECT * FROM urbansim.buildings WHERE assign_jobs = 1) usb		--DO NOT USE MIL/PF BUILDINGS
+WHERE ISNULL([residential_sqft], 0) + ISNULL([non_residential_sqft], 0) = 0
+	AND ISNULL([residential_units], 0) + ISNULL([job_spaces], 0) > 0
+;
 /*** PARCELS DATA ***/
 --GET PARCEL DATA: JURISDICTION ID
 UPDATE
