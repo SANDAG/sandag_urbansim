@@ -79,7 +79,7 @@ INSERT INTO urbansim.buildings WITH (TABLOCK) (
 	,parcel_id
 	,development_type_id
 	,mgra_id
-	,job_spaces
+	--,job_spaces
 	,shape
 	,centroid
 	,data_source
@@ -92,7 +92,7 @@ SELECT
 	,bpf.parcelid				--parcelID
 	,dev.development_type_id	--development_type_id
 	,mgra13						--mgra_id
-	,emp						--job_spaces
+	--,emp						--job_spaces
 	,ogr_geometry				--shape
 	,ogr_geometry.STCentroid()	--centroid
 	,datasource					--dataSource	--"SANDAG Public Facility 2016 Geocoding 042617"
@@ -815,69 +815,79 @@ SELECT COUNT(*) FROM input.jobs_wac_2012_2016 WHERE yr = 2015 AND job_id NOT IN 
 
 
 /*##### RUN 2/2 - ALLOCATE REMAINING WAC JOBS TO NEAREST BLOCK #####*/
-WITH near AS(
+WITH spaces AS(
+	SELECT
+		ROW_NUMBER() OVER (ORDER BY block_id, building_id) AS js_id
+		,block_id
+		,parcel_id
+		,building_id
+		,job_spaces
+		,shape
+	FROM(SELECT usb.block_id
+			,usb.parcel_id
+			,usb.building_id
+			,usb.job_spaces - COALESCE(jsu.job_spaces_used, 0) AS job_spaces
+			,usb.shape
+		FROM (SELECT * FROM urbansim.buildings WHERE assign_jobs = 1) usb		--DO NOT USE MIL/PF BUILDINGS
+		LEFT JOIN(SELECT building_id
+					,COUNT(building_id) AS job_spaces_used
+				FROM urbansim.jobs
+				GROUP BY building_id) AS jsu
+			ON usb.building_id = jsu.building_id
+		) AS usb
+	JOIN ref.numbers AS n ON n.numbers <= job_spaces
+	WHERE job_spaces > 0
+)
+, jobs AS(
+	SELECT 
+		ROW_NUMBER() OVER (PARTITION BY block_id ORDER BY job_id) idx
+		,job_id
+		,block_id
+		,sector_id
+		,b.Shape.STCentroid() AS cent
+	FROM (SELECT *
+		FROM input.jobs_wac_2012_2016
+		WHERE yr = 2015
+		AND job_id NOT IN(SELECT job_id FROM urbansim.jobs)) w
+	JOIN ref.blocks AS b
+	ON w.block_id = b.BLOCKID10
+)
+, near AS(
 	SELECT
 		ROW_NUMBER() OVER (PARTITION BY jobs.job_id ORDER BY jobs.job_id, jobs.cent.STDistance(spaces.shape)) row_id
 		,jobs.job_id
 		,jobs.sector_id
 		,spaces.building_id
-	FROM (
-			SELECT 
-				ROW_NUMBER() OVER (PARTITION BY block_id ORDER BY row_space, job_spaces ) AS idx	--row_block
-				,block_id
-				,building_id
-				,shape
-			FROM(
-				SELECT
-					ROW_NUMBER() OVER (PARTITION BY building_id ORDER BY job_spaces)*100/job_spaces AS row_space
-					,block_id
-					,parcel_id
-					,building_id
-					,job_spaces
-					,shape
-				FROM(SELECT usb.block_id
-						,usb.parcel_id
-						,usb.building_id
-						,usb.job_spaces - COALESCE(jsu.job_spaces_used, 0) AS job_spaces
-						,usb.shape
-					FROM (SELECT * FROM urbansim.buildings WHERE assign_jobs = 1) usb		--DO NOT USE MIL/PF BUILDINGS
-					LEFT JOIN(SELECT building_id
-								,COUNT(building_id) AS job_spaces_used
-							FROM urbansim.jobs
-							GROUP BY building_id) AS jsu
-						ON usb.building_id = jsu.building_id
-					WHERE job_spaces > 0) AS usb
-				JOIN ref.numbers AS n ON n.numbers <= job_spaces) x
-			)AS spaces
-	JOIN (
-			SELECT 
-			  ROW_NUMBER() OVER (PARTITION BY block_id ORDER BY job_id) idx
-			  ,job_id
-			  ,block_id
-			  ,sector_id
-			  ,b.Shape.STCentroid() AS cent
-			FROM (SELECT *
-				FROM input.jobs_wac_2012_2016
-				WHERE yr = 2015
-				AND job_id NOT IN(SELECT job_id FROM urbansim.jobs)) w
-			JOIN ref.blocks AS b
-			ON w.block_id = b.BLOCKID10
-	) AS jobs
-		ON jobs.cent.STBuffer(5280).STIntersects(spaces.shape) = 1				--DO FOR BUFFERDIST INCREMENTS OF 1/4 MILE (1,320, 2,640, 3,960, 5,280 ft)
+		,spaces.block_id
+		,spaces.job_spaces
+		,spaces.js_id
+	FROM jobs
+	JOIN spaces
+		ON jobs.cent.STBuffer(1320).STIntersects(spaces.shape) = 1				--DO FOR BUFFERDIST INCREMENTS OF 1/4 MILE (1,320, 2,640, 3,960, 5,280, 6,600, 7,920, 9,240, 10,560 ft)
+), grab AS(
+	SELECT
+		ROW_NUMBER() OVER(PARTITION BY near.building_id ORDER BY near.building_id, job_id) row_id
+		,job_id
+		,sector_id
+		,near.building_id
+		,near.job_spaces
+	FROM near
+	WHERE row_id = 1
 )
-INSERT INTO urbansim.jobs (job_id, sector_id, building_id)
-SELECT
+--INSERT INTO urbansim.jobs (job_id, sector_id, building_id, run)
+SELECT 
 	job_id
 	,sector_id
 	,building_id
-FROM near
-WHERE row_id = 1
+FROM grab
+WHERE row_id <= job_spaces
 ;
 --CHECKS	--CHECK IF BUFFERDIST IS SUFFICIENT
 SELECT SUM(job_spaces) FROM urbansim.buildings
 SELECT COUNT(*) FROM input.jobs_wac_2012_2016 WHERE yr = 2015
 SELECT COUNT(*) FROM spacecore.urbansim.jobs
 SELECT COUNT(*) FROM input.jobs_wac_2012_2016 WHERE yr = 2015 AND job_id NOT IN (SELECT job_id FROM urbansim.jobs)
+
 
 
 /*##### ALLOCATE GOV JOBS BY LOCATION #####*/
@@ -926,7 +936,7 @@ jobs_loc AS (
 	WHERE row_id = 1
 	--ORDER BY dist DESC
 )
---INSERT INTO urbansim.jobs (job_id, sector_id, building_id)
+INSERT INTO urbansim.jobs (job_id, sector_id, building_id)
 SELECT j.job_id, usb.building_id, sector_id--, j.id
 FROM urbansim.buildings AS usb
 JOIN (
@@ -937,6 +947,122 @@ JOIN (
 	) AS j
 	ON usb.building_id = j.building_id
 ORDER BY j.id, j.job_id
+
+
+/*##### ALLOCATE SELFEMPLOYED JOBS #####*/
+-- RUN 1/2 - ALLOCATE SELFEMPLOYED JOBS TO ANY BUILDINGS
+WITH jobs AS(
+	SELECT job_id
+		,sector_id
+		,ROW_NUMBER() OVER(ORDER BY NEWID()) AS random
+	FROM spacecore.input.jobs_selfemployed_2012_2016
+	WHERE yr = 2015
+	AND sector_id IN(										--RESIDENTIAL BUILDING COMPATIBLE
+		109
+		,110
+		,111
+		,112
+		,114
+		,116
+		,117)
+--ORDER BY job_id
+)
+, job_spaces_used AS(
+	SELECT building_id, COUNT(*) AS jobs
+	FROM urbansim.jobs
+	GROUP BY building_id
+)
+, job_spaces_available AS(
+	SELECT usb.building_id
+		,usb.development_type_id
+		,usb.job_spaces
+		--,usb.job_spaces - ISNULL(j.jobs, 0) AS job_spaces_available
+		,CASE
+			WHEN j.jobs > usb.job_spaces THEN 0
+			ELSE usb.job_spaces - ISNULL(j.jobs, 0)
+		END AS job_spaces_available
+	FROM (SELECT * 
+			FROM urbansim.buildings
+			)AS usb 										--ALL BUILDINGS
+		LEFT JOIN job_spaces_used AS j ON usb.building_id = j.building_id 
+	WHERE usb.job_spaces IS NOT NULL
+)
+, job_spaces AS(
+	SELECT building_id
+		,development_type_id
+		,job_spaces_available
+		,ROW_NUMBER() OVER(ORDER BY NEWID()) AS random
+	FROM job_spaces_available AS a
+		,ref.numbers AS n
+	WHERE a.job_spaces_available > 0
+	AND n.numbers <= a.job_spaces_available
+)
+INSERT INTO urbansim.jobs (job_id, sector_id, building_id)
+SELECT job_id
+	,sector_id
+	,building_id
+FROM job_spaces AS s
+JOIN jobs AS j ON j.job_id = s.random
+ORDER BY building_id
+
+
+-- RUN 2/2 - ALLOCATE SELFEMPLOYED JOBS TO NON RESIDENTAL BUILDINGS
+WITH jobs AS(
+	SELECT job_id
+		,sector_id
+	FROM spacecore.input.jobs_selfemployed_2012_2016
+	WHERE yr = 2015
+	AND sector_id IN(										--RESIDENTIAL BUILDING NOT COMPATIBLE
+		104
+		,105
+		,106
+		,107
+		,108
+		,115
+		,119
+		,120)
+)
+, job_spaces_used AS(
+	SELECT building_id, COUNT(*) AS jobs
+	FROM urbansim.jobs
+	GROUP BY building_id
+)
+, job_spaces_available AS(
+	SELECT usb.building_id
+		,usb.development_type_id
+		,usb.job_spaces
+		--,usb.job_spaces - ISNULL(j.jobs, 0) AS job_spaces_available
+		,CASE
+			WHEN j.jobs > usb.job_spaces THEN 0
+			ELSE usb.job_spaces - ISNULL(j.jobs, 0)
+		END AS job_spaces_available
+	FROM (SELECT * 
+			FROM urbansim.buildings
+			WHERE development_type_id <> 19
+			AND development_type_id <> 20
+			AND development_type_id <> 21
+			AND development_type_id <> 22
+			)AS usb 										--NOT IN RESIDENTIAL
+		LEFT JOIN job_spaces_used AS j ON usb.building_id = j.building_id 
+	WHERE usb.job_spaces IS NOT NULL
+)
+, job_spaces AS(
+	SELECT building_id
+		,development_type_id
+		,job_spaces_available
+		,ROW_NUMBER() OVER(ORDER BY NEWID()) AS random
+	FROM job_spaces_available AS a
+		,ref.numbers AS n
+	WHERE a.job_spaces_available > 0
+	AND n.numbers <= a.job_spaces_available
+)
+INSERT INTO urbansim.jobs (job_id, sector_id, building_id)
+SELECT job_id
+	,sector_id
+	,building_id
+FROM job_spaces AS s
+JOIN jobs AS j ON j.job_id = s.random
+ORDER BY building_id
 
 
 /***#################### WHERE SQFT IS NULL, DERIVE FROM UNITS, JOB_SPACES ####################***/
