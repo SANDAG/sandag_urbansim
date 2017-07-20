@@ -817,7 +817,7 @@ SELECT COUNT(*) FROM input.jobs_wac_2012_2016 WHERE yr = 2015 AND job_id NOT IN 
 /*##### RUN 2/2 - ALLOCATE REMAINING WAC JOBS TO NEAREST BLOCK #####*/
 WITH spaces AS(
 	SELECT
-		ROW_NUMBER() OVER (ORDER BY block_id, building_id) AS js_id
+		ROW_NUMBER() OVER (ORDER BY block_id, building_id) AS j_id
 		,block_id
 		,parcel_id
 		,building_id
@@ -835,7 +835,6 @@ WITH spaces AS(
 				GROUP BY building_id) AS jsu
 			ON usb.building_id = jsu.building_id
 		) AS usb
-	JOIN ref.numbers AS n ON n.numbers <= job_spaces
 	WHERE job_spaces > 0
 )
 , jobs AS(
@@ -860,7 +859,6 @@ WITH spaces AS(
 		,spaces.building_id
 		,spaces.block_id
 		,spaces.job_spaces
-		,spaces.js_id
 	FROM jobs
 	JOIN spaces
 		ON jobs.cent.STBuffer(1320).STIntersects(spaces.shape) = 1				--DO FOR BUFFERDIST INCREMENTS OF 1/4 MILE (1,320, 2,640, 3,960, 5,280, 6,600, 7,920, 9,240, 10,560 ft)
@@ -874,11 +872,12 @@ WITH spaces AS(
 	FROM near
 	WHERE row_id = 1
 )
---INSERT INTO urbansim.jobs (job_id, sector_id, building_id, run)
+INSERT INTO urbansim.jobs (job_id, sector_id, building_id, run)
 SELECT 
 	job_id
 	,sector_id
 	,building_id
+	,2
 FROM grab
 WHERE row_id <= job_spaces
 ;
