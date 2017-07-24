@@ -31,9 +31,6 @@ ORDER BY id
 WITH spaces as (
 	SELECT *
 	FROM urbansim.buildings
-	--WHERE data_source = 'SANDAG Public Facility 2016 Geocoding 042617'		--USE BUILDINGS THAT ARE PUBLIC FACILITIES
-	--OR development_type_id IN(8, 9, 10 ,16, 29)								--USE BUILDINGS WITH COMPATIBLE DEV TYPES
-
 	WHERE development_type_id NOT IN(7, 19, 20, 21, 22, 28)						--DO NOT USE BUILDINGS RESIDENTIAL AND SIMILAR
 	AND subparcel_assignment <> 'PLACEHOLDER_MIL'								--DO NOT USE MILITARY PLACEHOLDERS
 ),
@@ -73,8 +70,8 @@ jobs_loc AS (
 	WHERE row_id = 1
 	--ORDER BY dist DESC
 )
-INSERT INTO urbansim.jobs (job_id, sector_id, building_id)
-SELECT j.job_id, usb.building_id, sector_id--, j.id
+INSERT INTO urbansim.jobs (job_id, sector_id, building_id, source)
+SELECT j.job_id, sector_id, usb.building_id, 'GOV'
 FROM urbansim.buildings AS usb
 JOIN (
 	SELECT m.id, m.building_id, j.job_id, j.sector_id

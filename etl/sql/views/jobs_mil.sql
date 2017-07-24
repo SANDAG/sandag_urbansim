@@ -20,10 +20,11 @@ jobs AS (
 	FROM input.jobs_military_2012_2016
 	WHERE yr = 2015
 )
-INSERT INTO urbansim.jobs (job_id, sector_id, building_id)
+INSERT INTO urbansim.jobs (job_id, sector_id, building_id, source)
 SELECT jobs.job_id
 	,jobs.sector_id
 	,spaces.building_id
+	,'MIL'
 FROM spaces
 JOIN jobs
 ON spaces.mgra_id = jobs.mgra

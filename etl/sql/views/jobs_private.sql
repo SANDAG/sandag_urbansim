@@ -50,10 +50,10 @@ WITH spaces AS(
 		,spaces.block_id
 		,spaces.job_spaces
 		,jobs.cent.STDistance(spaces.shape) AS dist
-	INTO staging.near_1r								--**INSERT RUN NUMBER
+	INTO staging.near_13r								--**INSERT RUN NUMBER
 	FROM jobs
 	JOIN spaces
-		ON jobs.cent.STBuffer(52800).STIntersects(spaces.shape) = 1				--**DO FOR DISTANCE INCREMENTS OF 1/4 MILE (1,320, 2,640, 3,960, 5,280, 6,600, 7,920, 9,240, 10,560, 26,400, 52,800 ft)
+		ON jobs.cent.STBuffer(132000).STIntersects(spaces.shape) = 1				--**DO FOR DISTANCE INCREMENTS OF 1/4 MILE (1,320, 2,640, 3,960, 5,280, 6,600, 7,920, 9,240, 10,560, 26,400, 52,800, 79,200 ft)
 ;
 
 --CHECK
@@ -97,11 +97,12 @@ BEGIN
 		WHERE dist_id = 1
 		--ORDER BY building_id--
 	)
-	INSERT INTO urbansim.jobs (job_id, sector_id, building_id, run)					--ITERATE- RUN MULTIPLE TIMES FOR EACH DISTANCE, UNTIL ALLOCATION IS COMPLETE
+	INSERT INTO urbansim.jobs (job_id, sector_id, building_id, source, run)					--ITERATE- RUN MULTIPLE TIMES FOR EACH DISTANCE, UNTIL ALLOCATION IS COMPLETE
 	SELECT 
 		job_id
 		,sector_id
 		,building_id
+		,'WAC'
 		,1												--**INSERT RUN NUMBER
 	FROM grab
 	WHERE row_id <= job_spaces
