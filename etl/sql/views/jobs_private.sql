@@ -1,7 +1,12 @@
---CALCULATE DISTANCES INTO STAGING TABLE
+/*
+	RUN STEP 1 FOR INITIAL DISTANCE
+	THEN RUN STEP 2 TO ITERATE ALLOCATION UNTIL OUT OF JOB SPACES
+	RUN STEP 1 FOR NEXT DISTANCE AND THEN RUN STEP 2 TO ALLOCATE
+	DO AGAIN UNTIL OUT OF JOBS TO ALLOCATE
+*/
 
---DROP TABLE staging.near
-
+/*##### STEP 1 - CALCULATE DISTANCES INTO STAGING TABLE #####*/
+--DROP TABLE staging.near_1r
 WITH spaces AS(
 	SELECT
 		ROW_NUMBER() OVER (ORDER BY block_id, building_id) AS j_id
@@ -45,17 +50,26 @@ WITH spaces AS(
 		,spaces.block_id
 		,spaces.job_spaces
 		,jobs.cent.STDistance(spaces.shape) AS dist
-	INTO staging.near_5r														--RUN NAME
+	INTO staging.near_1r								--**INSERT RUN NUMBER
 	FROM jobs
 	JOIN spaces
-		ON jobs.cent.STBuffer(6600).STIntersects(spaces.shape) = 1				--DO FOR BUFFERDIST INCREMENTS OF 1/4 MILE (1,320, 2,640, 3,960, 5,280, 6,600, 7,920, 9,240, 10,560 ft)
+		ON jobs.cent.STBuffer(52800).STIntersects(spaces.shape) = 1				--**DO FOR DISTANCE INCREMENTS OF 1/4 MILE (1,320, 2,640, 3,960, 5,280, 6,600, 7,920, 9,240, 10,560, 26,400, 52,800 ft)
 ;
 
 --CHECK
-SELECT COUNT(*) FROM staging.near
-SELECT * FROM staging.near
+SELECT COUNT(*) FROM staging.near_1r
+SELECT * FROM staging.near_1r
 
 
+--DELETE FROM urbansim.jobs WHERE run = 1
+--SELECT * FROM urbansim.jobs WHERE run = 1
+
+
+--UPDATE DISTANCE TABLE
+DROP TABLE staging.near
+SELECT * INTO staging.near FROM staging.near_1r			--**INSERT RUN NUMBER
+
+/*##### STEP 2 - ALLOCATE JOBS BY DISTANCE #####*/
 --** WHILE LOOP START>> *********************************************************************************************************************
 --START ALLOCATION
 WHILE (SELECT SUM(job_spaces) FROM staging.near) > 0
@@ -88,7 +102,7 @@ BEGIN
 		job_id
 		,sector_id
 		,building_id
-		,5
+		,1												--**INSERT RUN NUMBER
 	FROM grab
 	WHERE row_id <= job_spaces
 	;
@@ -116,3 +130,17 @@ END
 PRINT 'OUT OF JOB SPACES'
 ;
 --** WHILE LOOP END << *********************************************************************************************************************
+
+--CHECK FOR REMAINING JOBS
+SELECT COUNT(*)
+FROM input.jobs_wac_2012_2016
+WHERE yr = 2015
+AND job_id NOT IN(SELECT job_id FROM urbansim.jobs)
+;
+
+--CHECK ALLOCATION BY RUN
+SELECT run, COUNT(*)
+FROM urbansim.jobs
+GROUP BY run
+ORDER BY run
+
