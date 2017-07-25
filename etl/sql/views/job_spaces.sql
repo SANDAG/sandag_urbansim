@@ -54,8 +54,9 @@ WITH emp AS(
 SELECT
 	usb.subparcel_id
 	,usb.building_id
-	,emp.emp AS emp_total--
-	,COUNT(*) OVER (PARTITION BY usb.subparcel_id, emp.sector_id)--
+	,usb.development_type_id
+	--,emp.emp AS emp_total
+	--,COUNT(*) OVER (PARTITION BY usb.subparcel_id, emp.sector_id) AS bldgs--
 	,emp.emp/ COUNT(*) OVER (PARTITION BY usb.subparcel_id, emp.sector_id) +
 		CASE 
 			WHEN ROW_NUMBER() OVER (PARTITION BY usb.subparcel_id, emp.sector_id ORDER BY usb.shape.STArea() DESC) <= (emp.emp % COUNT(*) OVER (PARTITION BY usb.subparcel_id, emp.sector_id)) THEN 1 
@@ -63,9 +64,9 @@ SELECT
 		END 
 		AS job_spaces
 	,emp.sector_id
+INTO urbansim.job_spaces
 FROM
 	(SELECT * FROM urbansim.buildings WHERE assign_jobs = 1) usb
 JOIN emp
 	ON usb.subparcel_id = emp.subparcel_id
-
 ;
