@@ -1,214 +1,87 @@
-/*#################### ASSIGN JOB_SPACES FROM EDD EMP ####################*/
+/*#################### ASSIGN JOB_SPACES FROM EDD ####################*/
 DECLARE @employment_vacancy float = 0.1;
-/* ##### ASSIGN JOB_SPACES TO SINGLE BUILDING SUBPARCELS ##### */
-WITH bldg_single AS (
-	SELECT
-		lc.subParcel AS subparcel_id
-		--,SUM(CAST(CEILING(emp_adj*(1+@employment_vacancy))AS int)) emp
-		--,SUM(CAST(CEILING(emp_adj)AS int)) emp
-		,SUM(emp_adj) emp
-		,naics
-	FROM gis.ludu2015 lc
-	INNER JOIN socioec_data.ca_edd.emp_2013 emp 
-	ON lc.Shape.STContains(emp.shape) = 1
-	INNER JOIN (SELECT subparcel_id
-				FROM urbansim.buildings 
-				--WHERE assign_jobs = 1		--DO NOT USE MIL/PF BUILDINGS
-				GROUP BY subparcel_id 
-				HAVING COUNT(*) = 1) single_bldg	
-	ON lc.subParcel = single_bldg.subparcel_id
-	WHERE emp.emp_adj IS NOT NULL
-	GROUP BY lc.subParcel, naics
-	--ORDER BY lc.subParcel, naics
-)
-SELECT
-	usb.building_id
-	,bldg.subparcel_id
-	,usb.block_id
-	,bldg.emp AS job_spaces
-	,bldg.naics AS edd_naics
-	,usb.development_type_id AS bldg_dev_type_id
-FROM urbansim.buildings AS usb
-JOIN bldg_single AS bldg
-	ON usb.subparcel_id = bldg.subparcel_id
-ORDER BY subparcel_id, building_id
-;
-********************************************************************************************
-/* ##### ASSIGN JOB_SPACES TO MULTIPLE BUILDING SUBPARCELS ##### */
---DECLARE @employment_vacancy float = 0.1;
-
---WHERE subparcel_id = 12273
-
+/* ##### ASSIGN JOB_SPACES TO BUILDINGS BY SUBPARCEL ##### */
 WITH emp AS(
 	SELECT
-		emp_lc.subparcel_id
-		,naics
-		,ROW_NUMBER() OVER (PARTITION BY emp_lc.subparcel_id ORDER BY naics_case, emp DESC) AS row_num
-		,emp
-	FROM (SELECT
-				subParcel AS subparcel_id
-				,LEFT(naics, 2) AS naics
-				,CASE LEFT(naics, 2)
-					WHEN 62 THEN 1		--Health Care and Social Assistance
-					WHEN 72 THEN 2		--Accommodation and Food Services
-					WHEN 61 THEN 3		--Educational Services					
-					WHEN 54 THEN 4		--Professional, Scientific, and Technical Services
-					ELSE 5
-				END AS naics_case
-				,SUM(emp_adj) AS emp
-			FROM socioec_data.ca_edd.emp_2013 AS emp
-			JOIN gis.ludu2015 lc
-				ON lc.Shape.STContains(emp.shape) = 1
-			WHERE emp_adj IS NOT NULL
-			GROUP BY subParcel
-				,LEFT(naics, 2)
-			) AS emp_lc 
-	JOIN (SELECT subparcel_id
-			FROM urbansim.buildings 
-			GROUP BY subparcel_id
-			HAVING COUNT(*) > 1) bldg_m
-		ON emp_lc.subparcel_id = bldg_m.subparcel_id
-	
-	WHERE emp_lc.subparcel_id = 12273				--<<TEST
-	ORDER BY subparcel_id, row_num
+		emp2013.subparcel_id AS subparcel_id2013
+		,emp2015.subparcel_id AS subparcel_id2015
+		,COALESCE(emp2013.subparcel_id, emp2015.subparcel_id) AS subparcel_id
+		,emp2013.emp AS emp2013
+		,emp2015.emp AS emp2015
+		,emp2013.sector_id AS sector_id2013
+		,emp2015.sector_id AS sector_id2015
+		,COALESCE(emp2013.sector_id, emp2015.sector_id) AS sector_id
+		,CASE
+			WHEN ISNULL(emp2013.emp, 0) >= ISNULL(emp2015.emp, 0) THEN ISNULL(emp2013.emp, 0)
+			ELSE emp2015.emp
+		END AS emp
+	FROM (
+		SELECT lc.subParcel AS subparcel_id
+			--,SUM(CAST(CEILING(ISNULL(emp_adj,0)*(1+@employment_vacancy))AS int)) AS emp
+			,SUM(CAST(CEILING(ISNULL(emp_adj,0))AS int)) AS emp
+			,emp.sandag_industry_id AS sector_id
+		FROM gis.ludu2015 lc
+		LEFT JOIN socioec_data.ca_edd.emp_2013 AS emp
+		ON lc.Shape.STContains(emp.shape) = 1
+		WHERE emp.emp_adj IS NOT NULL
+		GROUP BY lc.subParcel, emp.sandag_industry_id
+	) AS emp2013
+	FULL OUTER JOIN (
+		SELECT lc.subParcel AS subparcel_id
+			--,SUM(CAST(CEILING(ISNULL(emp_adj,0)*(1+@employment_vacancy))AS int)) AS emp
+			,SUM(CAST(CEILING(ISNULL(emp_adj,0))AS int)) AS emp
+			,emp.sandag_industry_id AS sector_id
+		FROM gis.ludu2015 lc
+		LEFT JOIN (
+			SELECT
+				CASE
+					WHEN emp1 >= emp2 AND emp1 >= emp3 THEN emp1
+					WHEN emp2 >= emp1 AND emp2 >= emp3 THEN emp2
+					WHEN emp3 >= emp1 AND emp3 >= emp2 THEN emp3
+				END AS emp_adj
+				,sandag_industry_id
+				,COALESCE([point_2014],[point_parcels]) AS shape
+			FROM (SELECT ISNULL(emp1,0) AS emp1, ISNULL(emp2,0) AS emp2, ISNULL(emp3,0) AS emp3, sandag_industry_id, [point_2014], [point_parcels], own FROM [ws].[dbo].[CA_EDD_EMP_2015]) x
+			WHERE own = 5							--PRIVATE SECTOR
+			) AS emp
+		ON lc.Shape.STContains(emp.shape) = 1
+		WHERE emp.emp_adj IS NOT NULL
+		GROUP BY lc.subParcel, emp.sandag_industry_id
+	) AS emp2015
+	ON emp2013.subparcel_id = emp2015.subparcel_id
+	AND emp2013.sector_id = emp2015.sector_id
 )
-bldg AS(
-	SELECT
-		block_id
-		,usb.subparcel_id
-		,building_id
-		,development_type_id AS bldg_dev_type_id
-		,shape.STArea()
-		,non_residential_sqft
-	FROM urbansim.buildings AS usb
-	--GROUP BY block_id, subparcel_id, building_id
-	JOIN (SELECT subparcel_id
-			CASE development_type_id
-				WHEN 
-			FROM urbansim.buildings 
-			GROUP BY subparcel_id
-			HAVING COUNT(*) > 1) bldg_m
-	ON usb.subparcel_id = bldg_m.subparcel_id
-	WHERE usb.subparcel_id = 12273				--<<TEST
-	ORDER BY block_id, usb.subparcel_id, building_id
-)
-SELECT
-	block_id
-	,subparcel_id
-	,building_id
-	,bldg_dev_type_id
-FROM bldg
-JOIN emp ON bldg.
-
-
-
-
-
-
-
-
-
-*****************************************************************************
-/* ##### ASSIGN JOB_SPACES TO MULTIPLE BUILDING SUBPARCELS ##### */
---DECLARE @employment_vacancy float = 0.1;
------MAY WANT TO THINK ABOUT EXCLUDING REALLY SMALL BUILDINGS FROM THIS QUERY
-WITH bldg_multi AS(
-	SELECT usb.subparcel_id
-		,usb.building_id
-		,emp/COUNT(*) OVER (PARTITION BY usb.subparcel_id) +
-		CASE
-			WHEN ROW_NUMBER() OVER (PARTITION BY usb.subparcel_id ORDER BY usb.shape.STArea()) <= (emp % COUNT(*) OVER (PARTITION BY usb.subparcel_id)) THEN 1
-			ELSE 0
-		END emp
-		--,naics
-	FROM (SELECT * FROM urbansim.buildings WHERE assign_jobs = 1) AS usb			--DO NOT USE MIL/PF BUILDINGS
-	JOIN (SELECT subParcel, naics, SUM(emp_adj) emp
-			FROM gis.ludu2015 lc
-			--INNER JOIN (SELECT subParcel, SUM(CAST(CEILING(emp_adj*(1+@employment_vacancy))AS int)) emp
-			INNER JOIN socioec_data.ca_edd.emp_2013 emp 
-				ON lc.Shape.STContains(emp.shape) = 1
-			WHERE emp.emp_adj IS NOT NULL
-			GROUP BY lc.subParcel, naics) lc
-	ON usb.subparcel_id = lc.subParcel
-	WHERE usb.subparcel_id IN (SELECT subparcel_id FROM urbansim.buildings GROUP BY subparcel_id HAVING COUNT(*) > 1)
-)
-SELECT
-	bldgs.building_id
-	,bldgs.subparcel_id
-	,usb.block_id
-	,bldgs.emp AS job_spaces
-	,bldgs.naics AS edd_naics
-	,usb.development_type_id AS bldg_dev_type_id
-
-FROM 
-	urbansim.buildings  usb		
-	INNER JOIN bldg_multi AS bldgs ON usb.building_id = bldgs.building_id
-	
-**************************************************************************************************************************	
-	WITH bldgs AS (
+, emp_space AS(
 	SELECT
 		usb.subparcel_id
 		,usb.building_id
-		,lc.emp/ COUNT(*) OVER (PARTITION BY usb.subparcel_id) +
-		CASE
-			WHEN ROW_NUMBER() OVER (PARTITION BY usb.subparcel_id ORDER BY usb.shape.STArea()) <= (lc.emp % COUNT(*) OVER (PARTITION BY usb.subparcel_id)) THEN 1 
+		,emp.emp/ COUNT(*) OVER (PARTITION BY usb.subparcel_id) +
+			CASE 
+			WHEN ROW_NUMBER() OVER (PARTITION BY usb.subparcel_id ORDER BY usb.shape.STArea()) <= (emp.emp % COUNT(*) OVER (PARTITION BY usb.subparcel_id)) THEN 1 
 			ELSE 0 
-		END jobs
-	FROM (SELECT * FROM urbansim.buildings WHERE assign_jobs = 1) usb		--DO NOT USE MIL/PF BUILDINGS
-	--INNER JOIN (SELECT subParcel, SUM(CAST(CEILING(emp_adj*(1+@employment_vacancy))AS int)) emp
-	INNER JOIN (SELECT subParcel, SUM(emp_adj) emp
-				FROM gis.ludu2015 lc
-				INNER JOIN socioec_data.ca_edd.emp_2013 emp 
-					ON lc.Shape.STContains(emp.shape) = 1
-				WHERE emp.emp_adj IS NOT NULL
-				GROUP BY lc.subParcel) lc
-	ON usb.subparcel_id = lc.subParcel
-	WHERE usb.subparcel_id IN (SELECT subparcel_id FROM urbansim.buildings usb GROUP BY subparcel_id HAVING count(*) > 1)
+			END job_spaces
+		FROM
+			(SELECT * FROM urbansim.buildings WHERE assign_jobs = 1) usb
+		JOIN emp
+			ON usb.subparcel_id = emp.subparcel_id
 )
-SELECT
-	bldgs.jobs AS job_spaces 
-FROM
-	(SELECT * FROM urbansim.buildings WHERE assign_jobs = 1) usb		--DO NOT USE MIL/PF BUILDINGS
-	INNER JOIN bldgs ON usb.building_id = bldgs.building_id
-;
-
-
-
-
-
-
-
-
-
-/* ##### ASSIGN JOB_SPACES TO MULTIPLE BUILDING SUBPARCELS ##### */
---DECLARE @employment_vacancy float = 0.1;
------MAY WANT TO THINK ABOUT EXCLUDING REALLY SMALL BUILDINGS FROM THIS QUERY
-WITH bldgs AS (
-  SELECT
-    usb.subparcel_id
-   ,usb.building_id
-   ,lc.emp/ COUNT(*) OVER (PARTITION BY usb.subparcel_id) +
-     CASE 
-       WHEN ROW_NUMBER() OVER (PARTITION BY usb.subparcel_id ORDER BY usb.shape.STArea()) <= (lc.emp % COUNT(*) OVER (PARTITION BY usb.subparcel_id)) THEN 1 
-       ELSE 0 
-	 END jobs
-  FROM
-    (SELECT * FROM urbansim.buildings WHERE assign_jobs = 1) usb		--DO NOT USE MIL/PF BUILDINGS
-    INNER JOIN (SELECT subParcel, SUM(CAST(CEILING(emp_adj*(1+@employment_vacancy))AS int)) emp
-		FROM gis.ludu2015 lc
-		INNER JOIN socioec_data.ca_edd.emp_2013 emp 
-		ON lc.Shape.STContains(emp.shape) = 1
-		WHERE emp.emp_adj IS NOT NULL
-		GROUP BY lc.subParcel) lc
-	ON usb.subparcel_id = lc.subParcel
-  WHERE
-    usb.subparcel_id IN (SELECT subparcel_id FROM urbansim.buildings usb GROUP BY subparcel_id HAVING count(*) > 1)
-	)
-UPDATE
+/*
+UPDATE 
 	usb
-SET
-	usb.job_spaces = bldgs.jobs
+SET 
+	usb.job_spaces = emp_space.job_spaces
 FROM
-	(SELECT * FROM urbansim.buildings WHERE assign_jobs = 1) usb		--DO NOT USE MIL/PF BUILDINGS
-	INNER JOIN bldgs ON usb.building_id = bldgs.building_id
+	(SELECT * FROM urbansim.buildings WHERE assign_jobs = 1) AS usb
+JOIN emp_space
+	ON usb.subparcel_id = emp_space.subparcel_id
+*/
+SELECT 
+	building_id
+	,usb.job_spaces
+	,emp_space.job_spaces
+FROM
+	(SELECT * FROM urbansim.buildings WHERE assign_jobs = 1) AS usb
+JOIN emp_space
+	ON usb.subparcel_id = emp_space.subparcel_id
+
 ;
