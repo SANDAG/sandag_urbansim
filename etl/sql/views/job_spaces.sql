@@ -3,13 +3,13 @@ DECLARE @employment_vacancy float = 0.1;
 /* ##### ASSIGN JOB_SPACES TO BUILDINGS BY SUBPARCEL ##### */
 WITH emp AS(
 	SELECT
-		emp2013.subparcel_id AS subparcel_id2013
-		,emp2015.subparcel_id AS subparcel_id2015
-		,COALESCE(emp2013.subparcel_id, emp2015.subparcel_id) AS subparcel_id
-		,emp2013.emp AS emp2013
-		,emp2015.emp AS emp2015
-		,emp2013.sector_id AS sector_id2013
-		,emp2015.sector_id AS sector_id2015
+		--emp2013.subparcel_id AS subparcel_id2013
+		--emp2015.subparcel_id AS subparcel_id2015
+		COALESCE(emp2013.subparcel_id, emp2015.subparcel_id) AS subparcel_id
+		--emp2013.emp AS emp2013
+		--emp2015.emp AS emp2015
+		--emp2013.sector_id AS sector_id2013
+		--emp2015.sector_id AS sector_id2015
 		,COALESCE(emp2013.sector_id, emp2015.sector_id) AS sector_id
 		,CASE
 			WHEN ISNULL(emp2013.emp, 0) >= ISNULL(emp2015.emp, 0) THEN ISNULL(emp2013.emp, 0)
@@ -51,37 +51,21 @@ WITH emp AS(
 	ON emp2013.subparcel_id = emp2015.subparcel_id
 	AND emp2013.sector_id = emp2015.sector_id
 )
-, emp_space AS(
-	SELECT
-		usb.subparcel_id
-		,usb.building_id
-		,emp.emp/ COUNT(*) OVER (PARTITION BY usb.subparcel_id) +
-			CASE 
-			WHEN ROW_NUMBER() OVER (PARTITION BY usb.subparcel_id ORDER BY usb.shape.STArea()) <= (emp.emp % COUNT(*) OVER (PARTITION BY usb.subparcel_id)) THEN 1 
+SELECT
+	usb.subparcel_id
+	,usb.building_id
+	,emp.emp AS emp_total--
+	,COUNT(*) OVER (PARTITION BY usb.subparcel_id, emp.sector_id)--
+	,emp.emp/ COUNT(*) OVER (PARTITION BY usb.subparcel_id, emp.sector_id) +
+		CASE 
+			WHEN ROW_NUMBER() OVER (PARTITION BY usb.subparcel_id, emp.sector_id ORDER BY usb.shape.STArea() DESC) <= (emp.emp % COUNT(*) OVER (PARTITION BY usb.subparcel_id, emp.sector_id)) THEN 1 
 			ELSE 0 
-			END job_spaces
-		FROM
-			(SELECT * FROM urbansim.buildings WHERE assign_jobs = 1) usb
-		JOIN emp
-			ON usb.subparcel_id = emp.subparcel_id
-)
-/*
-UPDATE 
-	usb
-SET 
-	usb.job_spaces = emp_space.job_spaces
+		END 
+		AS job_spaces
+	,emp.sector_id
 FROM
-	(SELECT * FROM urbansim.buildings WHERE assign_jobs = 1) AS usb
-JOIN emp_space
-	ON usb.subparcel_id = emp_space.subparcel_id
-*/
-SELECT 
-	building_id
-	,usb.job_spaces
-	,emp_space.job_spaces
-FROM
-	(SELECT * FROM urbansim.buildings WHERE assign_jobs = 1) AS usb
-JOIN emp_space
-	ON usb.subparcel_id = emp_space.subparcel_id
+	(SELECT * FROM urbansim.buildings WHERE assign_jobs = 1) usb
+JOIN emp
+	ON usb.subparcel_id = emp.subparcel_id
 
 ;
