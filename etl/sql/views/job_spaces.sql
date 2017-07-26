@@ -54,6 +54,7 @@ WITH emp AS(
 SELECT
 	usb.subparcel_id
 	,usb.building_id
+	,usb.block_id
 	,usb.development_type_id
 	--,emp.emp AS emp_total
 	--,COUNT(*) OVER (PARTITION BY usb.subparcel_id, emp.sector_id) AS bldgs--
