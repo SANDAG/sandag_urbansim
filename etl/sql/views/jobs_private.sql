@@ -57,7 +57,7 @@ SELECT COUNT(*) FROM input.jobs_wac_2012_2016 WHERE yr = 2015 AND job_id NOT IN 
 BEFORE PROCEEDING, MAKE SURE NUMBER OF JOB SPACES BY SECTOR
 IS GREATER THAN NUMBER OF JOBS PER SECTOR TO BE ALLOCATED
 */
-/*
+--/*
 --CHECK
 WITH job_spaces AS(
 	SELECT sector_id, SUM(job_spaces) AS job_spaces
@@ -79,7 +79,7 @@ FROM job_spaces
 FULL OUTER JOIN jobs
 	ON job_spaces.sector_id = jobs.sector_id
 ORDER BY COALESCE(jobs.sector_id, job_spaces.sector_id)
-*/
+--*/
 
 /*##### STEP 1 - CALCULATE DISTANCES INTO STAGING TABLE #####*/
 DECLARE @radius		int = 1320;	--1/4 MILE SEARCH RADIUS START
@@ -179,7 +179,7 @@ BEGIN
 		BEGIN
 			WITH nearest AS(	
 				SELECT
-					ROW_NUMBER() OVER(PARTITION BY job_id ORDER BY job_id, dist) dist_id
+					ROW_NUMBER() OVER(PARTITION BY job_id, sector_id ORDER BY job_id, dist) dist_id
 					,job_id
 					,sector_id
 					,building_id
@@ -190,7 +190,7 @@ BEGIN
 			)
 			,grab AS(	
 				SELECT
-					ROW_NUMBER() OVER(PARTITION BY building_id ORDER BY dist) row_id
+					ROW_NUMBER() OVER(PARTITION BY building_id, sector_id ORDER BY dist) row_id
 					,job_id
 					,sector_id
 					,building_id
@@ -220,15 +220,17 @@ BEGIN
 			UPDATE n
 			SET job_spaces = js.job_spaces_old - jsu.job_spaces_used
 			FROM staging.near AS n
-			JOIN(SELECT building_id
+			JOIN(SELECT building_id, sector_id
 							,COUNT(building_id) AS job_spaces_used
 						FROM urbansim.jobs
-						GROUP BY building_id) AS jsu
+						GROUP BY building_id, sector_id) AS jsu
 				ON n.building_id = jsu.building_id
-			JOIN(SELECT building_id
+				AND n.sector_id = jsu.sector_id
+			JOIN(SELECT building_id, sector_id
 							,job_spaces AS job_spaces_old
 						FROM urbansim.job_spaces) AS js
 				ON n.building_id = js.building_id
+				AND n.sector_id = js.sector_id
 			PRINT 'ANOTHER LOOP FINISHED'
 
 			IF (SELECT COUNT(*) FROM staging.near) = 0
