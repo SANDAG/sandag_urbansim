@@ -1,5 +1,7 @@
 /*#################### ASSIGN JOB_SPACES FROM EDD ####################*/
 DECLARE @employment_vacancy float = 0.1;
+--DROP TABLE urbansim.job_spaces
+
 /* ##### ASSIGN JOB_SPACES TO BUILDINGS BY SUBPARCEL ##### */
 WITH emp AS(
 	SELECT
@@ -17,8 +19,8 @@ WITH emp AS(
 		END AS emp
 	FROM (
 		SELECT lc.subParcel AS subparcel_id
-			--,SUM(CAST(CEILING(ISNULL(emp_adj,0)*(1+@employment_vacancy))AS int)) AS emp
-			,SUM(CAST(CEILING(ISNULL(emp_adj,0))AS int)) AS emp
+			,SUM(CAST(CEILING(ISNULL(emp_adj,0)*(1+@employment_vacancy))AS int)) AS emp
+			--,SUM(CAST(CEILING(ISNULL(emp_adj,0))AS int)) AS emp
 			,emp.sandag_industry_id AS sector_id
 		FROM gis.ludu2015 lc
 		LEFT JOIN socioec_data.ca_edd.emp_2013 AS emp
@@ -28,8 +30,8 @@ WITH emp AS(
 	) AS emp2013
 	FULL OUTER JOIN (
 		SELECT lc.subParcel AS subparcel_id
-			--,SUM(CAST(CEILING(ISNULL(emp_adj,0)*(1+@employment_vacancy))AS int)) AS emp
-			,SUM(CAST(CEILING(ISNULL(emp_adj,0))AS int)) AS emp
+			,SUM(CAST(CEILING(ISNULL(emp_adj,0)*(1+@employment_vacancy))AS int)) AS emp
+			--,SUM(CAST(CEILING(ISNULL(emp_adj,0))AS int)) AS emp
 			,emp.sandag_industry_id AS sector_id
 		FROM gis.ludu2015 lc
 		LEFT JOIN (
