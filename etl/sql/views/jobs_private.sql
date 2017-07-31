@@ -83,7 +83,7 @@ ORDER BY COALESCE(jobs.sector_id, job_spaces.sector_id)
 
 
 /*##### STEP 1 - CALCULATE DISTANCES INTO STAGING TABLE #####*/
-DECLARE @sector_id	smallint = 5;	--SECTOR ID
+DECLARE @sector_id	smallint = 1;	--SECTOR ID
 
 --** WHILE LOOP START>> ******************************************************************
 WHILE (@sector_id <= 20)
@@ -267,7 +267,7 @@ BEGIN
 		PRINT 'OUT OF JOB SPACES'
 		;
 		--** WHILE LOOP END << ******************************************************************
-	DROP TABLE #near
+	DROP TABLE IF EXISTS dbo.#near
 	SET @radius = @radius + @radius_i
 	SET @run = @run + 1
 
@@ -284,5 +284,6 @@ FROM input.jobs_wac_2012_2016
 WHERE yr = 2015
 AND job_id NOT IN(SELECT job_id FROM urbansim.jobs)
 ;
+
 
 
