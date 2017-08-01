@@ -28,21 +28,23 @@ jobs AS (
 	  spacecore.input.jobs_wac_2012_2016
 	WHERE yr = 2015
 )
-INSERT INTO urbansim.jobs (job_id, sector_id, building_id)
+INSERT INTO urbansim.jobs (job_id, sector_id, building_id, source, run)
 SELECT jobs.job_id
 	,jobs.sector_id
 	,spaces.building_id
+	,'WAC'
+	,0
 FROM spaces
 JOIN jobs
 ON spaces.block_id = jobs.block_id
 AND spaces.idx = jobs.idx
 ;
 --CHECKS
-SELECT SUM(job_spaces) FROM urbansim.buildings
+SELECT SUM(job_spaces) FROM urbansim.job_spaces
 SELECT COUNT(*) FROM input.jobs_wac_2012_2016 WHERE yr = 2015
 SELECT COUNT(*) FROM spacecore.urbansim.jobs
 SELECT COUNT(*) FROM input.jobs_wac_2012_2016 WHERE yr = 2015 AND job_id NOT IN (SELECT job_id FROM urbansim.jobs)
-
+;
 
 /*#################### RUN 2/2 - ALLOCATE REMAINING WAC JOBS TO NEAREST BLOCK	 ####################*/
 /*### THIS RUN HAS AN ITERATIVE STEP WITHIN AN ITERATIVE STEP ###*/
@@ -78,7 +80,7 @@ SELECT
 FROM job_spaces
 FULL OUTER JOIN jobs
 	ON job_spaces.sector_id = jobs.sector_id
-ORDER BY COALESCE(jobs.sector_id, job_spaces.sector_id)
+ORDER BY COALESCE(jobs.sector_id, job_spaces.sector_id);
 --*/
 
 
