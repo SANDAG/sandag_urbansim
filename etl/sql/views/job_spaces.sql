@@ -26,6 +26,7 @@ WITH emp AS(
 		LEFT JOIN socioec_data.ca_edd.emp_2013 AS emp
 		ON lc.Shape.STContains(emp.shape) = 1
 		WHERE emp.emp_adj IS NOT NULL
+		AND sandag_industry_id BETWEEN 1 AND 20				--PRIVATE SECTOR
 		GROUP BY lc.subParcel, emp.sandag_industry_id
 	) AS emp2013
 	FULL OUTER JOIN (
@@ -44,7 +45,8 @@ WITH emp AS(
 				,sandag_industry_id
 				,COALESCE([point_2014],[point_parcels]) AS shape
 			FROM (SELECT ISNULL(emp1,0) AS emp1, ISNULL(emp2,0) AS emp2, ISNULL(emp3,0) AS emp3, sandag_industry_id, [point_2014], [point_parcels], own FROM [ws].[dbo].[CA_EDD_EMP_2015]) x
-			WHERE own = 5							--PRIVATE SECTOR
+			WHERE own = 5									--PRIVATE SECTOR
+			AND sandag_industry_id BETWEEN 1 AND 20			--PRIVATE SECTOR
 			) AS emp
 		ON lc.Shape.STContains(emp.shape) = 1
 		WHERE emp.emp_adj IS NOT NULL
@@ -67,7 +69,8 @@ SELECT
 		END 
 		AS job_spaces
 	,emp.sector_id
-INTO urbansim.job_spaces
+	,'EDD' AS source
+--INTO urbansim.job_spaces
 FROM
 	(SELECT * FROM urbansim.buildings WHERE assign_jobs = 1) usb
 JOIN emp
