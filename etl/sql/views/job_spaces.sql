@@ -70,9 +70,56 @@ SELECT
 		AS job_spaces
 	,emp.sector_id
 	,'EDD' AS source
---INTO urbansim.job_spaces
+INTO urbansim.job_spaces
 FROM
 	(SELECT * FROM urbansim.buildings WHERE assign_jobs = 1) usb
 JOIN emp
 	ON usb.subparcel_id = emp.subparcel_id
 ;
+
+
+/*
+THESE JOB SPACES ARE USED BY 'WAC' (PRIVATE) AND 'SEM' (SELFEMPLOYED)
+
+JOB SPACES FOR 'GOV' AND 'MIL' ARE ADDED TO BUILDINGS LATER, IN THEIR ALLOCATION SCRIPTS:
+
+'GOV' JOBS ARE ALOCATED, IN JOBS_GOV SCRIPT
+SECTORS 21, 23, 24, 25, 26
+SOURCE = GOV 
+
+'MIL' JOBS ARE ALOCATED, IN JOBS_MIL SCRIPT
+SECTORS 22, 27
+SOURCE = MIL 
+*/
+
+
+/*
+/*################### ARBITRARILY ADD MORE SPACE FOR LEHD  ###########################*/
+WITH bldg AS (
+	SELECT
+	  usb.building_id
+	  ,deficit.block_id
+	  ,deficit.deficit
+	  ,deficit.deficit/ COUNT(*) OVER (PARTITION BY deficit.block_id) +
+		 CASE 
+		   WHEN ROW_NUMBER() OVER (PARTITION BY deficit.block_id ORDER BY usb.job_spaces desc) <= (deficit.deficit % COUNT(*) OVER (PARTITION BY deficit.block_id)) THEN 1 
+		   ELSE 0 
+		 END jobs
+	FROM 
+		urbansim.buildings usb 
+		INNER JOIN (SELECT bldg.block_id, jobs, spaces,  CAST(ROUND((jobs.jobs - bldg.spaces) ,0) as INT) deficit, CAST(ROUND((jobs.jobs - bldg.spaces) * 1.3 ,0) as INT) deficit15
+					FROM (SELECT block_id, COUNT(*) jobs FROM spacecore.input.jobs_wac_2013 GROUP BY block_id) jobs												--13,695 blocks	--1,377,100 jobs
+					JOIN (SELECT block_id, SUM(job_spaces) spaces FROM urbansim.buildings GROUP BY block_id) bldg ON jobs.block_id = bldg.block_id				--30,307 blocks	--1,929,835 spaces
+					WHERE jobs.jobs > bldg.spaces
+					) deficit																																	--146 blocks	--2,197 deficit*1.5	--1,434 deficit
+		ON usb.block_id = deficit.block_id
+)
+UPDATE usb
+  SET usb.job_spaces = ISNULL(usb.job_spaces, 0) + jobs
+FROM
+  urbansim.buildings usb 
+INNER JOIN
+  bldg ON usb.building_id = bldg.building_id
+WHERE ISNULL(usb.job_spaces, 0) + jobs > 0
+;
+*/
