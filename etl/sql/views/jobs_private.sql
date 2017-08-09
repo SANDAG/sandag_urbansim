@@ -95,6 +95,9 @@ BEGIN
 	DECLARE @radius_i	int = 1320;		--1/4 MILE SEARCH RADIUS, INCREMENTS
 	DECLARE @run		smallint = 1;	--NUMBERED RUNS TO TRACK ALLOCATION
 	
+	PRINT 'BEGIN SECTOR'
+	PRINT @sector_id
+	
 	--** WHILE LOOP START>> ******************************************************************
 	WHILE (
 		--CHECK FOR REMAINING JOBS
@@ -109,6 +112,10 @@ BEGIN
 		--DROP TABLE #spaces
 		--DROP TABLE #jobs
 		--DROP TABLE #near
+
+		PRINT 'BEGIN RUN'
+		PRINT @run
+		PRINT @radius
 
 		--SPACES #TABLE
 		SELECT
@@ -188,15 +195,13 @@ BEGIN
 		DROP TABLE #spaces	--SELECT * FROM #spaces
 		DROP TABLE #jobs	--SELECT * FROM #jobs
 
-		PRINT @radius
-		PRINT @run
-
 
 		/*##### STEP 2 - ALLOCATE JOBS BY DISTANCE #####*/
 		--** WHILE LOOP START>> ******************************************************************
 		--START ALLOCATION
 		WHILE (SELECT SUM(job_spaces) FROM #near) > 0					--ITERATE- RUN MULTIPLE TIMES FOR EACH DISTANCE, UNTIL ALLOCATION IS COMPLETE
 		BEGIN
+			PRINT 'BEGIN ALLOCATION LOOP'
 
 			--NEAREST #TABLE
 			SELECT
@@ -277,8 +282,10 @@ BEGIN
 	--** WHILE LOOP END << ******************************************************************
 
 SET @sector_id = @sector_id + 1
+PRINT 'ANOTHER SECTOR COMPLETED'
 END;
 --** WHILE LOOP END << ******************************************************************
+PRINT 'PRIVATE JOBS ALLOCATION COMPLETED'
 
 --CHECK FOR REMAINING JOBS
 SELECT COUNT(*)

@@ -1,3 +1,4 @@
+/*
 SELECT *
 FROM urbansim.buildings
 WHERE subparcel_assignment = 'PLACEHOLDER_MIL'
@@ -7,6 +8,8 @@ SELECT *
 FROM input.jobs_military_2012_2016
 WHERE yr = 2015
 --124,710
+;
+*/
 
 
 --ALLOCATE MIL JOBS BY MGRA
@@ -28,4 +31,30 @@ SELECT jobs.job_id
 FROM spaces
 JOIN jobs
 ON spaces.mgra_id = jobs.mgra
+;
+
+/*#################### UPDATE JOB SPACES  #################### */
+--UPDATE JS WITH MIL
+WITH j AS(
+SELECT building_id
+	,sector_id
+	,COUNT(*) AS jobs
+	,source
+FROM urbansim.jobs
+WHERE source IN ('MIL')
+GROUP BY building_id
+	,sector_id
+	,source
+)
+
+INSERT INTO urbansim.job_spaces(
+	building_id
+	,job_spaces
+	,sector_id
+	,source)
+SELECT building_id
+	,jobs
+	,sector_id
+	,source
+FROM j
 ;

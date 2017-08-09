@@ -1,6 +1,20 @@
 /*#################### ASSIGN JOB_SPACES FROM EDD ####################*/
 DECLARE @employment_vacancy float = 0.1;
---DROP TABLE urbansim.job_spaces
+
+DROP TABLE IF EXISTS  urbansim.job_spaces;
+GO
+
+CREATE TABLE urbansim.job_spaces(
+	job_space_id IDENTITY (1,1)
+	,subparcel_id int NULL
+	,building_id bigint NOT NULL
+	,block_id bigint NULL
+	,development_type_id smallint NULL
+	,job_spaces int NULL
+	,sector_id smallint NULL
+	,source varchar(3) NOT NULL
+)
+
 
 /* ##### ASSIGN JOB_SPACES TO BUILDINGS BY SUBPARCEL ##### */
 WITH emp AS(
@@ -55,6 +69,14 @@ WITH emp AS(
 	ON emp2013.subparcel_id = emp2015.subparcel_id
 	AND emp2013.sector_id = emp2015.sector_id
 )
+INSERT INTO urbansim.job_spaces(
+	subparcel_id
+	,building_id
+	,block_id
+	,development_type_id
+	,job_spaces
+	,sector_id
+	,source)
 SELECT
 	usb.subparcel_id
 	,usb.building_id
