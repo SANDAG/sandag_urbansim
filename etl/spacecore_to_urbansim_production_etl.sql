@@ -66,6 +66,13 @@ SET @table = 'job';									--URBANSIM TABLE
 SET @pkey = 'job_id';								--URBANSIM PRIMARY KEY
 */
 /*
+--JOB_SPACE
+SET @source = 'spacecore.urbansim.job_spaces';			--SPACECORE DATABASE SCHEMA TABLE
+SET @target = 'urbansim.urbansim.job_space';				--URBANSIM DATABASE SCHEMA TABLE
+SET @table = 'job_space';									--URBANSIM TABLE
+SET @pkey = 'job_space_id';								--URBANSIM PRIMARY KEY
+*/
+/*
 --BUILDING_SQFT_PER_JOB																							--???
 SET @source = 'spacecore.urbansim.building_sqft_per_job';		--SPACECORE DATABASE SCHEMA TABLE
 SET @target = 'urbansim.urbansim.building_sqft_per_job';		--URBANSIM DATABASE SCHEMA TABLE
