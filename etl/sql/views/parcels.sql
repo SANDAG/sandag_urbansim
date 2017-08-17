@@ -322,3 +322,15 @@ FROM
 				) lcp
 	ON usp.parcel_id = lcp.PARCELID 
 --*/
+
+
+/*#################### CALCULATE DISTANCES ####################*/
+--CALCULATE DISTANCE TO COAST
+WITH coast AS(
+	SELECT geometry::UnionAggregate(coast.SHAPE) AS shape
+	FROM GIS.coast
+)
+UPDATE parcels
+SET distance_to_coast = parcels.centroid.STDistance(coast.shape)
+FROM urbansim.parcels
+	,coast
