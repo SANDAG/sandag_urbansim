@@ -5,7 +5,7 @@ DROP TABLE IF EXISTS  urbansim.job_spaces;
 GO
 
 CREATE TABLE urbansim.job_spaces(
-	job_space_id IDENTITY (1,1)
+	job_space_id int IDENTITY (1,1) NOT NULL
 	,subparcel_id int NULL
 	,building_id bigint NOT NULL
 	,block_id bigint NULL
