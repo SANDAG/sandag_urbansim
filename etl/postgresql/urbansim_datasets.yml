@@ -1,4 +1,4 @@
-schema : ref
+schema : urbansim
 
 assessor_transactions :
     in_query_non_spatial: >
@@ -398,19 +398,11 @@ nodes :
     out_table : nodes
     #Map columns --> Notice special geometry column
     column_data_types :
-        building_id : !!python/name:sqlalchemy.Integer
-        development_type_id : !!python/name:sqlalchemy.Integer
-        parcel_id : !!python/name:sqlalchemy.Integer
-        improvement_value : !!python/name:sqlalchemy.Float
-        residential_units : !!python/name:sqlalchemy.Integer
-        residential_sqft : !!python/name:sqlalchemy.Integer
-        non_residential_sqft : !!python/name:sqlalchemy.Integer
-        job_spaces : !!python/name:sqlalchemy.Integer
-        non_residential_rent_per_sqft : !!python/name:sqlalchemy.Float
-        price_per_sqft : !!python/name:sqlalchemy.Float
-        stories : !!python/name:sqlalchemy.Integer
-        year_built : !!python/name:sqlalchemy.Integer
-        shape : !!python/object:geoalchemy2.Geography { geometry_type: 'POINT', srid: 4326, spatial_index: True }
+        node : !!python/name:sqlalchemy.Integer
+        x : !!python/name:sqlalchemy.Float
+        y : !!python/name:sqlalchemy.Float
+        on_ramp : !!python/name:sqlalchemy.Integer
+        shape : !!python/object:geoalchemy2.Geometry { geometry_type: 'POINT', srid: 2230, spatial_index: True }
 
 parcels :
     ##Input Query
@@ -419,7 +411,6 @@ parcels :
             parcel_id
             ,block_id
             ,mgra_id
-            ,zoning_id
             ,luz_id
             ,msa_id
             ,region_id
@@ -433,12 +424,11 @@ parcels :
             ,distance_to_coast
             ,distance_to_transit
         FROM
-          spacecore.urbansim.parcels
+          spacecore.urbansim.parcels_test
     ##Index Column
     index_col : parcel_id
     indexes :
         ix_parcels_mgra_id: mgra_id
-        ix_parcels_zoning_id: zoning_id
     ##Pandas Data Frame for spatial data
     in_query_spatial : >
         SELECT
@@ -446,15 +436,14 @@ parcels :
             ,shape.STAsText() as shape
             ,centroid.STAsText() as centroid
         FROM
-            spacecore.urbansim.parcels
+            spacecore.urbansim.parcels_test
     ##Output
-    out_table : parcels
+    out_table : parcels_test
     #Map columns --> Notice special geometry column
     column_data_types :
         parcel_id : !!python/name:sqlalchemy.Integer
         block_id : !!python/name:sqlalchemy.String
         mgra_id : !!python/name:sqlalchemy.Integer
-        zoning_id : !!python/name:sqlalchemy.String
         luz_id : !!python/name:sqlalchemy.Integer
         msa_id : !!python/name:sqlalchemy.Integer
         region_id : !!python/name:sqlalchemy.Integer
@@ -467,8 +456,8 @@ parcels :
         distance_to_onramp : !!python/name:sqlalchemy.Float
         distance_to_coast : !!python/name:sqlalchemy.Float
         distance_to_transit : !!python/name:sqlalchemy.Float
-        shape : !!python/object:geoalchemy2.Geography { geometry_type: 'MULTIPOLYGON', srid: 4326, spatial_index: True }
-        centroid : !!python/object:geoalchemy2.Geography { geometry_type: 'POINT', srid: 4326, spatial_index: True }
+        shape : !!python/object:geoalchemy2.Geometry { geometry_type: 'GEOMETRY', srid: 2230, spatial_index: True, management: False }
+        centroid : !!python/object:geoalchemy2.Geometry { geometry_type: 'POINT', srid: 2230, spatial_index: True, management: False }
 
 parks :
     ##Input Query
