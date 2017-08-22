@@ -122,10 +122,10 @@ SET @table = 'zoning_schedule';									--URBANSIM TABLE
 SET @pkey = 'zoning_schedule_id';								--URBANSIM PRIMARY KEY
 */
 /*
---ZONING
+--ZONING PARCEL
 SET @source = 'spacecore.urbansim.zoning_parcels';				--SPACECORE DATABASE SCHEMA TABLE
-SET @target = 'urbansim.urbansim.zoning_parcels';				--URBANSIM DATABASE SCHEMA TABLE
-SET @table = 'zoning_parcels';									--URBANSIM TABLE
+SET @target = 'urbansim.urbansim.zoning_parcel';				--URBANSIM DATABASE SCHEMA TABLE
+SET @table = 'zoning_parcel';									--URBANSIM TABLE
 SET @pkey = 'zoning_parcels_id';								--URBANSIM PRIMARY KEY
 */
 /*
@@ -176,6 +176,13 @@ SET @source = 'spacecore.ref.sr13_capacity';		--SPACECORE DATABASE SCHEMA TABLE
 SET @target = 'urbansim.ref.sr13_capacity';		--URBANSIM DATABASE SCHEMA TABLE
 SET @table = 'sr13_capacity';					--URBANSIM TABLE
 SET @pkey = 'sr13_capacity_id';					--URBANSIM PRIMARY KEY
+*/
+/*
+--REF SR14 CAPACITY
+SET @source = 'spacecore.ref.sr14_capacity';		--SPACECORE DATABASE SCHEMA TABLE
+SET @target = 'urbansim.ref.sr14_capacity';		--URBANSIM DATABASE SCHEMA TABLE
+SET @table = 'sr14_capacity';					--URBANSIM TABLE
+SET @pkey = 'sr14_capacity_id';					--URBANSIM PRIMARY KEY
 */
 --EXEC('SELECT * FROM '+ @source)
 
