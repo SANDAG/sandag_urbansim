@@ -189,13 +189,13 @@ FROM
         ,zoning.max_dua
         ,zoning.max_res_units
         ,CASE
-             WHEN sr13_capacity.cap_hs < 0 THEN 0
-             ELSE sr13_capacity.cap_hs
+             WHEN sr13_capacity.sr13_cap_hs_growth_adjusted < 0 THEN 0
+             ELSE sr13_capacity.sr13_cap_hs_growth_adjusted
          END as cap_hs
     FROM
         ref.sr13_capacity
             JOIN ref.parcelzoning_base AS parcels
-            ON parcels.parcel_id = sr13_capacity.parcel_id
+            ON parcels.parcel_id = sr13_capacity.ludu2015_parcel_id
                 JOIN ref.zoning_base AS zoning
                 ON zoning.zone = parcels.zone
     GROUP BY
@@ -204,7 +204,7 @@ FROM
         ,zoning.min_dua
         ,zoning.max_dua
         ,zoning.max_res_units
-        ,sr13_capacity.cap_hs
+        ,sr13_capacity.sr13_cap_hs_growth_adjusted
     ) parcel_zoning_sr13_comparison  
 GROUP BY
     zone
@@ -281,13 +281,13 @@ WITH t AS (
         ,zoning.max_dua
         ,zoning.max_res_units
         ,CASE
-             WHEN sr13_capacity.cap_hs < 0 THEN 0
-             ELSE sr13_capacity.cap_hs
+             WHEN sr13_capacity.sr13_cap_hs_growth_adjusted < 0 THEN 0
+             ELSE sr13_capacity.sr13_cap_hs_growth_adjusted
          END as cap_hs
     FROM
         ref.sr13_capacity
             JOIN ref.parcelzoning_base AS parcels
-            ON parcels.parcel_id = sr13_capacity.parcel_id
+            ON parcels.parcel_id = sr13_capacity.ludu2015_parcel_id
                 LEFT JOIN urbansim.zoning
                 ON zoning.zone = parcels.zone
     GROUP BY
@@ -297,7 +297,7 @@ WITH t AS (
         ,zoning.min_dua
         ,zoning.max_dua
         ,zoning.max_res_units
-        ,sr13_capacity.cap_hs
+        ,sr13_capacity.sr13_cap_hs_growth_adjusted
 )
 INSERT INTO urbansim.parcel_zoning_schedule2
 SELECT
