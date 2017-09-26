@@ -21,7 +21,7 @@ FROM gis.buildings_public_facilities
 
 
 SELECT *
-FROM input.vi_jobs_gov_2012_2016
+FROM input.vi_jobs_gov_2012_2016												--NOTE DATASET IS VIEW
 WHERE yr = 2015
 ORDER BY id
 --214,300
@@ -38,20 +38,20 @@ WITH spaces as (
 ),
 jobs AS (
 	SELECT *
-	FROM input.vi_jobs_gov_2012_2016
+	FROM input.vi_jobs_gov_2012_2016											--NOTE DATASET IS VIEW
 	WHERE yr = 2015
 ),
 jobs_loc AS (
 	SELECT id.id, shape
 	FROM (	
 		SELECT id, MIN(job_id) AS job_id
-		FROM input.vi_jobs_gov_2012_2016
+		FROM input.vi_jobs_gov_2012_2016										--NOTE DATASET IS VIEW
 		WHERE yr = 2015
 		GROUP BY id
 		) AS id
 	JOIN (
 		SELECT id, job_id, shape
-		FROM input.vi_jobs_gov_2012_2016
+		FROM input.vi_jobs_gov_2012_2016										--NOTE DATASET IS VIEW
 		WHERE yr = 2015
 		) AS loc
 		ON id.job_id = loc.job_id
@@ -78,7 +78,7 @@ FROM urbansim.buildings AS usb
 JOIN (
 	SELECT m.id, m.building_id, j.job_id, j.sector_id
 	FROM match AS m
-	RIGHT JOIN (SELECT *  FROM input.vi_jobs_gov_2012_2016 WHERE yr = 2015) AS j
+	RIGHT JOIN (SELECT *  FROM input.vi_jobs_gov_2012_2016 WHERE yr = 2015) AS j	--NOTE DATASET IS VIEW
 	ON m.id = j.id
 	) AS j
 	ON usb.building_id = j.building_id
