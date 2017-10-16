@@ -2,8 +2,8 @@
 --PULLS FROM [CAPACITYFEEDBACK] ON sql2014b8
 USE spacecore
  
-IF OBJECT_ID('ref.sr14_capacity') IS NOT NULL
-    DROP TABLE ref.sr14_capacity
+IF OBJECT_ID('ref.sr14_capacity_from_feedback') IS NOT NULL
+    DROP TABLE ref.sr14_capacity_from_feedback
 GO
  
 SELECT
