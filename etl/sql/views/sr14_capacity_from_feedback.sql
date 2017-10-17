@@ -19,7 +19,8 @@ SELECT
         CASE
             WHEN Feed_Type = 1 AND Cap_Type = 1 THEN zoning.[addl_units]                        --FROM JOIN
             WHEN Feed_Type = 1 AND Cap_Type = 2 THEN sr13cap.[sr13_cap_hs_growth_adjusted]      --FROM JOIN
-            --WHEN Feed_Type = 1
+			WHEN Feed_Type = 1 AND Cap_Type = 3 THEN New_Cap
+			WHEN Feed_Type = 1 AND Cap_Type = 4 THEN New_Cap
             WHEN Feed_Type = 2 THEN NULL
             WHEN Feed_Type = 3 AND Cap_Type = 1 THEN New_Cap
             WHEN Feed_Type = 3 AND Cap_Type = 2 THEN New_Cap
