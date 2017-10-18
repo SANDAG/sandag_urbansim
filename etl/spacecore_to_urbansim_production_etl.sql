@@ -184,6 +184,13 @@ SET @target = 'urbansim.ref.sr14_capacity';		--URBANSIM DATABASE SCHEMA TABLE
 SET @table = 'sr14_capacity';					--URBANSIM TABLE
 SET @pkey = 'capacity_id';					--URBANSIM PRIMARY KEY
 */
+/*
+--CAPACITY
+SET @source = 'spacecore.urbansim.capacity';			--SPACECORE DATABASE SCHEMA TABLE
+SET @target = 'urbansim.urbansim.capacity';				--URBANSIM DATABASE SCHEMA TABLE
+SET @table = 'capacity';								--URBANSIM TABLE
+SET @pkey = 'capacity_id';								--URBANSIM PRIMARY KEY
+*/
 --EXEC('SELECT * FROM '+ @source)
 
 /*#################### BEGIN LOAD ####################*/
