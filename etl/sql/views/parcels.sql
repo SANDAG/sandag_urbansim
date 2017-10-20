@@ -11,6 +11,8 @@ CREATE TABLE urbansim.parcels (
     parcel_id int NOT NULL
 	,block_id nvarchar(15) --NOT NULL
 	,development_type_id int
+	--,own int
+	,du int
     ,land_value float
     ,parcel_acres float
     ,region_id integer
@@ -31,9 +33,11 @@ CREATE TABLE urbansim.parcels (
 )
 
 --INSERT FROM LUDU2015: SHAPE
-INSERT INTO urbansim.parcels WITH (TABLOCK) (parcel_id, shape)
+INSERT INTO urbansim.parcels WITH (TABLOCK) (parcel_id, own, du shape)
 SELECT
     parcelID
+	--,MIN(genOwnID)
+	,SUM(du)
 	,geometry::UnionAggregate(Shape)
 FROM
     GIS.ludu2015
