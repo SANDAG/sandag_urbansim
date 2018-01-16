@@ -145,3 +145,21 @@ INNER JOIN
 WHERE ISNULL(usb.job_spaces, 0) + jobs > 0
 ;
 */
+
+
+/*
+/***#################### WHERE SQFT IS NULL, DERIVE FROM UNITS, JOB_SPACES ####################***/
+SELECT * FROM urbansim.buildings 
+WHERE assign_jobs = 1
+	AND ISNULL([residential_sqft], 0) + ISNULL([non_residential_sqft], 0) = 0
+	AND ISNULL([residential_units], 0) + ISNULL([job_spaces], 0) > 0
+
+--UPDATE
+UPDATE usb
+SET [floorspace_source] = 'units_jobs_derived'
+	,[residential_sqft] = [residential_units] * 400
+	,[non_residential_sqft] = [job_spaces] * 400
+FROM (SELECT * FROM urbansim.buildings WHERE assign_jobs = 1) usb		--DO NOT USE MIL/PF BUILDINGS
+WHERE ISNULL([residential_sqft], 0) + ISNULL([non_residential_sqft], 0) = 0
+	AND ISNULL([residential_units], 0) + ISNULL([job_spaces], 0) > 0
+*/

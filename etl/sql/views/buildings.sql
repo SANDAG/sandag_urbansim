@@ -12,7 +12,7 @@ IF OBJECT_ID('urbansim.buildings') IS NOT NULL
 GO
 
 CREATE TABLE urbansim.buildings(
-	building_id bigint NOT NULL
+	building_id int NOT NULL
 	,development_type_id smallint
 	,subparcel_id int NULL
 	,parcel_id int NOT NULL
@@ -628,87 +628,11 @@ WHERE usb.block_id IS NULL
 ;
 
 /*#################### ASSIGN JOB_SPACES FROM EDD ####################*/
-DECLARE @employment_vacancy float = 0.1;
-/* ##### ASSIGN JOB_SPACES TO BUILDINGS BY SUBPARCEL ##### */
-WITH emp AS(
-	SELECT
-		emp2013.subparcel_id
-		,emp2013.emp AS emp2013
-		,emp2015.emp AS emp2015
-		,CASE
-			WHEN emp2013.emp >= emp2015.emp THEN emp2013.emp
-			ELSE emp2015.emp
-		END AS emp
-	FROM (
-		SELECT lc.subParcel AS subparcel_id
-			--,SUM(ISNULL(emp.emp_adj, 0)) AS emp
-			,SUM(CAST(CEILING(ISNULL(emp_adj,0)*(1+@employment_vacancy))AS int)) AS emp
-		FROM gis.ludu2015 lc
-		LEFT JOIN socioec_data.ca_edd.emp_2013 AS emp
-		ON lc.Shape.STContains(emp.shape) = 1
-		WHERE emp.emp_adj IS NOT NULL
-		GROUP BY lc.subParcel
-	) AS emp2013
-	JOIN (
-		SELECT lc.subParcel AS subparcel_id
-			--,SUM(ISNULL(emp.emp_adj, 0)) AS emp
-			,SUM(CAST(CEILING(ISNULL(emp_adj,0)*(1+@employment_vacancy))AS int)) AS emp
-		FROM gis.ludu2015 lc
-		LEFT JOIN (
-			SELECT
-				CASE
-					WHEN emp1 >= emp2 AND emp1 >= emp3 THEN emp1
-					WHEN emp2 >= emp1 AND emp2 >= emp3 THEN emp2
-					WHEN emp3 >= emp1 AND emp3 >= emp2 THEN emp3
-				END AS emp_adj
-				,COALESCE([point_2014],[point_parcels]) AS shape
-			FROM (SELECT ISNULL(emp1,0) AS emp1, ISNULL(emp2,0) AS emp2, ISNULL(emp3,0) AS emp3, [point_2014], [point_parcels], own FROM [ws].[dbo].[CA_EDD_EMP_2015]) x
-			WHERE own = 5							--PRIVATE SECTOR
-			) AS emp
-		ON lc.Shape.STContains(emp.shape) = 1
-		WHERE emp.emp_adj IS NOT NULL
-		GROUP BY lc.subParcel
-	) AS emp2015
-	ON emp2013.subparcel_id = emp2015.subparcel_id
-)
-, emp_space AS(
-	SELECT
-		usb.subparcel_id
-		,usb.building_id
-		,emp.emp/ COUNT(*) OVER (PARTITION BY usb.subparcel_id) +
-			CASE 
-			WHEN ROW_NUMBER() OVER (PARTITION BY usb.subparcel_id ORDER BY usb.shape.STArea()) <= (emp.emp % COUNT(*) OVER (PARTITION BY usb.subparcel_id)) THEN 1 
-			ELSE 0 
-			END job_spaces
-		FROM
-			(SELECT * FROM urbansim.buildings WHERE assign_jobs = 1) usb
-		JOIN emp
-			ON usb.subparcel_id = emp.subparcel_id
-)
-UPDATE 
-	usb
-SET 
-	usb.job_spaces = emp_space.job_spaces
-FROM
-	(SELECT * FROM urbansim.buildings WHERE assign_jobs = 1) AS usb
-JOIN emp_space
-	ON usb.subparcel_id = emp_space.subparcel_id
-;
+/*
+JOB SPACES FOR PRIVATE ('WAC') AND SELFEMPLOYED ('SEM') ARE PROCESSED IN: job_spaces.sql
+JOB SPACES FOR 'GOV' AND 'MIL' ARE ADDED TO BUILDINGS LATER, IN THEIR ALLOCATION SCRIPTS.
+*/
 
-/***#################### WHERE SQFT IS NULL, DERIVE FROM UNITS, JOB_SPACES ####################***/
-SELECT * FROM urbansim.buildings 
-WHERE assign_jobs = 1
-	AND ISNULL([residential_sqft], 0) + ISNULL([non_residential_sqft], 0) = 0
-	AND ISNULL([residential_units], 0) + ISNULL([job_spaces], 0) > 0
-
---UPDATE
-UPDATE usb
-SET [floorspace_source] = 'units_jobs_derived'
-	,[residential_sqft] = [residential_units] * 400
-	,[non_residential_sqft] = [job_spaces] * 400
-FROM (SELECT * FROM urbansim.buildings WHERE assign_jobs = 1) usb		--DO NOT USE MIL/PF BUILDINGS
-WHERE ISNULL([residential_sqft], 0) + ISNULL([non_residential_sqft], 0) = 0
-	AND ISNULL([residential_units], 0) + ISNULL([job_spaces], 0) > 0
 ;
 /*** PARCELS DATA ***/
 --GET PARCEL DATA: JURISDICTION ID
@@ -723,17 +647,17 @@ ON usb.parcel_id = p.parcel_id
 --PROCEED TO PARCEL LEVEL ADJUSTMENTS SCRIPT
 
 /***#################### CHECKS ####################***/
-SELECT SUM(emp_adj)
-FROM socioec_data.ca_edd.emp_2013
+--SELECT SUM(emp_adj)
+--FROM socioec_data.ca_edd.emp_2013
 
-SELECT COUNT(*)
-FROM spacecore.input.jobs_wac_2013
+--SELECT COUNT(*)
+--FROM spacecore.input.jobs_wac_2013
 
-SELECT SUM(job_spaces)
-FROM urbansim.buildings
+--SELECT SUM(job_spaces)
+--FROM urbansim.buildings
 
-SELECT COUNT(*)
-FROM urbansim.jobs
+--SELECT COUNT(*)
+--FROM urbansim.jobs
 
 
 SELECT SUM(residential_units)
