@@ -207,6 +207,32 @@ ORDER BY parcel_id
 --17,522 DUP PARCELIDS	--XX
 
 
+/*######################################## OVERRIDES ########################################*/ 
+/*########## OVERRIDES FOR YEAR OVERLAP (SPHERE 1100) ##########*/
+--FIND
+SELECT parcel_id
+	,year
+	,sphere
+	,planid
+	,gplu
+FROM #gp_parcels
+WHERE sphere = 1100
+AND year = 2013
+AND parcel_id IN (SELECT parcel_id FROM #gp_parcels WHERE sphere = 1100 AND year = 2017)
+ORDER BY parcel_id, year, sphere, planid
+--7,849 of 18,906
+
+--CHECK
+SELECT * FROM #gp_parcels WHERE parcel_id = 190
+
+--DELETE
+DELETE
+FROM #gp_parcels
+WHERE sphere = 1100
+AND year = 2013
+AND parcel_id IN (SELECT parcel_id FROM #gp_parcels WHERE sphere = 1100 AND year = 2017)
+
+
 /*########## OVERRIDES FOR SPHERE OVERLAP 1/3 ##########*/
 --FIND 1900 ON 200 OR 1400s
 SELECT parcel_id
@@ -218,7 +244,7 @@ FROM #gp_parcels
 WHERE sphere >= 1900
 AND parcel_id IN (SELECT parcel_id FROM #gp_parcels WHERE sphere = 200 OR sphere BETWEEN 1400 AND 1499) 
 ORDER BY parcel_id, sphere, planid
---4,552
+--4,621
 
 --CHECK
 SELECT * FROM #gp_parcels WHERE parcel_id = 9002468
@@ -340,36 +366,13 @@ WHERE sphere BETWEEN 1900 AND 1999
 AND parcel_id IN (SELECT parcel_id FROM #gp_parcels WHERE sphere IN(500, 600, 700, 900, 1000, 1100, 1200, 1300, 1500, 1600, 1800))
 
 
-/*########## OVERRIDES FOR YEAR OVERLAP (SPHERE 1100) ##########*/
---FIND
-SELECT parcel_id
-	,year
-	,sphere
-	,planid
-	,gplu
-FROM #gp_parcels
-WHERE sphere = 1100
-AND year = 2013
-AND parcel_id IN (SELECT parcel_id FROM #gp_parcels WHERE sphere = 1100 AND year = 2017)
-ORDER BY parcel_id, year, sphere, planid
---7,881 of 18,906
-
---CHECK
-SELECT * FROM #gp_parcels WHERE parcel_id = 190
-
---DELETE
-DELETE
-FROM #gp_parcels
-WHERE sphere = 1100
-AND year = 2013
-AND parcel_id IN (SELECT parcel_id FROM #gp_parcels WHERE sphere = 1100 AND year = 2017)
-
-
 /*########## SAVE TO TABLE ##########*/
 IF OBJECT_ID('urbansim.general_plan_parcels') IS NOT NULL
     DROP TABLE urbansim.general_plan_parcels
 ;
-SELECT parcel_id
+SELECT 
+	IDENTITY(int,1,1) AS gpid
+	,parcel_id
 	,year
 	,sphere
 	,planid
