@@ -3,8 +3,7 @@ USE spacecore
 
 /*#################### RUN 1/2, DISCARD DUPLICATES BY NON DEVELOPABLE LU ####################*/
 --FIND DUPLICATES ON PARCELID
-IF OBJECT_ID('tempdb..#parcels_dup') IS NOT NULL
-    DROP TABLE #parcels_dup
+DROP TABLE IF EXISTS #parcels_dup
 ;
 WITH r AS(
 	SELECT 
@@ -14,8 +13,9 @@ WITH r AS(
 	HAVING COUNT(*) >= 2
 )
 SELECT
-	p.gpid
+	p.gpp_id
 	,r.parcel_id
+	,p.gp_id
 	,p.year
 	,p.sphere
 	,p.planid
@@ -29,20 +29,19 @@ SELECT
 		WHEN gplu = 9300 THEN 3						--INDIAN RESERVATION
 		ELSE 2										--ALL OTHER
 	END AS gplu_case
---INTO #parcels_dup
+INTO #parcels_dup
 FROM r
 JOIN urbansim.general_plan_parcels AS p ON r.parcel_id = p.parcel_id
 ORDER BY parcel_id
 ;
 SELECT * FROM #parcels_dup ORDER BY parcel_id, gplu
---7,353 duplicates
---3,538 unique
+--9,852 duplicates
+--4,293 unique
 
 
 --DROP NON DEVELOPABLE DUPLICATES
 --ORDER BY CASE DEVELOPABLE
-IF OBJECT_ID('tempdb..#parcels_dup_case') IS NOT NULL
-    DROP TABLE #parcels_dup_case
+DROP TABLE IF EXISTS #parcels_dup_case
 ;
 SELECT *
 	,ROW_NUMBER() OVER(PARTITION BY parcel_id ORDER BY parcel_id, gplu_case, gplu) AS row_gplu
@@ -56,17 +55,16 @@ SELECT * FROM #parcels_dup_case
 --SELECT *
 DELETE p
 FROM urbansim.general_plan_parcels AS p
-JOIN #parcels_dup_case AS d ON p.gpid = d.gpid
+JOIN #parcels_dup_case AS d ON p.gpp_id = d.gpp_id
 WHERE gplu_case > 1
 AND row_gplu > 1
 ;
---3,319
+--4,199
 
 
 /*#################### RUN 2/2, DISCARD DUPLICATES BY DEVELOPABLE ACRES ####################*/
 --FIND DUPLICATES ON PARCELID
-IF OBJECT_ID('tempdb..#parcels_dup') IS NOT NULL
-    DROP TABLE #parcels_dup
+DROP TABLE IF EXISTS #parcels_dup
 ;
 WITH r AS(
 	SELECT 
@@ -76,8 +74,9 @@ WITH r AS(
 	GROUP BY parcel_id
 )
 SELECT
-	p.gpid
+	p.gpp_id
 	,r.parcel_id
+	,p.gp_id
 	,p.year
 	,p.sphere
 	,p.planid
@@ -89,14 +88,13 @@ WHERE r._count >= 2
 ORDER BY parcel_id
 ;
 SELECT * FROM #parcels_dup ORDER BY parcel_id, gplu
---983 duplicates
---487 unique
+--2,271 duplicates
+--911 unique
 
 
 --CALCULATE DEVOPABLE AREA IN PARCEL 
 --FIND NON CONSTRAINED PART OF PARCEL
-IF OBJECT_ID('tempdb..#parcels_dev') IS NOT NULL
-    DROP TABLE #parcels_dev
+DROP TABLE IF EXISTS #parcels_dev
 ;
 SELECT 
 	parcel_id
@@ -111,7 +109,7 @@ CROSS APPLY(
 	) AS cons
 --WHERE parcel_id = 5109337	--368		--TEST
 ORDER BY parcel_id
---487
+--911
 
 --TEST
 --SELECT * FROM urbansim.parcels	WHERE parcel_id = 368
@@ -120,12 +118,12 @@ ORDER BY parcel_id
 
 
 --CALCULATE INTERSECTIONS, PARCEL TO GP
-IF OBJECT_ID('tempdb..#parcels_dup_intersection') IS NOT NULL
-    DROP TABLE #parcels_dup_intersection
+DROP TABLE IF EXISTS #parcels_dup_intersection
 ;
 SELECT 
-	--pd.gpid
+	--p.gpp_id
 	p.parcel_id
+	,pd.gp_id
 	,pd.sphere
 	,pd.planid
 	,pd.gplu
@@ -137,10 +135,11 @@ FROM #parcels_dev AS p
 JOIN #parcels_dup AS pd ON pd.parcel_id = p.parcel_id
 JOIN gis.general_plan AS gp
 	--ON gp.ogr_geometry.STIntersects(p.shape) = 1
-	ON pd.planid = gp.planid
+	ON pd.gp_id = gp.gp_id
 --WHERE parcel_id = 368
-GROUP BY --pd.gpid
+GROUP BY --d.gpp_id
 	p.parcel_id
+	,pd.gp_id
 	,pd.sphere
 	,pd.planid
 	,pd.gplu
@@ -148,17 +147,17 @@ ORDER BY parcel_id
 ;
 
 SELECT * FROM #parcels_dup_intersection ORDER BY parcel_id
---983
+--2,271
 
 
 --LOAD INTERSECTION VALUE TO PARCEL AND STORE TO TABLE
-IF OBJECT_ID('tempdb..#parcels_dup_dev') IS NOT NULL
-    DROP TABLE #parcels_dup_dev
+DROP TABLE IF EXISTS #parcels_dup_dev
 ;
 SELECT 
 	--IDENTITY(int,1,1) AS gpmid
-	p.gpid
+	p.gp_id
 	,p.parcel_id
+	,p.gpp_id
 	,p.year
 	,p.sphere
 	,p.planid
@@ -175,42 +174,54 @@ INTO #parcels_dup_dev
 FROM #parcels_dup AS p
 JOIN #parcels_dup_intersection AS pin
 ON p.parcel_id = pin.parcel_id
-	AND p.sphere = pin.sphere
-	AND p.planid = pin.planid
-	AND p.gplu = pin.gplu
+	AND p.gp_id = pin.gp_id
 ORDER BY p.parcel_id
 	,gplu
 
 --CHECK
 SELECT * FROM #parcels_dup_dev
---983
+--2,271
 
 --DISCARD DUPLICATES
 WITH s AS(
-	SELECT gpid, parcel_id
+	SELECT gpp_id, parcel_id
 	FROM #parcels_dup_dev
 	WHERE rownum_dev = 1
 	UNION ALL
-	SELECT gpid, parcel_id
+	SELECT gpp_id, parcel_id
 	FROM #parcels_dup_dev
 	WHERE rownum = 1
 	AND parcel_id NOT IN (
 		SELECT parcel_id
 		FROM #parcels_dup_dev
 		WHERE rownum_dev = 1)
-	--ORDER BY parcel_id, gpid
-)--487
+	--ORDER BY parcel_id, gpp_id
+)--911
 , d AS(
-	SELECT gpid, parcel_id
+	SELECT gpp_id, parcel_id
 	FROM #parcels_dup_dev
-	WHERE gpid NOT IN (SELECT gpid FROM s)
-)--496
+	WHERE gpp_id NOT IN (SELECT gpp_id FROM s)
+)--1,360
 DELETE
 FROM urbansim.general_plan_parcels
-WHERE gpid IN (SELECT gpid FROM d)
+WHERE gpp_id IN (SELECT gpp_id FROM d)
 ;
+
+--DROP MULTIPLE PARCEL ID COLUMN, DUPLICATES HAVE BEEN ELIMINATED
+ALTER TABLE urbansim.general_plan_parcels
+DROP COLUMN gpp_id
+
+
+--****************************************************************************************************************
+--CHECKS
+SELECT COUNT(*) FROM urbansim.general_plan_parcels
 
 SELECT *
 FROM urbansim.general_plan_parcels
 ORDER BY parcel_id
 
+SELECT parcel_id, COUNT(*)
+FROM urbansim.general_plan_parcels
+GROUP BY parcel_id
+HAVING COUNT(*) > 1
+ORDER BY parcel_id

@@ -1,3 +1,5 @@
+USE spacecore
+;
 /****** LOAD FROM GDB TO MSSQL ******/
 --USE OGR2OGR
 /*
@@ -5,8 +7,6 @@ E:\OSGeo4W64\bin\ogr2ogr.exe -f MSSQLSpatial "MSSQL:server=sql2014a8;database=sp
 */
 SELECT COUNT(*) FROM gis.general_plan
 --//LOADED 87,543	FROM 87,545
-
-USE spacecore
 
 /****** FIX SRID  ******/
 SELECT DISTINCT centroid.STSrid FROM gis.ludu2015points;
@@ -22,9 +22,17 @@ UPDATE GIS.general_plan SET ogr_geometry.STSrid = 2230;		--NAD83 / California zo
 --SET THE SHAPES TO BE NOT NULL SO WE CAN CREATE A SPATIAL INDEX
 ALTER TABLE GIS.general_plan ALTER COLUMN ogr_geometry geometry NOT NULL
 
+--ADD CLUSTERED PRIMARY KEY
+--ALTER TABLE GIS.general_plan DROP COLUMN ogr_fid		--DROP IF EXISTS
+ALTER TABLE GIS.general_plan
+ADD gp_id int IDENTITY(1, 1) NOT NULL
+ALTER TABLE GIS.general_plan
+ADD CONSTRAINT pk_gis_general_plan_gp_id PRIMARY KEY(gp_id)
+;
+
 --SELECT max(x_coord), min(x_coord), max(y_coord), min(y_coord) from gis.parcels
 
-CREATE SPATIAL INDEX [ix_spatial_gis_general_plan_ogr_fid] ON GIS.general_plan
+CREATE SPATIAL INDEX [ix_spatial_gis_general_plan_gp_id] ON GIS.general_plan
 (
     ogr_geometry
 ) USING  GEOMETRY_GRID
@@ -37,7 +45,7 @@ CREATE SPATIAL INDEX [ix_spatial_gis_general_plan_ogr_fid] ON GIS.general_plan
 IF OBJECT_ID('tempdb..#gp') IS NOT NULL
     DROP TABLE #gp
 ;
-SELECT ogr_fid
+SELECT gp_id
 	,ogr_geometry
 	,gp.year
 	,gp.sphere
@@ -65,14 +73,14 @@ FROM GIS.general_plan AS gp
 
 --CREATE SPATIAL INDEX ON GP TEMP TABLE
 --CREATE A PRIMARY KEY SO WE CAN CREATE A SPATIAL INDEX
-ALTER TABLE #gp ADD CONSTRAINT gp_ogr_fid PRIMARY KEY CLUSTERED (ogr_fid) 
+ALTER TABLE #gp ADD CONSTRAINT gp_gp_id PRIMARY KEY CLUSTERED (gp_id) 
 
 --SET THE SHAPES TO BE NOT NULL SO WE CAN CREATE A SPATIAL INDEX
 ALTER TABLE #gp ALTER COLUMN ogr_geometry geometry NOT NULL
 
 --SELECT max(x_coord), min(x_coord), max(y_coord), min(y_coord) from #gp
 
-CREATE SPATIAL INDEX [ix_spatial_gp_ogr_fid] ON #gp
+CREATE SPATIAL INDEX [ix_spatial_gp_gp_id] ON #gp
 (
     ogr_geometry
 ) USING  GEOMETRY_GRID
@@ -81,16 +89,19 @@ CREATE SPATIAL INDEX [ix_spatial_gp_ogr_fid] ON #gp
 ;
 
 
---JOIN GP TO SUBPARCEL
+--SPATIAL JOIN GENERAL PLAN TO SUBPARCEL
 IF OBJECT_ID('tempdb..#gp_sparcels') IS NOT NULL
     DROP TABLE #gp_sparcels
 ;
 SELECT
 	parcelID AS parcel_id
 	,LCKey
+	,gp_id
 	,year
 	,sphere
 	,planid
+	,loden
+	,hiden
 	,gplu
 INTO #gp_sparcels
 FROM gis.ludu2015points AS sp
@@ -99,12 +110,15 @@ JOIN #gp AS gp
 ORDER BY gplu, parcelID, LCKey
 --SELECT * FROM #gp_sparcels ORDER BY parcel_id, LCKey
 --ALL = 830,083 of 829,868	--XX
+SELECT * FROM #gp_sparcels WHERE parcel_id = 96286	--112921
+
 
 --FIND DUPLICATES ON LCKEY
 WITH r AS(
 	SELECT 
 		parcel_id
 		,LCKey
+		,gp_id
 		,year
 		,sphere
 		,ROW_NUMBER() OVER(PARTITION BY LCKey ORDER BY LCKey) AS rownum
@@ -114,6 +128,7 @@ WITH r AS(
 SELECT
 	parcel_id
 	,LCKey
+	,gp_id
 	,year
 	,sphere
 	,rownum
@@ -130,29 +145,39 @@ IF OBJECT_ID('tempdb..#gp_parcels') IS NOT NULL
 ;
 SELECT
 	parcel_id
+	,gp_id
 	,year
 	,sphere
 	,planid
+	,loden
+	,hiden
 	,gplu
 INTO #gp_parcels
 FROM #gp_sparcels
 GROUP BY 
 	parcel_id
+	,gp_id
 	,year
 	,sphere
 	,planid
+	,loden
+	,hiden
 	,gplu
 ORDER BY 
-parcel_id
+	parcel_id
+	,gp_id
 	,year
 	,sphere
 	,planid
+	,loden
+	,hiden
 	,gplu
 ;
+
 --CREATE NONCLUSTERED INDEX
-CREATE NONCLUSTERED INDEX [ix_gp_parcels_ogr_fid]   
+CREATE NONCLUSTERED INDEX [ix_gp_parcels_parcel_id]   
     ON #gp_parcels (parcel_id);  
---816,944 FROM 830,083	--XX
+--818,698 FROM 830,083	--XX
 --CHECK
 --SELECT * FROM #gp_sparcels WHERE parcel_id = 9002468 ORDER BY LCKey
 --SELECT * FROM #gp_parcels WHERE parcel_id = 9002468
@@ -162,9 +187,12 @@ CREATE NONCLUSTERED INDEX [ix_gp_parcels_ogr_fid]
 WITH r AS(
 	SELECT 
 		parcel_id
+		,gp_id
 		,year
 		,sphere
 		,planid
+		,loden
+		,hiden
 		,gplu
 		,ROW_NUMBER() OVER(PARTITION BY parcel_id ORDER BY parcel_id) AS rownum
 	FROM #gp_parcels
@@ -172,9 +200,12 @@ WITH r AS(
 )
 SELECT
 	r.parcel_id
+	,p.gp_id
 	,p.year
 	,p.sphere
 	,p.planid
+	,p.loden
+	,p.hiden
 	,p.gplu
 	,ROW_NUMBER() OVER(PARTITION BY p.parcel_id ORDER BY p.parcel_id) AS rownum
 FROM r
@@ -182,16 +213,19 @@ JOIN #gp_parcels AS p ON r.parcel_id = p.parcel_id
 WHERE rownum = 2
 ORDER BY parcel_id
 ;
---35,541 DUPS	--XX
+--38,042 DUPS	--XX
 
 
 --FIND DUPLICATE PARCELID AND COUNT
 WITH r AS(
 	SELECT 
 		parcel_id
+		,gp_id
 		,year
 		,sphere
 		,planid
+		,loden
+		,hiden
 		,gplu
 		,ROW_NUMBER() OVER(PARTITION BY parcel_id ORDER BY parcel_id) AS rownum
 	FROM #gp_parcels
@@ -204,21 +238,24 @@ FROM r
 WHERE rownum > 1
 GROUP BY parcel_id
 ORDER BY parcel_id
---17,522 DUP PARCELIDS	--XX
+--18,269 DUP PARCELIDS	--XX
 
 
 /*########## OVERRIDES FOR SPHERE OVERLAP 1/3 ##########*/
 --FIND 1900 ON 200 OR 1400s
 SELECT parcel_id
+	,gp_id
 	,year
 	,sphere
 	,planid
+	,loden
+	,hiden
 	,gplu
 FROM #gp_parcels
 WHERE sphere >= 1900
 AND parcel_id IN (SELECT parcel_id FROM #gp_parcels WHERE sphere = 200 OR sphere BETWEEN 1400 AND 1499) 
 ORDER BY parcel_id, sphere, planid
---4,621
+--4,625
 
 --CHECK
 SELECT * FROM #gp_parcels WHERE parcel_id = 9002468
@@ -228,20 +265,23 @@ DELETE
 FROM #gp_parcels
 WHERE sphere >= 1900
 AND parcel_id IN (SELECT parcel_id FROM #gp_parcels WHERE sphere = 200 OR sphere BETWEEN 1400 AND 1499) 
-
+--4,625
 
 /*########## OVERRIDES FOR SPHERE OVERLAP 2/3 ##########*/
 --FIND 200 ON 1400s
 SELECT parcel_id
+	,gp_id
 	,year
 	,sphere
 	,planid
+	,loden
+	,hiden
 	,gplu
 FROM #gp_parcels
 WHERE sphere = 200
 AND parcel_id IN (SELECT parcel_id FROM #gp_parcels WHERE sphere BETWEEN 1400 AND 1499) 
 ORDER BY parcel_id, sphere, planid
---801
+--802
 
 --CHECK
 SELECT * FROM #gp_parcels WHERE parcel_id = 600
@@ -343,9 +383,12 @@ AND parcel_id IN (SELECT parcel_id FROM #gp_parcels WHERE sphere IN(500, 600, 70
 /*########## OVERRIDES FOR YEAR OVERLAP (SPHERE 1100) ##########*/
 --FIND
 SELECT parcel_id
+	,gp_id
 	,year
 	,sphere
 	,planid
+	,loden
+	,hiden
 	,gplu
 FROM #gp_parcels
 WHERE sphere = 1100
@@ -366,23 +409,26 @@ AND parcel_id IN (SELECT parcel_id FROM #gp_parcels WHERE sphere = 1100 AND year
 
 
 /*########## SAVE TO TABLE ##########*/
-IF OBJECT_ID('urbansim.general_plan_parcels') IS NOT NULL
-    DROP TABLE urbansim.general_plan_parcels
+--INSERT MULTIPLE PARCEL ID COLUMN, WILL BE USED TO ELIMINATE DUPLICATES
+DROP TABLE IF EXISTS urbansim.general_plan_parcels
 ;
 SELECT 
-	IDENTITY(int,1,1) AS gpid
+	IDENTITY(int,1,1) AS gpp_id			--GENERAL PLAN PARCEL ID
 	,parcel_id
+	,gp_id								--GENERAL PLAN ID
 	,year
 	,sphere
 	,planid
+	,loden
+	,hiden
 	,gplu
 INTO urbansim.general_plan_parcels
 FROM #gp_parcels
 ORDER BY parcel_id
 ;
 CREATE INDEX ix_urbansim_general_plan_parcels_parcel_id
-ON urbansim.general_plan_parcels (parcel_id, sphere);
---802, 740
+ON urbansim.general_plan_parcels (gpp_id);
+--804,484
 
 --CHECK
 SELECT * FROM spacecore.urbansim.general_plan_parcels --WHERE parcel_id = xxx;
@@ -396,7 +442,7 @@ WITH p AS(
 		parcel_id
 		,sphere
 		,COUNT(*) AS _count
-	FROM #gp_parcels
+	FROM urbansim.general_plan_parcels
 	GROUP BY parcel_id
 		,sphere
 	--ORDER BY parcel_id
@@ -418,7 +464,7 @@ FROM p
 JOIN (SELECT DISTINCT parcel_id FROM s WHERE rownum > 1) AS s ON p.parcel_id = s.parcel_id
 --WHERE p.parcel_id = 9002391
 ORDER BY p.parcel_id, sphere
---14,287 DUP PARCELIDS in DIFFERENT SPHERE	--XX
+--1,777 DUP PARCELIDS in DIFFERENT SPHERE	--XX
 --SELECT * FROM #gp_parcels WHERE parcel_id = 9002468--9002391
 
 
@@ -432,7 +478,7 @@ WITH p AS(
 			WHEN 4 THEN LEFT(sphere, 2)
 			END AS j_id
 		,COUNT(*) AS _count
-	FROM #gp_parcels
+	FROM urbansim.general_plan_parcels
 	GROUP BY parcel_id
 		,CASE LEN(sphere)
 			WHEN 3 THEN LEFT(sphere, 1)
@@ -472,7 +518,7 @@ WITH p AS(
 			WHEN 4 THEN LEFT(sphere, 2)
 			END AS j_id
 		,COUNT(*) AS _count
-	FROM #gp_parcels
+	FROM urbansim.general_plan_parcels
 	GROUP BY parcel_id
 		,CASE LEN(sphere)
 			WHEN 3 THEN LEFT(sphere, 1)
