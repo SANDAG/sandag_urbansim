@@ -12,7 +12,7 @@ CREATE TABLE urbansim.parcels (
 	,block_id nvarchar(15) --NOT NULL
 	,development_type_id int
 	--,own int
-	,du int
+	,du_2015 int
     ,land_value float
     ,parcel_acres float
     ,region_id integer
@@ -33,7 +33,7 @@ CREATE TABLE urbansim.parcels (
 )
 
 --INSERT FROM LUDU2015: SHAPE
-INSERT INTO urbansim.parcels WITH (TABLOCK) (parcel_id, own, du shape)
+INSERT INTO urbansim.parcels WITH (TABLOCK) (parcel_id, own, du_2015 shape)
 SELECT
     parcelID
 	--,MIN(genOwnID)
