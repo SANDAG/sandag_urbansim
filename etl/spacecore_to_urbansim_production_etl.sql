@@ -129,7 +129,14 @@ SET @table = 'zoning_parcel';									--URBANSIM TABLE
 SET @pkey = 'zoning_parcels_id';								--URBANSIM PRIMARY KEY
 */
 /*
---SCHEDULED DEVELOPMENT
+--SCHEDULED DEVELOPMENT SITES
+SET @source = 'spacecore.gis.scheduled_development_sites';			--SPACECORE DATABASE SCHEMA TABLE
+SET @target = 'urbansim.ref.scheduled_development_site';		--URBANSIM DATABASE SCHEMA TABLE
+SET @table = 'scheduled_development_site';							--URBANSIM TABLE
+SET @pkey = 'ogr_fid';											--URBANSIM PRIMARY KEY
+*/
+/*
+--SCHEDULED DEVELOPMENT PARCELS
 SET @source = 'spacecore.urbansim.scheduled_development_parcels';	--SPACECORE DATABASE SCHEMA TABLE
 SET @target = 'urbansim.urbansim.scheduled_development_parcel';		--URBANSIM DATABASE SCHEMA TABLE
 SET @table = 'scheduled_development_parcel';						--URBANSIM TABLE
@@ -191,6 +198,14 @@ SET @target = 'urbansim.urbansim.capacity';				--URBANSIM DATABASE SCHEMA TABLE
 SET @table = 'capacity';								--URBANSIM TABLE
 SET @pkey = 'capacity_id';								--URBANSIM PRIMARY KEY
 */
+/*
+--GENERAL PLAN PARCELS
+SET @source = 'spacecore.urbansim.general_plan_parcels';	--SPACECORE DATABASE SCHEMA TABLE
+SET @target = 'urbansim.urbansim.general_plan_parcel';		--URBANSIM DATABASE SCHEMA TABLE
+SET @table = 'general_plan_parcel';							--URBANSIM TABLE
+SET @pkey = 'parcel_id';									--URBANSIM PRIMARY KEY
+*/
+
 --EXEC('SELECT * FROM '+ @source)
 
 /*#################### BEGIN LOAD ####################*/
