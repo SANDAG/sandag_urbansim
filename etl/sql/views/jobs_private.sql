@@ -9,13 +9,14 @@ SELECT
 	,building_id
 FROM(
 	SELECT
-		ROW_NUMBER() OVER (PARTITION BY building_id ORDER BY job_spaces)*100/job_spaces AS row_space
-		,block_id
-		,parcel_id
-		,building_id
-		,job_spaces
+		ROW_NUMBER() OVER (PARTITION BY usb.building_id ORDER BY s.job_spaces)*100/s.job_spaces AS row_space
+		,usb.block_id
+		,usb.parcel_id
+		,usb.building_id
+		,s.job_spaces
 	FROM (SELECT * FROM urbansim.buildings WHERE assign_jobs = 1) usb		--DO NOT USE MIL/PF BUILDINGS
-	JOIN ref.numbers AS n ON n.numbers <= job_spaces
+	JOIN [spacecore].[urbansim].[job_spaces] AS s ON usb.building_id = s.building_id
+	JOIN ref.numbers AS n ON n.numbers <= s.job_spaces
 	) x
 ),
 jobs AS (
