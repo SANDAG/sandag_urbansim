@@ -68,6 +68,7 @@ USING btree (jurisdiction_id);
 
 
 --load zoning from staging.zoning
+/***
 INSERT INTO urbansim.zoning
 SELECT
     1 as zoning_schedule_id
@@ -95,7 +96,34 @@ SELECT
     ,geography AS shape
     ,review
 FROM staging.zoning;
-
+***/
+INSERT INTO urbansim.zoning
+SELECT 
+    zoning_schedule_id
+    ,zoning_id
+    ,parent_zoning_id
+    ,jurisdiction_id
+    ,zone_code
+    ,yr_effective
+    ,region_id
+    ,min_lot_size
+    ,min_far
+    ,max_far
+    ,min_front_setback
+    ,max_front_setback
+    ,rear_setback
+    ,side_setback
+    ,min_dua
+    ,max_dua
+    ,max_res_units
+    ,max_building_height
+    ,zone_code_link
+    ,notes
+    ,review_date
+    ,review_by
+    ,shape
+    ,review
+FROM urbansim.zoninggenerator
 
 CREATE TABLE urbansim.zoning_allowed_use
 (
@@ -112,12 +140,22 @@ ON urbansim.zoning_allowed_use
 USING btree (zoning_id);
 
 --load zoning_allowed_use from staging.zoning_allowed_use
+/***
 INSERT INTO urbansim.zoning_allowed_use
 SELECT
     a.zoning_id
     ,a.zoning_allowed_use_id
     ,a.development_type_id
 FROM staging.zoning_allowed_use a
+    ,urbansim.zoning z
+WHERE z.zoning_id = a.zoning_id;
+***/
+INSERT INTO urbansim.zoning_allowed_use
+SELECT
+    a.zoning_id
+    ,a.zoning_allowed_use_id
+    ,a.development_type_id
+FROM urbansim.zoningalloweduse a
     ,urbansim.zoning z
 WHERE z.zoning_id = a.zoning_id;
 
@@ -227,18 +265,19 @@ FROM
 WHERE zoning.max_res_units <> t.cap_hs
 
 
+--PARCEL ZONING SCHEDULE
 WITH t AS (
 SELECT
-    zoning_id
+    zone
     ,max_res_units
     ,cap_hs
     ,COUNT(*) as num_parcels
-    ,COUNT(zoning_id) OVER (PARTITION BY zoning_id) as total_cases
+    ,COUNT(zone) OVER (PARTITION BY zone) as total_cases
 FROM
     (    SELECT
         parcels.parcel_id
         ,parcels.parcel_acres
-        ,zoning.zoning_id
+        ,zoning.zone
         ,zoning.min_dua
         ,zoning.max_dua
         ,zoning.max_res_units
@@ -252,7 +291,7 @@ FROM
             INNER JOIN urbansim.buildings
             ON buildings.parcel_id = parcels.parcel_id
                 LEFT JOIN urbansim.zoning
-                ON zoning.zoning_id = parcels.zoning_id
+                ON zoning.zone = parcels.zoning_id
                     LEFT JOIN staging.sr13_capacity
                         ON parcels.parcel_id = sr13_capacity.parcel_id
     GROUP BY
@@ -265,26 +304,26 @@ FROM
         ,zoning.max_res_units
         ,sr13_capacity.cap_hs) parcel_zoning_sr13_comparison  
 GROUP BY
-    zoning_id
+    zone
     ,max_res_units
     ,cap_hs    
 ORDER BY
-    zoning_id
+    zone
     ,num_parcels DESC)
-INSERT INTO urbansim.parcel_zoning_schedule
+--INSERT INTO urbansim.parcel_zoning_schedule
 SELECT
     2 as zoning_schedule_id
     ,parcels.parcel_id
-    ,zoning.zoning_id
+    ,zoning.zone
 FROM
     urbansim.parcels
         INNER JOIN staging.sr13_capacity
         ON sr13_capacity.parcel_id = parcels.parcel_id
             INNER JOIN t
-            ON t.zoning_id = parcels.zoning_id
+            ON t.zone = parcels.zoning_id
                 INNER JOIN urbansim.zoning
                 ON zoning.zoning_schedule_id = 2
-                AND zoning.zoning_id = t.zoning_id || ' cap_hs ' || t.cap_hs
+                AND zoning.zone = t.zone || ' cap_hs ' || t.cap_hs
                 AND zoning.max_res_units = sr13_capacity.cap_hs
 
 
