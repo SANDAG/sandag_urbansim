@@ -1,3 +1,5 @@
+USE urbansim
+;
 ----2916 total parcels with SFU units only (no MFU), there are 8 sites with both SFU and MFU and 4801 total parcels with any sched dev (mfu or sfu)   
 --select * from urbansim.urbansim.scheduled_development_parcel
 --where sfu > 0 and mfu > 0 
@@ -23,8 +25,10 @@ select s.*, gp.gplu, p.proportion_undevelopable, p.parcel_acres
 into #sfu_parcels
 from urbansim.urbansim.scheduled_development_parcel as s 
 join urbansim.urbansim.general_plan_parcel as gp on s.parcel_id = gp.parcel_id 
-join spacecore.urbansim.parcels as p on s.parcel_id = p.parcel_id 
-where sfu > 0 and mfu = 0 
+join spacecore.urbansim.parcels as p on s.parcel_id = p.parcel_id
+join urbansim.ref.scheduled_development_site AS sds ON s.site_id = sds.siteid
+where s.sfu > 0 and s.mfu = 0 
+and sds.status <> 'completed'
 order by site_id; 
 
 --select * from #sfu_parcels order by site_id, parcel_id 
@@ -35,7 +39,12 @@ select distinct site_id from #sfu_parcels
 update #sfu_parcels
 set developable_acres = 0
 from #sfu_parcels
-where gplu not in(1000,1100,1200,9600,9700) ;
+where gplu not in(1000,1100,1200,9600,9700)
+AND site_id NOT IN(							--OVERWRITE EXCEPTIONS
+28
+,1860
+,13004
+);
 
 drop table if exists #sfu_parcels_0;
 
@@ -250,7 +259,8 @@ drop table if exists #mfu_parcels;
 select s.*, gp.gplu, p.proportion_undevelopable, p.parcel_acres 
 ,(1 - p.proportion_undevelopable) as proportion_developable
 ,CASE 
-	  WHEN p.proportion_undevelopable IS NULL THEN parcel_acres 
+	  WHEN p.proportion_undevelopable IS NULL THEN parcel_acres
+	  WHEN s.site_id IN(11003, 15035) THEN parcel_acres		--OVERWRITE EXCEPTIONS
 	  WHEN p.proportion_undevelopable IS NOT NULL THEN (parcel_acres - (parcel_acres*p.proportion_undevelopable))
 	  END AS developable_acres
 --insert variable to keep track of allocation case (how we determined how to allocate the units to a parcel) 
@@ -270,7 +280,26 @@ select distinct site_id from #mfu_parcels
 update #mfu_parcels
 set developable_acres = 0
 from #mfu_parcels
-where gplu not in(1000,1100,1200,1300,9600,9700) ;
+where gplu not in(1000,1100,1200,1300,9600,9700)
+AND site_id NOT IN(							--OVERWRITE EXCEPTIONS
+1685
+,1745
+,1748
+,1761
+,1859
+,2015
+,3149
+,3181
+,11003
+,12010
+,14075
+,14081
+,15035
+,17003
+,17006
+);
+
+--SELECT * FROM #mfu_parcels ORDER BY site_id
 
 drop table if exists #mfu_parcels_0;
 
@@ -285,6 +314,16 @@ set row_num = NULL
 from #mfu_parcels_0
 where developable_acres = 0 ;
 
+
+--OVERWRITE EXCEPTION, FIX MULTI SITE ID
+UPDATE mfup
+SET mfu = sds.mfu
+FROM #mfu_parcels_0 AS mfup
+JOIN (SELECT siteid, SUM(mfu) AS mfu FROM [ref].[scheduled_development_site] GROUP BY siteid) AS sds	--OVERWRITE EXCEPTIONS
+	ON mfup.site_id = sds.siteid
+WHERE mfup.site_id = 15035
+
+
 --select * from #mfu_parcels_0 order by site_id
 
 /*count the number of parcel_id's by site_id, if the count of parcels = the number of mfU then you can allocate one to one*/
@@ -293,12 +332,14 @@ drop table if exists #mfu_parcel_count;
 
 select 
 site_id
-,min(mfu) as mfu 
+,min(sds.mfu) as mfu																					--OVERWRITE EXCEPTIONS
 ,count(parcel_id) as parcel_count
 ,CAST(NULL as numeric(36,18)) as units_per_dev_acre
 INTO #mfu_parcel_count
-from #mfu_parcels_0
-where (mfu >0 and sfu = 0) or (site_id = 3006) or (sfu = 0 and mhu > 0)  
+from #mfu_parcels_0 AS mfu
+JOIN (SELECT siteid, SUM(mfu) AS mfu FROM [ref].[scheduled_development_site] WHERE status <> 'completed' GROUP BY siteid) AS sds	--OVERWRITE EXCEPTIONS
+	ON mfu.site_id = sds.siteid
+where (sds.mfu >0 and sfu = 0) or (site_id = 3006) or (sfu = 0 and mhu > 0)								--OVERWRITE EXCEPTIONS
 --and developable_acres <>0
 group by site_id
 order by site_id  ;
@@ -315,7 +356,7 @@ drop table if exists #mfu_sites;
 
 select 
 s.site_id
-,min(s.mfu) as mfu 
+,min(sds.mfu) as mfu																					--OVERWRITE EXCEPTIONS
 ,min(pc.parcel_count) as parcel_count 
 ,CAST(NULL as numeric(36,18)) as mfu_per_dev_acre
 ,CAST(NULL as int) as mfu_effective
@@ -324,11 +365,14 @@ s.site_id
 INTO #mfu_sites
 from #mfu_parcels_0 as s 
 join #mfu_parcel_count as pc on s.site_id = pc.site_id 
-where (s.mfu >0 and s.sfu = 0) or (s.site_id = 3006) or (sfu = 0 and mhu > 0)
+JOIN (SELECT siteid, SUM(mfu) AS mfu FROM [ref].[scheduled_development_site] GROUP BY siteid) AS sds	--OVERWRITE EXCEPTIONS
+	ON s.site_id = sds.siteid
+where (sds.mfu >0 and s.sfu = 0) or (s.site_id = 3006) or (sfu = 0 and mhu > 0)
 --and developable_acres <>0
 group by s.site_id
 order by s.site_id ;
 
+SELECT * FROM #mfu_parcels_0 WHERE site_id = 15035
 --select * from #mfu_parcels_0 order by site_id 
 --select * from #mfu_sites order by site_id 
 --select * from #mfu_parcel_count order by site_id
@@ -536,7 +580,8 @@ order by s.site_id ;
 update #sf_mf_parcels
 set developable_acres = 0
 from #sf_mf_parcels
-where gplu not in(1100,1200,9600,9700) ;
+where gplu not in(1100,1200,9600,9700)
+;
 
 drop table if exists #sf_mf_parcels_0;
 
@@ -762,17 +807,17 @@ drop table if exists urbansim.urbansim.sched_dev_all;
 select * into urbansim.urbansim.sched_dev_all
 
 from (
-select NULL as scenario, site_id, parcel_id, startdate, compdate, civemp, milemp, sfu, mfu, mhu, ISNULL(sfu_effective,0) as sfu_effective, ISNULL(mfu_effective,0) as mfu_effective, case_id 
+select NULL as scenario, site_id, parcel_id, startdate, compdate, civemp, milemp, sfu, mfu, mhu, ISNULL(sfu_effective,0) as sfu_effective, ISNULL(mfu_effective,0) as mfu_effective, case_id
 from #sf_mf_parcels_2
 
 union all
 
-select NULL as scenario, site_id, parcel_id, startdate, compdate, civemp, milemp, sfu, 0 as mfu, mhu, ISNULL(sfu_effective,0) as sfu_effective, 0 as mfu_effective, case_id 
+select NULL as scenario, site_id, parcel_id, startdate, compdate, civemp, milemp, sfu, 0 as mfu, mhu, ISNULL(sfu_effective,0) as sfu_effective, 0 as mfu_effective, case_id
 from #sfu_parcels_2
 
 union all
 
-select NULL as scenario, site_id, parcel_id, startdate, compdate, civemp, milemp, 0 as sfu, mfu, mhu, 0 as sfu_effective, ISNULL(mfu_effective,0) as sfu_effective, case_id 
+select NULL as scenario, site_id, parcel_id, startdate, compdate, civemp, milemp, 0 as sfu, mfu, mhu, 0 as sfu_effective, ISNULL(mfu_effective,0) as sfu_effective, case_id
 from #mfu_parcels_2)
 as temp;
 
@@ -797,3 +842,95 @@ select distinct site_id from urbansim.urbansim.sched_dev_all
 --set scenario = 1 
 --CASE WHEN compdate IS NULL THEN startdate = 2017 
 --set compdate 
+
+
+/*#################### INSERT ADDITIONAL CAPACITY DATA FROM PARCELS ####################*/
+ALTER TABLE urbansim.urbansim.sched_dev_all
+ADD du_2015 int
+	,du_2017 int
+	,capacity_1 int
+	,capacity_2 int
+	,max_res_units int
+;
+
+UPDATE sda
+SET sda.du_2015 = usp.du_2015
+	,sda.du_2017 = usp.du_2017
+	,sda.max_res_units = usp.max_res_units
+	,sda.capacity_1 = usp.capacity_1
+	,sda.capacity_2 = usp.capacity_2
+FROM urbansim.urbansim.sched_dev_all AS sda
+JOIN urbansim.urbansim.parcel AS usp ON sda.parcel_id = usp.parcel_id
+;
+
+
+--*********************************************************************************************************
+
+
+/*######################################## CHECK UNIT ALLOCATION ########################################*/
+
+--**TOTAL
+SELECT
+	SUM([sfu_effective]) AS sfu_effective
+	,SUM([mfu_effective]) AS mfu_effective
+	,SUM([du_2015]) AS du_2015
+	,SUM([du_2017]) AS du_2017
+FROM [urbansim].[urbansim].[sched_dev_all]
+
+SELECT
+	SUM([sfu]) AS sfu
+	,SUM([mfu]) AS mfu
+	,SUM([mhu]) AS mhu
+FROM [urbansim].[ref].[scheduled_development_site]
+WHERE status <> 'completed'
+--AND EXISTS (SELECT siteid FROM [urbansim].[urbansim].[sched_dev_all])
+
+
+--**SITE
+DROP TABLE IF EXISTS #sda
+SELECT site_id,
+	--,SUM([sfu])
+	--,SUM([mfu])
+	--,SUM([mhu])
+	SUM([sfu_effective]) AS sfu_effective
+	,SUM([mfu_effective]) AS mfu_effective
+	,SUM([du_2015]) AS du_2015
+	,SUM([du_2017]) AS du_2017
+INTO #sda
+FROM [urbansim].[urbansim].[sched_dev_all]
+--WHERE site_id = 1062
+GROUP BY site_id
+ORDER BY site_id
+
+DROP TABLE IF EXISTS #sds
+SELECT siteid,
+	SUM([sfu]) AS sfu
+	,SUM([mfu]) AS mfu
+	,SUM([mhu]) AS mhu
+INTO #sds
+FROM [urbansim].[ref].[scheduled_development_site]
+--WHERE siteid = 1062
+WHERE status <> 'completed'
+GROUP BY siteid
+ORDER BY siteid
+
+
+--SFU
+SELECT *
+FROM #sda AS sda
+JOIN #sds AS sds ON sda.site_id = sds.siteid
+WHERE sfu_effective <> sfu
+ORDER BY site_id
+
+--MFU
+SELECT *
+FROM #sda AS sda
+FULL OUTER JOIN #sds AS sds ON sda.site_id = sds.siteid
+WHERE mfu_effective <> mfu
+ORDER BY COALESCE(siteid, site_id)
+
+
+SELECT *
+FROM [urbansim].[urbansim].[sched_dev_all]
+WHERE parcel_id = 5200983 
+
