@@ -76,7 +76,7 @@ ORDER BY
 ;
 
  
-/****** INSERT GQ ******/
+/************ INSERT GQ ************/
 --LOAD FROM GDB TO MSSQL
 --USE OGR2OGR
 --LOAD INTO SCHEMA: GIS
@@ -140,6 +140,47 @@ UPDATE urbansim.scheduled_development_parcels
 SET civGQ = 138
 	,notes= 'Mission Cov apt and senior housing'
 WHERE parcel_id = 5098007
+;
+
+
+/************ INSERT NONRES ************/
+--LOAD FROM GDB TO MSSQL
+--USE OGR2OGR
+--LOAD INTO SCHEMA: GIS
+/*
+E:\OSGeo4W64\bin\ogr2ogr.exe -f MSSQLSpatial "MSSQL:server=sql2014a8;database=spacecore;trusted_connection=yes" E:\data\urbansim_data_development\scheduled_development\Parcels\urbansim_schedev_parcel_nonres_add.shp -nln schedev_parcel_nonres_add -lco SCHEMA=GIS -lco OVERWRITE=YES -OVERWRITE
+*/
+;
+--FIX SRID
+SELECT DISTINCT ogr_geometry.STSrid FROM [GIS].[schedev_parcel_nonres_add];
+UPDATE [GIS].[schedev_parcel_nonres_add] SET ogr_geometry.STSrid = 2230;		--NAD83 / California zone 6 (ftUS)
+
+--CHECK FOR NONRES PARCELS DUPLICATES AND DELETE
+SELECT *
+FROM urbansim.scheduled_development_parcels AS sdp
+WHERE EXISTS
+	(SELECT parcel_id 
+	FROM GIS.schedev_parcel_nonres_add  AS sda
+	WHERE sda.parcel_id = sdp.parcel_id)
+;
+
+--INSERT GQ PARCELS
+INSERT INTO urbansim.scheduled_development_parcels
+SELECT
+	site_id
+	,parcel_id
+	,capacity3
+	,sfu_effect
+	,mfu_effect
+	,mhu_effect
+	,notes
+	,editor
+	,ogr_geometry
+	,civgq
+FROM GIS.schedev_parcel_nonres_add
+ORDER BY
+	site_id
+	,parcel_id
 ;
 
 
