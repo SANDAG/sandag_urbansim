@@ -10,9 +10,13 @@ CREATE TABLE urbansim.parcels (
     --objectid int not null --PLACEHOLDER FOR OPERATIONS BELOW. DROP AT END OF LOAD		--***
     parcel_id int NOT NULL
 	,block_id nvarchar(15) --NOT NULL
-	,development_type_id int
+	,development_type_id_2015 int
+	,development_type_id_2017 int
 	--,own int
+	,lu_2015 int
+	,lu_2017 int
 	,du_2015 int
+	,du_2017 int
     ,land_value float
     ,parcel_acres float
     ,region_id integer
@@ -102,31 +106,158 @@ FROM
 	urbansim.parcels AS usp
 JOIN asr ON asr.parcelid = usp.parcel_id
 ;
---SET THE DEVELOPMENT TYPE ID FROM PRIORITY
+
+--SET THE DEVELOPMENT TYPE ID AND LU FROM PRIORITY FOR 2015
+--GET PRIORITY, STORE TO TEMP TABLE
+DROP TABLE IF EXISTS #priority
+;
+SELECT
+	lc.parcelID AS parcel_id
+	,dev.priority AS p
+	,dev.development_type_id
+	,lc.lu
+	,lc.acres
+	,ROW_NUMBER() OVER (PARTITION BY parcelID ORDER BY priority, acres DESC) AS rownum
+INTO #priority
+FROM gis.ludu2015 AS lc								--LUDU 2015
+LEFT JOIN ref.development_type_lu_code xref 
+	ON lc.lu = xref.lu_code
+LEFT JOIN ref.development_type dev 
+	ON xref.development_type_id = dev.development_type_id
+ORDER BY lc.parcelID
+;
+--GET PRIORITY AND COPY VALUES
 UPDATE
     usp
 SET 
-    usp.development_type_id = dev.dev_type_id
+    usp.development_type_id_2015 = p.development_type_id
+	,lu_2015 = lu
 FROM
     urbansim.parcels usp 
-LEFT JOIN (
-		SELECT
-		  p_dev_type.parcelID
-		  ,dev.development_type_id dev_type_id
-		  ,dev.name dev_type
-		FROM
-		  (SELECT lc.parcelID, MIN(dev.priority) p FROM gis.ludu2015 lc
-				INNER JOIN ref.development_type_lu_code xref ON lc.lu = xref.lu_code
-				INNER JOIN ref.development_type dev ON xref.development_type_id = dev.development_type_id
-				GROUP BY lc.parcelID) p_dev_type
-		  INNER JOIN ref.development_type dev ON p_dev_type.p = dev.priority
-		  ) dev
-ON usp.parcel_id = dev.parcelID
+LEFT JOIN
+	(SELECT * FROM #priority WHERE rownum = 1) AS p
+ON usp.parcel_id = p.parcel_id
 ;
+DROP TABLE IF EXISTS #priority
+;
+
+
+--SET THE DEVELOPMENT TYPE ID FOR MILITARY 2015
+DROP TABLE IF EXISTS #mil
+;
+WITH  lu AS(
+	SELECT
+		parcel_id
+		,lu_2015
+	FROM urbansim.parcels
+	WHERE lu_2015 BETWEEN 6700 AND 6709			--GQ Military Barracks
+	OR lu_2015 = 1403							--Military Use
+)
+, own AS(
+	SELECT
+		parcelId AS parcel_id
+		,MIN(own) AS own
+	FROM spacecore.gis.ludu2015
+	WHERE own = 41
+	GROUP BY parcelId
+)
+, fac AS(
+	SELECT
+		parcel_id
+		,base_name
+	FROM spacecore.GIS.military_facility_parcel
+	WHERE mil_base = 1
+)
+SELECT
+	usp.parcel_id
+	,lu.lu_2015
+	,own.own
+	,fac.base_name
+	,usp.lu_2015 AS lu_2015_all
+	,usp.du_2015
+	,usp.development_type_id_2015
+	,CASE
+		WHEN usp.development_type_id_2015 IN (23,29) THEN usp.development_type_id_2015 
+		WHEN usp.du_2015 > 0 THEN 23
+		ELSE 29
+	END AS development_type_id_2015_mil
+INTO #mil
+FROM urbansim.parcels As usp
+LEFT JOIN lu ON usp.parcel_id = lu.parcel_id
+LEFT JOIN own ON usp.parcel_id = own.parcel_id
+LEFT JOIN fac ON usp.parcel_id = fac.parcel_id
+WHERE lu.lu_2015 IS NOT NULL
+OR own.own IS NOT NULL
+OR fac.base_name IS NOT NULL
+ORDER BY parcel_id
+;
+--SELECT * FROM #mil
+
+--UPDATE DEVELOPMENT TYPE ID
+UPDATE usp
+	SET usp.development_type_id_2015 = mil.development_type_id_2015_mil
+FROM urbansim.parcels AS usp
+JOIN #mil AS mil ON usp.parcel_id = mil.parcel_id
+;
+SELECT * FROM urbansim.parcels WHERE development_type_id_2015 IN(23, 29)
+;
+DROP TABLE #mil
+;
+
+
+--SET THE DEVELOPMENT TYPE ID AND LU FROM PRIORITY FOR 2017
+--DO SPATIAL JOIN, GET PRIORITY, STORE TO TEMP TABLE
+DROP TABLE IF EXISTS #priority
+;
+SELECT
+	--lc.parcelID AS parcel_id_2017					--parcel_id_2017
+	usp.parcel_id									--parcel_id_2015
+	,dev.priority AS p
+	,dev.development_type_id
+	,lc.lu
+	,lc.acres
+	,ROW_NUMBER() OVER (PARTITION BY usp.parcel_id ORDER BY priority, acres DESC) AS rownum		--USE 2015 parcel_id
+INTO #priority
+FROM gis.ludu2017 AS lc								--LUDU 2017
+LEFT JOIN ref.development_type_lu_code xref 
+	ON lc.lu = xref.lu_code
+LEFT JOIN ref.development_type dev 
+	ON xref.development_type_id = dev.development_type_id
+JOIN gis.ludu2017points AS lcp
+	ON lc.subParcel = lcp.subParcel
+JOIN urbansim.parcels AS usp
+	ON usp.shape.STIntersects(lcp.shape) = 1		--USE gis.ludu2017points
+ORDER BY lc.parcelID
+;
+
+--GET PRIORITY AND COPY VALUES
+UPDATE
+    usp
+SET 
+	usp.development_type_id_2017 = p.development_type_id
+	,usp.lu_2017 = p.lu
+FROM
+    urbansim.parcels usp 
+LEFT JOIN
+	(SELECT * FROM #priority WHERE rownum = 1) AS p
+ON usp.parcel_id = p.parcel_id
+;
+--RETURN VALUES
+SELECT * FROM urbansim.parcels WHERE lu_2015 <> lu_2017
+;
+
+DROP TABLE IF EXISTS #priority
+;
+--SET DU FROM LUDU_2017
+/*
+DU_2017 IS UPDATED LATER, IN SCRIPT:
+capacity_2017_into_2015.sql
+*/
+
 /*
 --EXCLUDE ROAD RIGHT OF WAY RECORDS
 DELETE FROM urbansim.parcels
-WHERE development_type_id = 24 --Transportation Right of Way
+WHERE development_type_id_2015 = 24 --Transportation Right of Way
 */
 
 --CREATE A PRIMARY KEY SO WE CAN CREATE A SPATIAL INDEX
@@ -302,7 +433,7 @@ SET
 FROM 
 	urbansim.parcels usp
 WHERE
-	development_type_id = 29
+	development_type_id_2015 = 29
 
 --/*
 --SET APN
