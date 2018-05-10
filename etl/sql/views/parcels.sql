@@ -147,11 +147,13 @@ DROP TABLE IF EXISTS #mil
 ;
 WITH  lu AS(
 	SELECT
-		parcel_id
-		,lu_2015
-	FROM urbansim.parcels
-	WHERE lu_2015 BETWEEN 6700 AND 6709			--GQ Military Barracks
-	OR lu_2015 = 1403							--Military Use
+		parcelID AS parcel_id
+		,MIN(lu) AS lu							--MAY HAVE MULTIPLE MIL LU
+	FROM gis.ludu2015
+	WHERE lu BETWEEN 6700 AND 6709				--GQ Military Barracks
+	OR lu = 1403								--Military Use
+	GROUP BY parcelID
+	--ORDER BY parcelID
 )
 , own AS(
 	SELECT
@@ -160,17 +162,19 @@ WITH  lu AS(
 	FROM spacecore.gis.ludu2015
 	WHERE own = 41
 	GROUP BY parcelId
+	--ORDER BY parcel_id
 )
 , fac AS(
 	SELECT
 		parcel_id
 		,base_name
-	FROM spacecore.GIS.military_facility_parcel
+	FROM spacecore.GIS.military_facility_parcel_2015
 	WHERE mil_base = 1
+	--ORDER BY parcel_id
 )
 SELECT
 	usp.parcel_id
-	,lu.lu_2015
+	,lu.lu
 	,own.own
 	,fac.base_name
 	,usp.lu_2015 AS lu_2015_all
@@ -186,14 +190,14 @@ FROM urbansim.parcels As usp
 LEFT JOIN lu ON usp.parcel_id = lu.parcel_id
 LEFT JOIN own ON usp.parcel_id = own.parcel_id
 LEFT JOIN fac ON usp.parcel_id = fac.parcel_id
-WHERE lu.lu_2015 IS NOT NULL
+WHERE lu.lu IS NOT NULL
 OR own.own IS NOT NULL
 OR fac.base_name IS NOT NULL
-ORDER BY parcel_id
+ORDER BY usp.parcel_id
 ;
---SELECT * FROM #mil
+--SELECT * FROM #mil ORDER BY parcel_id
 
---UPDATE DEVELOPMENT TYPE ID
+--UPDATE DEVELOPMENT TYPE ID 2015 MIL
 UPDATE usp
 	SET usp.development_type_id_2015 = mil.development_type_id_2015_mil
 FROM urbansim.parcels AS usp
@@ -242,17 +246,94 @@ LEFT JOIN
 	(SELECT * FROM #priority WHERE rownum = 1) AS p
 ON usp.parcel_id = p.parcel_id
 ;
+
+DROP TABLE IF EXISTS #priority
+;
+
 --RETURN VALUES
 SELECT * FROM urbansim.parcels WHERE lu_2015 <> lu_2017
 ;
 
-DROP TABLE IF EXISTS #priority
+
+--SET THE DEVELOPMENT TYPE ID FOR MILITARY 2017
+DROP TABLE IF EXISTS #mil
 ;
+WITH  lu AS(
+	SELECT
+		usp.parcel_id
+		,MIN(lp.lu) AS lu							--MAY HAVE MULTIPLE MIL LU
+	FROM GIS.ludu2017points AS lp
+	JOIN urbansim.parcels AS usp
+		ON usp.shape.STIntersects(lp.Shape) = 1
+	WHERE lp.lu BETWEEN 6700 AND 6709				--GQ Military Barracks
+	OR lp.lu = 1403									--Military Use
+	GROUP BY usp.parcel_id
+	--ORDER BY usp.parcel_id
+)
+, own AS(
+	SELECT
+		usp.parcel_id
+		,MIN(lp.genOwnID) AS own
+	FROM GIS.ludu2017points AS lp
+	JOIN urbansim.parcels AS usp
+		ON usp.shape.STIntersects(lp.Shape) = 1
+	WHERE lp.genOwnID = 41
+	GROUP BY usp.parcel_id
+	--ORDER BY usp.parcel_id
+)
+, fac AS(
+	SELECT
+		usp.parcel_id
+		,base_name
+	FROM spacecore.GIS.military_facility_parcel_2017_2015 AS fac
+	JOIN urbansim.parcels AS usp
+		ON usp.parcel_id = fac.parcel_id
+	WHERE fac.mil_base = 1
+	--ORDER BY usp.parcel_id
+)
+SELECT
+	usp.parcel_id
+	,lu.lu
+	,own.own
+	,fac.base_name
+	,usp.lu_2017 AS lu_2017_all
+	,usp.du_2017
+	,usp.development_type_id_2017
+	,CASE
+		WHEN usp.development_type_id_2017 IN (23,29) THEN usp.development_type_id_2017 
+		WHEN usp.du_2017 > 0 THEN 23
+		ELSE 29
+	END AS development_type_id_2017_mil
+INTO #mil
+FROM urbansim.parcels As usp
+LEFT JOIN lu ON usp.parcel_id = lu.parcel_id
+LEFT JOIN own ON usp.parcel_id = own.parcel_id
+LEFT JOIN fac ON usp.parcel_id = fac.parcel_id
+WHERE lu.lu IS NOT NULL
+OR own.own IS NOT NULL
+OR fac.base_name IS NOT NULL
+ORDER BY usp.parcel_id
+;
+
+--SELECT * FROM #mil ORDER BY parcel_id
+
+--UPDATE DEVELOPMENT TYPE ID 2017 MIL
+UPDATE usp
+	SET usp.development_type_id_2017 = mil.development_type_id_2017_mil
+FROM urbansim.parcels AS usp
+JOIN #mil AS mil ON usp.parcel_id = mil.parcel_id
+;
+SELECT * FROM urbansim.parcels WHERE development_type_id_2017 IN(23, 29)
+;
+DROP TABLE #mil
+;
+
 --SET DU FROM LUDU_2017
 /*
 DU_2017 IS UPDATED LATER, IN SCRIPT:
 capacity_2017_into_2015.sql
 */
+
 
 /*
 --EXCLUDE ROAD RIGHT OF WAY RECORDS
