@@ -8,7 +8,7 @@ DROP TABLE IF EXISTS urbansim.job_spaces;
 GO
 
 CREATE TABLE urbansim.job_spaces(
-	job_space_id int IDENTITY (1,1) NOT NULL
+	job_space_id int IDENTITY (1,1) NOT NULL PRIMARY KEY
 	,subparcel_id int NULL
 	,building_id bigint NOT NULL
 	,block_id bigint NULL
@@ -16,7 +16,6 @@ CREATE TABLE urbansim.job_spaces(
 	,job_spaces int NULL
 	,sector_id smallint NULL
 	,source varchar(3) NOT NULL
-	,PRIMARY KEY (job_space_id)
 	,INDEX urbansim_job_spaces_job_space_id (job_space_id)
 );
 
@@ -43,7 +42,7 @@ WITH emp AS(
 			--,SUM(CAST(CEILING(ISNULL(emp_adj,0))AS int)) AS emp
 			,emp.sandag_industry_id AS sector_id
 		FROM gis.ludu2015 lc
-		LEFT JOIN socioec_data.[ca_edd].[emp_2013] AS emp								--USE EDD EMP2013 GEOCODE VERSION 1
+		LEFT JOIN socioec_data.ca_edd.emp_2013_v1 AS emp								--USE EDD EMP2013 GEOCODE VERSION 1
 		ON lc.Shape.STContains(emp.shape) = 1
 		WHERE emp.emp_adj IS NOT NULL
 		AND sandag_industry_id BETWEEN 1 AND 20				--PRIVATE SECTOR
@@ -65,7 +64,7 @@ WITH emp AS(
 				,sandag_industry_id
 				,shape
 			FROM (SELECT ISNULL(emp1,0) AS emp1, ISNULL(emp2,0) AS emp2, ISNULL(emp3,0) AS emp3, sandag_industry_id, shape, own
-					FROM [ws].[dbo].[CA_EDD_EMP_2015]) x									--USE EDD EMP2015 GEOCODE VERSION 1
+					FROM ws.dbo.CA_EDD_EMP_2015_v1) x									--USE EDD EMP2015 GEOCODE VERSION 1
 			WHERE own = 5									--PRIVATE SECTOR
 			AND sandag_industry_id BETWEEN 1 AND 20			--PRIVATE SECTOR
 			) AS emp
@@ -157,15 +156,15 @@ WHERE ISNULL(usb.job_spaces, 0) + jobs > 0
 /***#################### WHERE SQFT IS NULL, DERIVE FROM UNITS, JOB_SPACES ####################***/
 SELECT * FROM urbansim.buildings 
 WHERE assign_jobs = 1
-	AND ISNULL([residential_sqft], 0) + ISNULL([non_residential_sqft], 0) = 0
-	AND ISNULL([residential_units], 0) + ISNULL([job_spaces], 0) > 0
+	AND ISNULL(residential_sqft, 0) + ISNULL(non_residential_sqft, 0) = 0
+	AND ISNULL(residential_units, 0) + ISNULL(job_spaces, 0) > 0
 
 --UPDATE
 UPDATE usb
-SET [floorspace_source] = 'units_jobs_derived'
-	,[residential_sqft] = [residential_units] * 400
-	,[non_residential_sqft] = [job_spaces] * 400
+SET floorspace_source = 'units_jobs_derived'
+	,residential_sqft = residential_units * 400
+	,non_residential_sqft = job_spaces * 400
 FROM (SELECT * FROM urbansim.buildings WHERE assign_jobs = 1) usb		--DO NOT USE MIL/PF BUILDINGS
-WHERE ISNULL([residential_sqft], 0) + ISNULL([non_residential_sqft], 0) = 0
-	AND ISNULL([residential_units], 0) + ISNULL([job_spaces], 0) > 0
+WHERE ISNULL(residential_sqft, 0) + ISNULL(non_residential_sqft, 0) = 0
+	AND ISNULL(residential_units, 0) + ISNULL(job_spaces, 0) > 0
 */

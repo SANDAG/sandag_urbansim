@@ -26,7 +26,7 @@ jobs AS (
 	  ,block_id
 	  ,sector_id
 	FROM
-	  spacecore.input.jobs_wac_2012_2016
+	  spacecore.input.jobs_wac_2012_2016_3
 	WHERE yr = 2015
 )
 INSERT INTO urbansim.jobs (job_id, sector_id, building_id, source, run)
@@ -42,9 +42,9 @@ AND spaces.idx = jobs.idx
 ;
 --CHECKS
 SELECT SUM(job_spaces) FROM urbansim.job_spaces
-SELECT COUNT(*) FROM input.jobs_wac_2012_2016 WHERE yr = 2015
+SELECT COUNT(*) FROM input.jobs_wac_2012_2016_3 WHERE yr = 2015
 SELECT COUNT(*) FROM spacecore.urbansim.jobs
-SELECT COUNT(*) FROM input.jobs_wac_2012_2016 WHERE yr = 2015 AND job_id NOT IN (SELECT job_id FROM urbansim.jobs)
+SELECT COUNT(*) FROM input.jobs_wac_2012_2016_3 WHERE yr = 2015 AND job_id NOT IN (SELECT job_id FROM urbansim.jobs)
 ;
 
 /*#################### RUN 2/2 - ALLOCATE REMAINING WAC JOBS TO NEAREST BLOCK	 ####################*/
@@ -69,7 +69,7 @@ WITH job_spaces AS(
 )
 ,jobs AS(
 	SELECT sector_id, COUNT(*) AS jobs
-	FROM input.jobs_wac_2012_2016
+	FROM input.jobs_wac_2012_2016_3
 	WHERE yr = 2015
 	GROUP BY sector_id
 )
@@ -103,7 +103,7 @@ BEGIN
 	WHILE (
 		--CHECK FOR REMAINING JOBS
 		SELECT COUNT(*)
-		FROM input.jobs_wac_2012_2016
+		FROM input.jobs_wac_2012_2016_3
 		WHERE yr = 2015
 		AND job_id NOT IN(SELECT job_id FROM urbansim.jobs)
 		AND sector_id = @sector_id
@@ -155,7 +155,7 @@ BEGIN
 			,Shape.STCentroid() AS cent
 			,Shape.STCentroid().STBuffer(@radius) AS buff
 		INTO #jobs
-		FROM input.jobs_wac_2012_2016 AS wac
+		FROM input.jobs_wac_2012_2016_3 AS wac
 		JOIN (SELECT BLOCKID10 AS block_id, Shape FROM ref.blocks) AS b ON wac.block_id = b.block_id 
 		WHERE yr = 2015
 		AND job_id NOT IN(SELECT job_id FROM urbansim.jobs)
@@ -290,7 +290,7 @@ PRINT 'PRIVATE JOBS ALLOCATION COMPLETED'
 
 --CHECK FOR REMAINING JOBS
 SELECT COUNT(*)
-FROM input.jobs_wac_2012_2016
+FROM input.jobs_wac_2012_2016_3
 WHERE yr = 2015
 AND job_id NOT IN(SELECT job_id FROM urbansim.jobs)
 ;

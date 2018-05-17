@@ -1,89 +1,154 @@
-/*
-SELECT *
+USE spacecore
+;
+
+/*** LOAD TEMP TABLES FOR PROCESSING: BUILDINGS AND JOBS ***/
+--BUILDINGS
+DROP TABLE IF EXISTS #buildings
+;
+SELECT
+	parcel_id
+	,building_id
+	,development_type_id
+	,ROW_NUMBER() OVER (PARTITION BY parcel_id ORDER BY shape.STArea() DESC) AS rownum
+	,data_source
+INTO #buildings
 FROM urbansim.buildings
 WHERE data_source = 'SANDAG Public Facility 2016 Geocoding 042617'
---2,534
-
-SELECT *
-FROM gis.buildings_public_facilities
-ORDER BY id
-
-SELECT development_type_id, COUNT(*) AS bldgs
-FROM gis.buildings_public_facilities AS pf
-LEFT JOIN ref.development_type_lu_code AS dev
-	ON pf.lu = dev.lu_code
-GROUP BY development_type_id
-ORDER BY development_type_id
-
-
-SELECT CAST(SUM(CEILING(emp)) AS int)
-FROM gis.buildings_public_facilities
-
-
-SELECT *
-FROM input.vi_jobs_gov_2012_2016												--NOTE DATASET IS VIEW
-WHERE yr = 2015
-ORDER BY id
---214,300
+	OR development_type_id IN(8, 9, 10, 16)									--PUBLIC FACILITIES DEV TYPE
+	AND subparcel_assignment <> 'PLACEHOLDER_MIL'							--DO NOT USE MILITARY PLACEHOLDERS
+ORDER BY parcel_id, rownum
 ;
-*/
+SELECT * FROM #buildings
+;
 
 
---ALLOCATE GOV JOBS BY LOCATION
+--JOBS
+DROP TABLE IF EXISTS #jobs
+;
+SELECT
+	yr
+	,id
+	,job_id
+	,sector_id
+	,parcel_2015 AS parcel_id
+INTO #jobs
+FROM spacecore.input.jobs_gov_2012_2016_3
+WHERE yr = 2015
+;
+SELECT * FROM #jobs ORDER BY parcel_id
+;
+
+SELECT DISTINCT parcel_id
+FROM #jobs AS j
+WHERE NOT EXISTS
+	(SELECT *
+	FROM #buildings AS b
+	WHERE j.parcel_2015 = b.parcel_id)
+
+SELECT *
+FROM #buildings
+WHERE parcel_id = 395
+ORDER BY parcel_id
+
+
+/*** INSERT PLACEHOLDER FOR GOV EMP AT PARCEL LEVEL ***/
+--INSERT BUILDING IN PARCEL WHERE GOV EMP AND CURRENTLY NO BUILDING
+INSERT INTO urbansim.buildings WITH (TABLOCK) (
+	building_id
+	,parcel_id
+	--,development_type_id
+	,shape
+	,centroid
+	,data_source
+	,assign_jobs
+	)
+SELECT
+	9000000 + j.parcel_id				--building_id
+	,j.parcel_id						--parcel_id
+	--,development_type_id				--development_type_id
+	,usp.centroid.STBuffer(1)			--shape
+	,usp.centroid						--centroid
+	,'PLACEHOLDER_GOV'					--data_source
+	,0									--assign_jobs
+FROM (SELECT DISTINCT parcel_id FROM #jobs) AS j
+JOIN urbansim.parcels AS usp ON j.parcel_id = usp.parcel_id
+WHERE NOT EXISTS 									--CURRENTLY NO BUILDING
+	(SELECT *
+	FROM #buildings AS b
+	WHERE j.parcel_id = b.parcel_id)
+;
+
+
+/*** ALLOCATE GOV JOBS TO BUILDINGS ***/
+--1/3 ALLOCATE GOV JOBS IN PUBLIC FACILITIES BUILDINGS
+WITH spaces as (
+	SELECT *
+		,ROW_NUMBER() OVER(PARTITION BY  parcel_id ORDER BY rownum) AS rownum_pf
+	FROM #buildings
+	WHERE data_source = 'SANDAG Public Facility 2016 Geocoding 042617'
+	--ORDER BY parcel_id
+)
+INSERT INTO urbansim.jobs (job_id, sector_id, building_id, source)
+SELECT j.job_id
+	,j.sector_id
+	,s.building_id
+	,'GOV'
+FROM spaces AS s
+JOIN #jobs AS j
+	ON s.parcel_id = j.parcel_id
+WHERE s.rownum_pf = 1
+ORDER BY job_id
+;
+
+
+--2/3 ALLOCATE GOV JOBS IN COMPATIBLE DEV TYPE BUILDINGS
+WITH spaces as (
+	SELECT *
+		,ROW_NUMBER() OVER(PARTITION BY  parcel_id ORDER BY rownum) AS rownum_dev
+	FROM #buildings
+	WHERE data_source <> 'SANDAG Public Facility 2016 Geocoding 042617'
+	--ORDER BY parcel_id
+)
+INSERT INTO urbansim.jobs (job_id, sector_id, building_id, source)
+SELECT j.job_id
+	,j.sector_id
+	,s.building_id
+	,'GOV'
+FROM spaces AS s
+JOIN #jobs AS j
+	ON s.parcel_id = j.parcel_id
+WHERE s.rownum_dev = 1
+AND NOT EXISTS
+	(SELECT *
+	FROM urbansim.jobs AS usj
+	WHERE j.job_id = usj.job_id)
+ORDER BY job_id
+
+
+--3/3 ALLOCATE GOV JOBS IN PLACEHOLDER BUILDINGS
 WITH spaces as (
 	SELECT *
 	FROM urbansim.buildings
-	WHERE development_type_id NOT IN(7, 19, 20, 21, 22, 28)						--DO NOT USE BUILDINGS RESIDENTIAL AND SIMILAR
-	AND subparcel_assignment <> 'PLACEHOLDER_MIL'								--DO NOT USE MILITARY PLACEHOLDERS
-),
-jobs AS (
-	SELECT *
-	FROM input.vi_jobs_gov_2012_2016											--NOTE DATASET IS VIEW
-	WHERE yr = 2015
-),
-jobs_loc AS (
-	SELECT id.id, shape
-	FROM (	
-		SELECT id, MIN(job_id) AS job_id
-		FROM input.vi_jobs_gov_2012_2016										--NOTE DATASET IS VIEW
-		WHERE yr = 2015
-		GROUP BY id
-		) AS id
-	JOIN (
-		SELECT id, job_id, shape
-		FROM input.vi_jobs_gov_2012_2016										--NOTE DATASET IS VIEW
-		WHERE yr = 2015
-		) AS loc
-		ON id.job_id = loc.job_id
-), match AS(
-	SELECT row_id, id, building_id, dist
-		, development_type_id, data_source, subparcel_assignment
-	FROM(
-		SELECT
-			ROW_NUMBER() OVER (PARTITION BY jobs_loc.id ORDER BY jobs_loc.id, jobs_loc.shape.STDistance(spaces.shape)) row_id
-			,jobs_loc.id
-			,spaces.building_id
-			,jobs_loc.shape.STDistance(spaces.shape) AS dist
-			, development_type_id, data_source, subparcel_assignment
-		FROM jobs_loc
-		JOIN spaces
-			ON jobs_loc.shape.STBuffer(15000).STIntersects(spaces.shape) = 1	--CHECK IF BUFFERDIST IS SUFFICIENT
-		) x
-	WHERE row_id = 1
-	--ORDER BY dist DESC
+	WHERE data_source = 'PLACEHOLDER_GOV'
+	--ORDER BY parcel_id
 )
 INSERT INTO urbansim.jobs (job_id, sector_id, building_id, source)
-SELECT j.job_id, sector_id, usb.building_id, 'GOV'
-FROM urbansim.buildings AS usb
-JOIN (
-	SELECT m.id, m.building_id, j.job_id, j.sector_id
-	FROM match AS m
-	RIGHT JOIN (SELECT *  FROM input.vi_jobs_gov_2012_2016 WHERE yr = 2015) AS j	--NOTE DATASET IS VIEW
-	ON m.id = j.id
-	) AS j
-	ON usb.building_id = j.building_id
-ORDER BY j.id, j.job_id
-;
+SELECT j.job_id
+	,j.sector_id
+	,s.building_id
+	,'GOV'
+FROM spaces AS s
+JOIN #jobs AS j
+	ON s.parcel_id = j.parcel_id
+WHERE NOT EXISTS
+	(SELECT *
+	FROM urbansim.jobs AS usj
+	WHERE j.job_id = usj.job_id)
+ORDER BY job_id
+
+DROP TABLE #buildings
+DROP TABLE #JOBS
+
 
 /*#################### UPDATE JOB SPACES  #################### */
 --UPDATE JS WITH GOV
