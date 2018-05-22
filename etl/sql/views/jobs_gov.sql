@@ -57,6 +57,7 @@ INSERT INTO urbansim.buildings WITH (TABLOCK) (
 	building_id
 	,parcel_id
 	--,development_type_id
+	,mgra_id
 	,shape
 	,centroid
 	,data_source
@@ -66,6 +67,7 @@ SELECT
 	9000000 + j.parcel_id				--building_id
 	,j.parcel_id						--parcel_id
 	--,development_type_id				--development_type_id
+	,mgra_id							--mgra_id
 	,usp.centroid.STBuffer(1)			--shape
 	,usp.centroid						--centroid
 	,'PLACEHOLDER_GOV'					--data_source
