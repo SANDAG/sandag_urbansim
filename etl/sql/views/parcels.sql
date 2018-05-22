@@ -209,6 +209,45 @@ DROP TABLE #mil
 ;
 
 
+------SET THE DEVELOPMENT TYPE ID AND LU FROM PRIORITY FOR 2017
+------DO SPATIAL JOIN, GET LU, STORE TO TEMP TABLE
+----DROP TABLE IF EXISTS #lu
+----;
+----SELECT
+----	lu.parcelID AS parcel_id_2017					--parcel_id_2017
+----	,lu.subParcel
+----	,usp.parcel_id									--parcel_id_2015
+----	,usp.parcel_acres AS acres_parcel
+----	,lu.lu
+----	,lu.shape.STArea()/43560 AS acres_lu
+----	,dev.priority AS p
+----	,dev.development_type_id
+----	,(usp.shape.STIntersection(lu.shape).STArea())/43560 AS acres_intersection
+----INTO #lu
+----FROM urbansim.parcels AS usp							--LUDU 2017
+----JOIN gis.ludu2017 AS lu	
+----	ON usp.shape.STIntersects(lu.shape) = 1				--USE gis.ludu2017points
+----LEFT JOIN ref.development_type_lu_code xref 
+----	ON lu.lu = xref.lu_code
+----LEFT JOIN ref.development_type dev 
+----	ON xref.development_type_id = dev.development_type_id
+------WHERE parcel_id =	30400							--xxTEST
+----ORDER BY usp.parcel_id, acres_intersection DESC
+------ORDER BY p
+----;
+----SELECT * FROM #lu
+
+------GET PRIORITY, STORE TO TEMP TABLE
+----DROP TABLE IF EXISTS #priority
+----;
+----SELECT *
+----	,ROW_NUMBER() OVER (PARTITION BY parcel_id ORDER BY p, acres_intersection DESC) AS rownum
+----INTO #priority
+----FROM #lu
+----WHERE acres_intersection / acres_lu > 0.25				--GREATER THAN 25%
+----OR acres_intersection / acres_parcel > 0.25				--GREATER THAN 25%
+----;
+
 --SET THE DEVELOPMENT TYPE ID AND LU FROM PRIORITY FOR 2017
 --DO SPATIAL JOIN, GET PRIORITY, STORE TO TEMP TABLE
 DROP TABLE IF EXISTS #priority
