@@ -248,7 +248,8 @@ DROP TABLE #mil
 ----OR acres_intersection / acres_parcel > 0.25				--GREATER THAN 25%
 ----;
 
---SET THE DEVELOPMENT TYPE ID AND LU FROM PRIORITY FOR 2017
+-- 1/2 SET THE DEVELOPMENT TYPE ID AND LU FROM PRIORITY FOR 2017
+--FOR MANY 2017 TO ONE 2015
 --DO SPATIAL JOIN, GET PRIORITY, STORE TO TEMP TABLE
 DROP TABLE IF EXISTS #priority
 ;
@@ -289,8 +290,54 @@ ON usp.parcel_id = p.parcel_id
 DROP TABLE IF EXISTS #priority
 ;
 
+
+-- 2/2 --SET THE DEVELOPMENT TYPE ID AND LU FROM PRIORITY FOR 2017
+--FOR REMAINING ONE 2017 TO ONE OR MORE 2015
+--DO SPATIAL JOIN, GET VALUE, STORE TO TEMP TABLE
+DROP TABLE IF EXISTS #ref
+;
+SELECT
+	--lc.parcelID AS parcel_id_2017					--parcel_id_2017
+	usp.parcel_id									--parcel_id_2015
+	,dev.priority AS p
+	,dev.development_type_id
+	,lc.lu
+	,lc.acres
+INTO #ref
+FROM gis.ludu2017 AS lc								--LUDU 2017
+LEFT JOIN ref.development_type_lu_code xref 
+	ON lc.lu = xref.lu_code
+LEFT JOIN ref.development_type dev 
+	ON xref.development_type_id = dev.development_type_id
+JOIN urbansim.parcels AS usp
+	ON usp.centroid.STIntersects(lc.shape) = 1		--USE gis.ludu2017points
+WHERE usp.lu_2017 IS NULL
+ORDER BY lc.parcelID
+;
+SELECT * FROM #ref
+;
+
+--GET PRIORITY AND COPY VALUES
+UPDATE
+    usp
+SET 
+	usp.development_type_id_2017 = r.development_type_id
+	,usp.lu_2017 = r.lu
+FROM
+    urbansim.parcels usp 
+JOIN
+	#ref AS r
+ON usp.parcel_id = r.parcel_id
+;
+
+DROP TABLE IF EXISTS #ref
+;
+
 --RETURN VALUES
-SELECT * FROM urbansim.parcels WHERE lu_2015 <> lu_2017
+SELECT * FROM urbansim.parcels
+WHERE lu_2015 <> lu_2017
+OR lu_2015 IS NULL
+OR lu_2017 IS NULL
 ;
 
 
@@ -502,15 +549,57 @@ AND
 	usp.zone IS NULL
 */
 		
-/*
---JURISDICTION ID FROM ZONE
-UPDATE
-	usp
+
+--JURISDICTION ID FROM BOUNDARIES
+--DO SPATIAL JOIN, GET JURISDICTION, STORE TO TEMP TABLE
+DROP TABLE IF EXISTS #juris
+;
+SELECT
+	j.city
+	,usp.parcel_id
+	,usp.parcel_acres AS acres_parcel
+	,(usp.shape.STIntersection(j.shape).STArea())/43560 AS acres_intersection
+INTO #juris
+FROM urbansim.parcels AS usp
+JOIN (SELECT * FROM OPENQUERY(sql2014b8, 'SELECT * FROM [RM].[DBO].[city_cpa_2017]')) AS j	
+	ON usp.shape.STIntersects(j.shape) = 1
+--WHERE parcel_id =	30400							--xxTEST
+ORDER BY usp.parcel_id, acres_intersection DESC
+;
+SELECT * FROM #juris
+
+--GET PRIORITY, STORE TO TEMP TABLE
+DROP TABLE IF EXISTS #juris_parcel
+;
+SELECT *
+	,ROW_NUMBER() OVER (PARTITION BY parcel_id ORDER BY acres_intersection DESC) AS rownum
+INTO #juris_parcel
+FROM #juris
+;
+SELECT * FROM #juris_parcel ORDER BY parcel_id, rownum
+;
+--CHECK RATIOS
+SELECT * 
+FROM #juris_parcel
+WHERE rownum > 1
+AND acres_intersection / acres_parcel > 0.4				--GREATER THAN 40%
+ORDER BY parcel_id, rownum
+
+--UPDATE
+UPDATE usp
 SET
-	usp.jurisdiction_id = LEFT(usp.zone, CHARINDEX('_', usp.zone) - 1)
-FROM
-	urbansim.parcels AS usp
-*/
+	usp.jurisdiction_id = j.city
+FROM urbansim.parcels AS usp
+JOIN #juris_parcel AS j
+	ON j.parcel_id = usp.parcel_id
+	AND j.rownum = 1
+;
+
+--CHECK
+SELECT *
+FROM urbansim.parcels
+WHERE jurisdiction_id IS NULL
+
 
 --CREATE CONSTRAINTS
 UPDATE
