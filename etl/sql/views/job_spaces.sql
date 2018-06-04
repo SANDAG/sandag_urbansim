@@ -12,7 +12,7 @@ CREATE TABLE urbansim.job_spaces(
 	,subparcel_id int NULL
 	,building_id bigint NOT NULL
 	,block_id bigint NULL
-	,development_type_id smallint NULL
+	--,development_type_id smallint NULL
 	,job_spaces int NULL
 	,sector_id smallint NULL
 	,source varchar(3) NOT NULL
@@ -79,7 +79,7 @@ INSERT INTO urbansim.job_spaces(
 	subparcel_id
 	,building_id
 	,block_id
-	,development_type_id
+	--,development_type_id
 	,job_spaces
 	,sector_id
 	,source)
@@ -87,19 +87,27 @@ SELECT
 	usb.subparcel_id
 	,usb.building_id
 	,usb.block_id
-	,usb.development_type_id
+	--,usb.development_type_id
 	--,emp.emp AS emp_total
 	--,COUNT(*) OVER (PARTITION BY usb.subparcel_id, emp.sector_id) AS bldgs--
 	,emp.emp/ COUNT(*) OVER (PARTITION BY usb.subparcel_id, emp.sector_id) +
-		CASE 
-			WHEN ROW_NUMBER() OVER (PARTITION BY usb.subparcel_id, emp.sector_id ORDER BY usb.shape.STArea() DESC) <= (emp.emp % COUNT(*) OVER (PARTITION BY usb.subparcel_id, emp.sector_id)) THEN 1 
-			ELSE 0 
-		END 
-		AS job_spaces
+	CASE 
+		WHEN ROW_NUMBER() OVER (PARTITION BY usb.subparcel_id, emp.sector_id ORDER BY usb.shape.STArea() DESC) <= (emp.emp % COUNT(*) OVER (PARTITION BY usb.subparcel_id, emp.sector_id)) THEN 1 
+		ELSE 0 
+	END 
+	AS job_spaces
 	,emp.sector_id
 	,'EDD' AS source
 FROM
-	(SELECT * FROM urbansim.buildings WHERE assign_jobs = 1) usb
+	(SELECT
+		usb.subparcel_id
+		,usb.building_id
+		,usb.block_id
+		--,usp.development_type_id_2015
+	FROM urbansim.buildings AS usb
+	JOIN urbansim.parcels AS usp
+		ON usp.parcel_id = usb.parcel_id
+	 WHERE assign_jobs = 1) usb
 JOIN emp
 	ON usb.subparcel_id = emp.subparcel_id
 ;

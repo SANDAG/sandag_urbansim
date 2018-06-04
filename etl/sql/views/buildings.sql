@@ -16,7 +16,7 @@ CREATE TABLE urbansim.buildings(
 	,development_type_id smallint
 	,subparcel_id int NULL
 	,parcel_id int NOT NULL
-	,block_id bigint
+	,block_id nvarchar(15)
 	,mgra_id int
 	,luz_id int
 	,jurisdiction_id smallint

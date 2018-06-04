@@ -8,7 +8,7 @@ DROP TABLE IF EXISTS #buildings
 SELECT
 	parcel_id
 	,building_id
-	,development_type_id
+	--,development_type_id
 	,ROW_NUMBER() OVER (PARTITION BY parcel_id ORDER BY shape.STArea() DESC) AS rownum
 	,data_source
 INTO #buildings
@@ -43,7 +43,7 @@ FROM #jobs AS j
 WHERE NOT EXISTS
 	(SELECT *
 	FROM #buildings AS b
-	WHERE j.parcel_2015 = b.parcel_id)
+	WHERE j.parcel_id = b.parcel_id)
 
 SELECT *
 FROM #buildings
@@ -58,6 +58,7 @@ INSERT INTO urbansim.buildings WITH (TABLOCK) (
 	,parcel_id
 	--,development_type_id
 	,mgra_id
+	,block_id
 	,shape
 	,centroid
 	,data_source
@@ -66,8 +67,9 @@ INSERT INTO urbansim.buildings WITH (TABLOCK) (
 SELECT
 	9000000 + j.parcel_id				--building_id
 	,j.parcel_id						--parcel_id
-	--,development_type_id				--development_type_id
+	--,usp.development_type_id_2015 AS development_type_id			--development_type_id
 	,mgra_id							--mgra_id
+	,block_id							--block_id
 	,usp.centroid.STBuffer(1)			--shape
 	,usp.centroid						--centroid
 	,'PLACEHOLDER_GOV'					--data_source
@@ -125,7 +127,7 @@ AND NOT EXISTS
 	FROM urbansim.jobs AS usj
 	WHERE j.job_id = usj.job_id)
 ORDER BY job_id
-
+;
 
 --3/3 ALLOCATE GOV JOBS IN PLACEHOLDER BUILDINGS
 WITH spaces as (
@@ -147,9 +149,9 @@ WHERE NOT EXISTS
 	FROM urbansim.jobs AS usj
 	WHERE j.job_id = usj.job_id)
 ORDER BY job_id
-
-DROP TABLE #buildings
-DROP TABLE #JOBS
+;
+DROP TABLE #buildings;
+DROP TABLE #JOBS;
 
 
 /*#################### UPDATE JOB SPACES  #################### */
@@ -164,16 +166,30 @@ WHERE source IN ('GOV')
 GROUP BY building_id
 	,sector_id
 	,source
+), d AS(
+	SELECT
+		usb.building_id
+		,usb.block_id
+		--,usp.development_type_id_2015 AS development_type_id
+	FROM urbansim.buildings AS usb
+	JOIN urbansim.parcels AS usp
+		ON usp.parcel_id = usb.parcel_id
 )
 
 INSERT INTO urbansim.job_spaces(
 	building_id
+	,block_id
+	--,development_type_id
 	,job_spaces
 	,sector_id
 	,source)
-SELECT building_id
-	,jobs
-	,sector_id
-	,source
+SELECT
+	j.building_id
+	,d.block_id
+	--,d.development_type_id
+	,j.jobs
+	,j.sector_id
+	,j.source
 FROM j
+JOIN d ON d.building_id = j.building_id
 ;
