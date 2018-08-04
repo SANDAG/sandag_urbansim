@@ -33,7 +33,7 @@ SELECT
 	,parcel_2015 AS parcel_id
 INTO #jobs
 FROM spacecore.input.jobs_gov_2012_2016_3
-WHERE yr = 2015
+WHERE yr = 2016
 ;
 SELECT * FROM #jobs ORDER BY parcel_id
 ;

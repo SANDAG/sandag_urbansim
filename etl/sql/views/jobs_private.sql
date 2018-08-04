@@ -6,7 +6,7 @@ IS GREATER THAN NUMBER OF JOBS PER SECTOR TO BE ALLOCATED
 */
 --GENERAL CHECK
 SELECT SUM(job_spaces) FROM urbansim.job_spaces
-SELECT COUNT(*) FROM input.jobs_wac_2012_2016_3 WHERE yr = 2015
+SELECT COUNT(*) FROM input.jobs_wac_2012_2016_3 WHERE yr = 2016
 ;
 
 --/*
@@ -19,7 +19,7 @@ WITH job_spaces AS(
 ,jobs AS(
 	SELECT sector_id, COUNT(*) AS jobs
 	FROM input.jobs_wac_2012_2016_3
-	WHERE yr = 2015
+	WHERE yr = 2016
 	GROUP BY sector_id
 )
 SELECT
@@ -64,6 +64,8 @@ FROM(
 	FROM (SELECT * FROM urbansim.buildings WHERE assign_jobs = 1) usb		--DO NOT USE MIL/PF BUILDINGS
 	JOIN [spacecore].[urbansim].[job_spaces] AS s ON usb.building_id = s.building_id
 	JOIN ref.numbers AS n ON n.numbers <= s.job_spaces
+	--WHERE usb.building_id = 31
+	--WHERE usb.block_id IN (60730203071005, 60730203062012)
 	) x
 ),
 jobs AS (
@@ -74,12 +76,14 @@ jobs AS (
 	  ,sector_id
 	FROM
 	  spacecore.input.jobs_wac_2012_2016_3
-	WHERE yr = 2015
+	WHERE yr = 2016
+	--AND block_id IN (60730203071005, 60730203062012)
 )
 INSERT INTO urbansim.jobs (job_id, sector_id, building_id, source, run)
 SELECT jobs.job_id
 	,jobs.sector_id
 	,spaces.building_id
+	--,spaces.block_id				--XX_TEST
 	,'WAC' AS source
 	,0 AS run
 FROM spaces
@@ -89,12 +93,17 @@ AND spaces.sector_id = jobs.sector_id
 AND spaces.idx = jobs.idx
 ;
 GO
+--SELECT * FROM urbansim.jobs WHERE building_id = 31
+--SELECT * FROM urbansim.jobs WHERE building_id = 178
+--SELECT * FROM urbansim.job_spaces WHERE building_id = 31
+--SELECT * FROM urbansim.job_spaces WHERE building_id = 178
+--SELECT * FROM urbansim.jobs WHERE block_id = 60730203071005 AND sector_id = 16
 
 ----CHECKS
 --SELECT SUM(job_spaces) FROM urbansim.job_spaces
---SELECT COUNT(*) FROM input.jobs_wac_2012_2016_3 WHERE yr = 2015
+--SELECT COUNT(*) FROM input.jobs_wac_2012_2016_3 WHERE yr = 2016
 --SELECT COUNT(*) FROM spacecore.urbansim.jobs
---SELECT COUNT(*) FROM input.jobs_wac_2012_2016_3 WHERE yr = 2015 AND job_id NOT IN (SELECT job_id FROM urbansim.jobs)
+--SELECT COUNT(*) FROM input.jobs_wac_2012_2016_3 WHERE yr = 2016 AND job_id NOT IN (SELECT job_id FROM urbansim.jobs)
 --;
 
 /*#################### RUN 2/2 - ALLOCATE REMAINING WAC JOBS TO NEAREST BLOCK	 ####################*/
@@ -119,7 +128,8 @@ BEGIN
 	DROP TABLE IF EXISTS #spaces
 	SELECT
 		usb.building_id
-		,js.job_spaces - ISNULL(jsu.job_spaces_used, 0) AS job_spaces
+		--,js.sector_id
+		,js.job_spaces - ISNULL(jsu.job_spaces_used, 0) AS job_spaces		--xxBRAKES^^
 	INTO #spaces
 	FROM urbansim.buildings AS usb
 	JOIN urbansim.job_spaces AS js
@@ -132,8 +142,12 @@ BEGIN
 			WHERE sector_id = @sector_id
 			GROUP BY building_id) AS jsu
 		ON jsu.building_id = js.building_id
-	WHERE js.job_spaces - ISNULL(jsu.job_spaces_used, 0) > 0
+	WHERE js.job_spaces - ISNULL(jsu.job_spaces_used, 0) > 0		--xxBRAKES
 	PRINT 'FOUND SPACES'
+
+	--SELECT SUM(job_spaces) FROM #spaces
+	--SELECT * FROM #spaces ORDER BY building_id;			--xxCHECK
+	
 
 	--JOBS LIST
 	DROP TABLE IF EXISTS #jobs_list
@@ -144,8 +158,8 @@ BEGIN
 		,sector_id
 	INTO #jobs_list
 	FROM input.jobs_wac_2012_2016_3 AS wac
-	WHERE yr = 2015
-	AND NOT EXISTS (SELECT * FROM urbansim.jobs WHERE wac.job_id = jobs.job_id)
+	WHERE yr = 2016
+	AND NOT EXISTS (SELECT * FROM urbansim.jobs WHERE wac.job_id = jobs.job_id)		--xxBRAKES
 	AND sector_id = @sector_id
 	PRINT 'FOUND JOBS'	
 
@@ -167,7 +181,7 @@ BEGIN
 		;
 		--CREATE SPATIAL INDEX
 		ALTER TABLE #spaces_bldg ALTER COLUMN building_id int NOT NULL;
-		ALTER TABLE #spaces_bldg ADD CONSTRAINT pk_spaces_building_id_tmp PRIMARY KEY CLUSTERED (building_id);
+		ALTER TABLE #spaces_bldg ADD CONSTRAINT pk_spaces_building_id PRIMARY KEY CLUSTERED (building_id);
 		ALTER TABLE #spaces_bldg ALTER COLUMN shape geometry NOT NULL;
 		CREATE SPATIAL INDEX [ix_spatial_buildings_shape] ON #spaces_bldg
 		(
@@ -188,7 +202,7 @@ BEGIN
 		;
 		--CREATE SPATIAL INDEX
 		ALTER TABLE #jobs_block ALTER COLUMN block_id bigint NOT NULL
-		ALTER TABLE #jobs_block ADD CONSTRAINT pk_jobs_job_id_temp PRIMARY KEY CLUSTERED (block_id) 
+		ALTER TABLE #jobs_block ADD CONSTRAINT pk_jobs_job_id PRIMARY KEY CLUSTERED (block_id) 
 		ALTER TABLE #jobs_block ALTER COLUMN buff geometry NOT NULL
 		CREATE SPATIAL INDEX [ix_spatial_jobs_cent] ON #jobs_block
 		(
@@ -211,7 +225,7 @@ BEGIN
 			j.block_id
 			,s.building_id
 			,CAST(j.cent.STDistance(s.shape) AS int) AS dist
-		INTO #dist
+		INTO #dist																		--**SELECT INTO
 		FROM #jobs_block AS j
 			,#spaces_bldg AS s
 		WHERE j.buff.STIntersects(s.shape) = 1
@@ -235,6 +249,9 @@ BEGIN
 		PRINT 'DISTANCES OBTAINED'
 
 
+
+
+
 		/*##### STEP 2 - ALLOCATE JOBS BY DISTANCE #####*/
 		--START ALLOCATION
 		--BREAK IF NO NEAR FOUND
@@ -254,6 +271,7 @@ BEGIN
 			INTO #nearest
 			FROM #near
 			WHERE job_spaces > 0
+			--SELECT * FROM #nearest
 			PRINT 'NEAREST'
 
 			--GRAB #TABLE	
@@ -333,7 +351,8 @@ BEGIN
 		--INCREMENT RUN NUMBER
 		SET @run = @run + 1
 
-		SELECT COUNT(*) FROM #jobs;
+		SELECT COUNT(*) FROM #jobs_list;
+		--SELECT * FROM #jobs;			--xxCHECK
 
 	END;
 

@@ -103,6 +103,7 @@ FROM
 		usb.subparcel_id
 		,usb.building_id
 		,usb.block_id
+		,usb.shape
 		--,usp.development_type_id_2015
 	FROM urbansim.buildings AS usb
 	JOIN urbansim.parcels AS usp

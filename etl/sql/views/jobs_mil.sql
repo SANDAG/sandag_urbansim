@@ -6,7 +6,7 @@ WHERE subparcel_assignment = 'PLACEHOLDER_MIL'
 
 SELECT *
 FROM input.jobs_military_2012_2016
-WHERE yr = 2015
+WHERE yr = 2016
 --124,710
 ;
 */
@@ -21,7 +21,7 @@ WITH spaces as (
 jobs AS (
 	SELECT *
 	FROM input.jobs_military_2012_2016
-	WHERE yr = 2015
+	WHERE yr = 2016
 )
 INSERT INTO urbansim.jobs (job_id, sector_id, building_id, source)
 SELECT jobs.job_id
