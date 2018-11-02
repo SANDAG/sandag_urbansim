@@ -1,6 +1,12 @@
 USE spacecore
 ;
 
+--DEFINE YEAR FOR JOBS
+DECLARE @yr int = 2016
+;
+SELECT @yr AS 'year'
+;
+
 /*** LOAD TEMP TABLES FOR PROCESSING: BUILDINGS AND JOBS ***/
 --BUILDINGS
 DROP TABLE IF EXISTS #buildings
@@ -32,8 +38,8 @@ SELECT
 	,sector_id
 	,parcel_2015 AS parcel_id
 INTO #jobs
-FROM spacecore.input.jobs_gov_2012_2016_3
-WHERE yr = 2016
+FROM spacecore.input.jobs_gov_2012_2016_4
+WHERE yr = @yr
 ;
 SELECT * FROM #jobs ORDER BY parcel_id
 ;
@@ -82,6 +88,12 @@ WHERE NOT EXISTS 									--CURRENTLY NO BUILDING
 	WHERE j.parcel_id = b.parcel_id)
 ;
 
+/*
+DELETE
+--SELECT *
+FROM urbansim.buildings
+WHERE data_source = 'PLACEHOLDER_GOV'
+*/
 
 /*** ALLOCATE GOV JOBS TO BUILDINGS ***/
 --1/3 ALLOCATE GOV JOBS IN PUBLIC FACILITIES BUILDINGS
@@ -193,3 +205,10 @@ SELECT
 FROM j
 JOIN d ON d.building_id = j.building_id
 ;
+
+/*
+DELETE
+--SELECT *
+FROM urbansim.jobs
+WHERE source = 'GOV'
+*/

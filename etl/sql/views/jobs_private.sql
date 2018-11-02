@@ -1,12 +1,19 @@
 USE spacecore
 ;
+
+--DEFINE YEAR FOR JOBS
+DECLARE @yr int = 2016
+;
+SELECT @yr AS 'year'
+;
+
 /*
 BEFORE PROCEEDING, MAKE SURE NUMBER OF JOB SPACES BY SECTOR
 IS GREATER THAN NUMBER OF JOBS PER SECTOR TO BE ALLOCATED
 */
 --GENERAL CHECK
-SELECT SUM(job_spaces) FROM urbansim.job_spaces
-SELECT COUNT(*) FROM input.jobs_wac_2012_2016_3 WHERE yr = 2016
+SELECT SUM(job_spaces) AS job_spaces_edd FROM urbansim.job_spaces WHERE [source] = 'EDD'
+SELECT COUNT(*) AS jobs FROM input.jobs_wac_2012_2016_3 WHERE yr = @yr
 ;
 
 --/*
@@ -14,12 +21,13 @@ SELECT COUNT(*) FROM input.jobs_wac_2012_2016_3 WHERE yr = 2016
 WITH job_spaces AS(
 	SELECT sector_id, SUM(job_spaces) AS job_spaces
 	FROM urbansim.job_spaces
+	WHERE [source] = 'EDD'
 	GROUP BY sector_id
 )
 ,jobs AS(
 	SELECT sector_id, COUNT(*) AS jobs
 	FROM input.jobs_wac_2012_2016_3
-	WHERE yr = 2016
+	WHERE yr = @yr
 	GROUP BY sector_id
 )
 SELECT
@@ -44,7 +52,7 @@ CREATE TABLE urbansim.jobs (
 	,source nchar(3) NOT NULL
 	,run int
 )
-GO
+;
 
 /*#################### RUN 1/2 - ALLOCATE WAC JOBS BY BLOCK						####################*/
 WITH spaces as (
@@ -64,6 +72,7 @@ FROM(
 	FROM (SELECT * FROM urbansim.buildings WHERE assign_jobs = 1) usb		--DO NOT USE MIL/PF BUILDINGS
 	JOIN [spacecore].[urbansim].[job_spaces] AS s ON usb.building_id = s.building_id
 	JOIN ref.numbers AS n ON n.numbers <= s.job_spaces
+	WHERE s.[source] = 'EDD'
 	--WHERE usb.building_id = 31
 	--WHERE usb.block_id IN (60730203071005, 60730203062012)
 	) x
@@ -76,7 +85,7 @@ jobs AS (
 	  ,sector_id
 	FROM
 	  spacecore.input.jobs_wac_2012_2016_3
-	WHERE yr = 2016
+	WHERE yr = @yr
 	--AND block_id IN (60730203071005, 60730203062012)
 )
 INSERT INTO urbansim.jobs (job_id, sector_id, building_id, source, run)
@@ -92,7 +101,7 @@ ON spaces.block_id = jobs.block_id
 AND spaces.sector_id = jobs.sector_id
 AND spaces.idx = jobs.idx
 ;
-GO
+
 --SELECT * FROM urbansim.jobs WHERE building_id = 31
 --SELECT * FROM urbansim.jobs WHERE building_id = 178
 --SELECT * FROM urbansim.job_spaces WHERE building_id = 31
@@ -100,10 +109,10 @@ GO
 --SELECT * FROM urbansim.jobs WHERE block_id = 60730203071005 AND sector_id = 16
 
 ----CHECKS
---SELECT SUM(job_spaces) FROM urbansim.job_spaces
---SELECT COUNT(*) FROM input.jobs_wac_2012_2016_3 WHERE yr = 2016
+--SELECT SUM(job_spaces) FROM urbansim.job_spaces WHERE [source] = 'EDD'
+--SELECT COUNT(*) FROM input.jobs_wac_2012_2016_3 WHERE yr = 2014
 --SELECT COUNT(*) FROM spacecore.urbansim.jobs
---SELECT COUNT(*) FROM input.jobs_wac_2012_2016_3 WHERE yr = 2016 AND job_id NOT IN (SELECT job_id FROM urbansim.jobs)
+--SELECT COUNT(*) FROM input.jobs_wac_2012_2016_3 WHERE yr = 2014 AND job_id NOT IN (SELECT job_id FROM urbansim.jobs)
 --;
 
 /*#################### RUN 2/2 - ALLOCATE REMAINING WAC JOBS TO NEAREST BLOCK	 ####################*/
@@ -114,6 +123,7 @@ GO
 	STEP 1 FOR NEXT DISTANCE AND THEN STEP 2 TO ALLOCATE.
 	DO AGAIN UNTIL OUT OF JOBS TO ALLOCATE.
 */
+--DECLARE @yr			int = 2012;
 DECLARE @sector_id	smallint = 1;		--xxBRAKES
 DECLARE @radius		int = 1320;			--1/4 MILE SEARCHRADIUS, INITIAL
 DECLARE @radius_i	int = 1320;			--1/4 MILE SEARCHRADIUS, INCREMENT
@@ -135,6 +145,7 @@ BEGIN
 	JOIN urbansim.job_spaces AS js
 		ON js.building_id = usb.building_id
 		AND js.sector_id = @sector_id
+		AND js.[source] = 'EDD'
 	FULL JOIN (SELECT
 				building_id
 				,COUNT(building_id) AS job_spaces_used
@@ -158,8 +169,8 @@ BEGIN
 		,sector_id
 	INTO #jobs_list
 	FROM input.jobs_wac_2012_2016_3 AS wac
-	WHERE yr = 2016
-	AND NOT EXISTS (SELECT * FROM urbansim.jobs WHERE wac.job_id = jobs.job_id)		--xxBRAKES
+	WHERE yr = @yr
+	AND NOT EXISTS (SELECT * FROM urbansim.jobs AS jobs WHERE wac.job_id = jobs.job_id)		--xxBRAKES
 	AND sector_id = @sector_id
 	PRINT 'FOUND JOBS'	
 
@@ -321,6 +332,7 @@ BEGIN
 							,job_spaces AS job_spaces_old
 						FROM urbansim.job_spaces
 						WHERE sector_id = @sector_id
+						AND [source] = 'EDD'
 						) AS js
 				ON n.building_id = js.building_id
 							
@@ -343,6 +355,7 @@ BEGIN
 						,job_spaces AS job_spaces_old
 					FROM urbansim.job_spaces
 					WHERE sector_id = @sector_id
+					AND [source] = 'EDD'
 					) AS js
 			ON n.building_id = js.building_id
 
