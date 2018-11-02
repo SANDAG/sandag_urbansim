@@ -21,59 +21,152 @@ CREATE TABLE urbansim.job_spaces(
 
 
 /* ##### ASSIGN JOB_SPACES TO BUILDINGS BY SUBPARCEL ##### */
-DECLARE @employment_vacancy float = 0.1;
-WITH emp AS(
+
+--USE EMPLOYMENT VACANCY RATE
+--ADDED EMPLOYMENT VACANCY RATE FOR ALL SECTORS
+DECLARE @employment_vacancy float = 0.1;				--RATE
+
+--ADDED EMPLOYMENT VACANCY RATE FOR EXCEPTION SECTORS
+DECLARE @employment_vacancy_x float = 0.16;				--RATE
+DECLARE @sector_x table(sector_x varchar(50))
+INSERT INTO @sector_x VALUES ('8'), ('20')				--SECTORS
+;
+/*
+sector_id	sandag_industry_name
+1	Farm
+2	Mining and Logging
+3	Utilities
+4	Construction
+5	Manufacturing
+6	Wholesale Trade
+7	Retail Trade
+8	Transportation & Warehousing
+9	Information
+10	Finance & Insurance
+11	Real Estate & Rental & Leasing
+12	Professional, Scientific & Technical Services
+13	Management of Companies & Enterprises
+14	Administrative & Support & Waste Services
+15	Educational Services
+16	Health Care & Social Assistance
+17	Arts, Entertainment & Recreation
+18	Accommodation
+19	Food Services
+20	Other Services
+21	Federal Government Excluding Department of Defense
+22	Department of Defense
+23	State Government Education
+24	State Government Excluding Education
+25	Local Government Education
+26	Local Government Excluding Education
+27	Uniform Military
+28	Public Administration
+*/
+
+
+WITH emp2013 AS(
 	SELECT
-		--emp2013.subparcel_id AS subparcel_id2013
-		--emp2015.subparcel_id AS subparcel_id2015
-		COALESCE(emp2013.subparcel_id, emp2015.subparcel_id) AS subparcel_id
-		--emp2013.emp AS emp2013
-		--emp2015.emp AS emp2015
-		--emp2013.sector_id AS sector_id2013
-		--emp2015.sector_id AS sector_id2015
-		,COALESCE(emp2013.sector_id, emp2015.sector_id) AS sector_id
+		lc.LCKey AS subparcel_id
 		,CASE
-			WHEN ISNULL(emp2013.emp, 0) >= ISNULL(emp2015.emp, 0) THEN ISNULL(emp2013.emp, 0)
-			ELSE emp2015.emp
+			WHEN CAST(emp.sandag_industry_id AS varchar) IN (SELECT * FROM @sector_x)
+				THEN SUM(CAST(CEILING(ISNULL(emp_adj, 0)*(1 + @employment_vacancy_x))AS int))
+			ELSE
+				SUM(CAST(CEILING(ISNULL(emp_adj, 0)*(1 + @employment_vacancy))AS int)) 
 		END AS emp
-	FROM (
-		SELECT lc.LCKey AS subparcel_id
-			,SUM(CAST(CEILING(ISNULL(emp_adj,0)*(1+@employment_vacancy))AS int)) AS emp
-			--,SUM(CAST(CEILING(ISNULL(emp_adj,0))AS int)) AS emp
-			,emp.sandag_industry_id AS sector_id
-		FROM gis.ludu2015 lc
-		LEFT JOIN socioec_data.ca_edd.emp_2013_v1 AS emp								--USE EDD EMP2013 GEOCODE VERSION 1
-		ON lc.Shape.STContains(emp.shape) = 1
-		WHERE emp.emp_adj IS NOT NULL
-		AND sandag_industry_id BETWEEN 1 AND 20				--PRIVATE SECTOR
-		GROUP BY lc.LCKey, emp.sandag_industry_id
-	) AS emp2013
-	FULL OUTER JOIN (
-		SELECT lc.LCKey AS subparcel_id
-			,SUM(CAST(CEILING(ISNULL(emp_adj,0)*(1+@employment_vacancy))AS int)) AS emp
-			--,SUM(CAST(CEILING(ISNULL(emp_adj,0))AS int)) AS emp
-			,emp.sandag_industry_id AS sector_id
-		FROM gis.ludu2015 lc
-		LEFT JOIN (
-			SELECT
-				CASE
-					WHEN emp1 >= emp2 AND emp1 >= emp3 THEN emp1
-					WHEN emp2 >= emp1 AND emp2 >= emp3 THEN emp2
-					WHEN emp3 >= emp1 AND emp3 >= emp2 THEN emp3
-				END AS emp_adj
-				,sandag_industry_id
-				,shape
-			FROM (SELECT ISNULL(emp1,0) AS emp1, ISNULL(emp2,0) AS emp2, ISNULL(emp3,0) AS emp3, sandag_industry_id, shape, own
-					FROM ws.dbo.CA_EDD_EMP_2015_v1) x									--USE EDD EMP2015 GEOCODE VERSION 1
-			WHERE own = 5									--PRIVATE SECTOR
-			AND sandag_industry_id BETWEEN 1 AND 20			--PRIVATE SECTOR
-			) AS emp
-		ON lc.Shape.STContains(emp.shape) = 1
-		WHERE emp.emp_adj IS NOT NULL
-		GROUP BY lc.LCKey, emp.sandag_industry_id
-	) AS emp2015
-	ON emp2013.subparcel_id = emp2015.subparcel_id
-	AND emp2013.sector_id = emp2015.sector_id
+		--,SUM(CAST(CEILING(ISNULL(emp_adj,0)*(1+@employment_vacancy))AS int)) AS emp
+		--,SUM(CAST(CEILING(ISNULL(emp_adj,0))AS int)) AS emp
+		,emp.sandag_industry_id AS sector_id
+	FROM gis.ludu2015 lc
+	LEFT JOIN socioec_data.ca_edd.emp_2013_v1 AS emp		--USE EDD EMP2013 GEOCODE VERSION 1
+	ON lc.Shape.STContains(emp.shape) = 1
+	WHERE emp.emp_adj IS NOT NULL
+	AND sandag_industry_id IS NOT NULL
+	--AND sandag_industry_id BETWEEN 1 AND 20				--PRIVATE SECTOR
+	GROUP BY lc.LCKey, emp.sandag_industry_id
+), emp2015 AS (
+	SELECT lc.LCKey AS subparcel_id
+		,CASE
+			WHEN CAST(emp.sandag_industry_id AS varchar) IN (SELECT * FROM @sector_x)
+				THEN SUM(CAST(CEILING(ISNULL(emp_adj, 0)*(1 + @employment_vacancy_x))AS int))
+			ELSE
+				SUM(CAST(CEILING(ISNULL(emp_adj, 0)*(1 + @employment_vacancy))AS int)) 
+		END AS emp
+		--,SUM(CAST(CEILING(ISNULL(emp_adj,0)*(1+@employment_vacancy))AS int)) AS emp
+		--,SUM(CAST(CEILING(ISNULL(emp_adj,0))AS int)) AS emp
+		,emp.sandag_industry_id AS sector_id
+		,emp.own
+	,ROW_NUMBER() OVER (PARTITION BY lc.LCKey ORDER BY emp.own) AS row_own
+	FROM gis.ludu2015 lc
+	LEFT JOIN (
+		SELECT
+			CASE
+				WHEN emp1 >= emp2 AND emp1 >= emp3 THEN emp1
+				WHEN emp2 >= emp1 AND emp2 >= emp3 THEN emp2
+				WHEN emp3 >= emp1 AND emp3 >= emp2 THEN emp3
+			END AS emp_adj
+			,sandag_industry_id
+			,own
+			,shape
+		FROM (SELECT ISNULL(emp1,0) AS emp1, ISNULL(emp2,0) AS emp2, ISNULL(emp3,0) AS emp3, sandag_industry_id, shape, own
+				FROM ws.dbo.CA_EDD_EMP_2015_v1) x			--USE EDD EMP2015 GEOCODE VERSION 1
+		WHERE sandag_industry_id IS NOT NULL
+		--WHERE own = 5										--PRIVATE SECTOR
+		--AND sandag_industry_id BETWEEN 1 AND 20			--PRIVATE SECTOR
+		) AS emp
+	ON lc.Shape.STContains(emp.shape) = 1
+	WHERE emp.emp_adj IS NOT NULL
+	GROUP BY lc.LCKey, emp.sandag_industry_id, emp.own
+), emp13 AS (
+	SELECT
+		emp2013.subparcel_id
+		,emp2013.emp
+		,emp2013.sector_id
+		,emp2015.own
+	FROM emp2013
+	LEFT JOIN emp2015
+		ON emp2013.subparcel_id = emp2015.subparcel_id
+		AND emp2015.row_own = 1
+		--AND emp2013.sector_id = emp2015.sector_id
+	WHERE emp2015.own NOT IN (1,2,3)						--PRIVATE SECTOR
+	AND emp2013.emp IS NOT NULL
+	AND emp2013.sector_id BETWEEN 1 AND 20					--PRIVATE SECTOR
+), emp15 AS (
+	SELECT
+		subparcel_id
+		,emp
+		,sector_id
+		,own
+	FROM emp2015
+		WHERE own = 5										--PRIVATE SECTOR
+		AND sector_id BETWEEN 1 AND 20						--PRIVATE SECTOR
+		AND emp IS NOT NULL
+), emp AS(
+	SELECT
+		--emp13.subparcel_id AS subparcel_id2013
+		--emp15.subparcel_id AS subparcel_id2015
+		COALESCE(emp13.subparcel_id, emp15.subparcel_id) AS subparcel_id
+		--emp13.emp AS emp2013
+		--emp15.emp AS emp2015
+		--emp13.sector_id AS sector_id2013
+		--emp15.sector_id AS sector_id2015
+		,CASE
+			WHEN emp15.emp + emp13.emp = 0 THEN 0
+			WHEN ISNULL(emp15.emp, 0) >= ISNULL(emp13.emp, 0) THEN ISNULL(emp15.emp, 0)
+			ELSE emp13.emp
+		END AS emp
+		--,emp13.emp AS e13
+		--,emp15.emp AS e15
+		,CASE
+			WHEN (ISNULL(emp15.emp, 0) + ISNULL(emp13.emp, 0) = 0) THEN COALESCE(emp13.sector_id, emp15.sector_id)
+			WHEN ISNULL(emp15.emp, 0) >= ISNULL(emp13.emp, 0) THEN emp15.sector_id
+			ELSE emp13.sector_id
+		END AS sector_id
+		--,emp13.sector_id AS s13
+		--,emp15.sector_id AS s15
+	FROM emp13
+	FULL OUTER JOIN emp15
+		ON emp13.subparcel_id = emp15.subparcel_id
+	AND emp13.sector_id = emp15.sector_id
 )
 INSERT INTO urbansim.job_spaces(
 	subparcel_id
@@ -94,8 +187,7 @@ SELECT
 	CASE 
 		WHEN ROW_NUMBER() OVER (PARTITION BY usb.subparcel_id, emp.sector_id ORDER BY usb.shape.STArea() DESC) <= (emp.emp % COUNT(*) OVER (PARTITION BY usb.subparcel_id, emp.sector_id)) THEN 1 
 		ELSE 0 
-	END 
-	AS job_spaces
+	END AS job_spaces
 	,emp.sector_id
 	,'EDD' AS source
 FROM
