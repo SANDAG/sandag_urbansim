@@ -1,111 +1,138 @@
 USE urbansim
 ;
 ----2916 total parcels with SFU units only (no MFU), there are 8 sites with both SFU and MFU and 4801 total parcels with any sched dev (mfu or sfu)   
---select * from urbansim.urbansim.scheduled_development_parcel
+--select * from spacecore.urbansim.scheduled_development_parcels
 --where sfu > 0 and mfu > 0 
 
---select DISTINCT site_id from urbansim.urbansim.scheduled_development_parcel
+--select DISTINCT site_id from spacecore.urbansim.scheduled_development_parcels
 --where sfu > 0 and mfu = 0 
 
 --select * 
---from urbansim.urbansim.scheduled_development_parcel
+--from spacecore.urbansim.scheduled_development_parcels
 
 --***************************************SFU PROJECTS ONLY************************
 
-drop table if exists #sfu_parcels; 
+DROP TABLE IF EXISTS #sfu_parcels; 
 
-select s.*, gp.gplu, p.proportion_undevelopable, p.parcel_acres 
-,(1 - p.proportion_undevelopable) as proportion_developable
-,CASE 
-	  WHEN p.proportion_undevelopable IS NULL THEN parcel_acres 
-	  WHEN p.proportion_undevelopable IS NOT NULL THEN (parcel_acres - (parcel_acres*p.proportion_undevelopable))
-	  END AS developable_acres
+SELECT 
+	sdp.ogr_fid
+	,sdp.site_id
+	,sdp.parcel_id
+	,sds.sfu
+	,sds.mfu
+	,sds.mhu
+	,sds.startdate
+	,sds.compdate
+	,sds.devtypeid
+	,gpp.gplu
+	,usp.proportion_undevelopable
+	,usp.parcel_acres 
+	,(1 - usp.proportion_undevelopable) AS proportion_developable
+	,CASE 
+		WHEN usp.proportion_undevelopable IS NULL THEN parcel_acres 
+		WHEN usp.proportion_undevelopable IS NOT NULL THEN (parcel_acres - (parcel_acres * usp.proportion_undevelopable))
+	END AS developable_acres
 --insert variable to keep track of allocation case (how we determined how to allocate the units to a parcel) 
-	  ,NULL as case_id  
-into #sfu_parcels
-from urbansim.urbansim.scheduled_development_parcel as s 
-join urbansim.urbansim.general_plan_parcel as gp on s.parcel_id = gp.parcel_id 
-join spacecore.urbansim.parcels as p on s.parcel_id = p.parcel_id
-join urbansim.ref.scheduled_development_site AS sds ON s.site_id = sds.siteid
-where s.sfu > 0 and s.mfu = 0 
-and sds.status <> 'completed'
-order by site_id; 
+	,NULL AS case_id  
+INTO #sfu_parcels
+FROM spacecore.urbansim.scheduled_development_parcels AS sdp
+JOIN spacecore.gis.scheduled_development_sites AS sds
+	ON sdp.ogr_fid = sds.ogr_fid
+JOIN spacecore.urbansim.general_plan_parcels AS gpp
+	ON sdp.parcel_id = gpp.parcel_id 
+JOIN spacecore.urbansim.parcels AS usp
+	ON sdp.parcel_id = usp.parcel_id
+WHERE sds.sfu > 0
+	AND sds.mfu = 0 
+	AND sds.status <> 'completed'
+ORDER BY
+	sdp.ogr_fid
+	,sdp.site_id
+; 
 
---select * from #sfu_parcels order by site_id, parcel_id 
-select distinct site_id from #sfu_parcels 
---select * from #sfu_sites order by site_id 
+SELECT DISTINCT site_id FROM #sfu_parcels 
 
 --change developable acreage for those parcels which do not have any residential land uses according to GPLU
-update #sfu_parcels
-set developable_acres = 0
-from #sfu_parcels
-where gplu not in(1000,1100,1200,9600,9700)
+UPDATE sfup
+	SET developable_acres = 0
+FROM #sfu_parcels AS sfup
+WHERE gplu not in(1000,1100,1200,9600,9700)
 AND site_id NOT IN(							--OVERWRITE EXCEPTIONS
 28
 ,1860
 ,13004
 );
 
-drop table if exists #sfu_parcels_0;
 
-select *
-,row_number () over(partition by #sfu_parcels.site_id order by developable_acres DESC) as row_num 
-into #sfu_parcels_0
-from #sfu_parcels ;
+DROP TABLE IF EXISTS #sfu_parcels_0
+;
+SELECT
+	*
+	,ROW_NUMBER () OVER(PARTITION BY sfup.ogr_fid ORDER BY developable_acres DESC) AS row_num 
+INTO #sfu_parcels_0
+FROM #sfu_parcels AS sfup;
+;
+SELECT * FROM #sfu_parcels_0
 
 --set row number variable to null when there is no developable acreage on the parcel, so that when we allocate residuals later, those parcels will not be assigned units
-update #sfu_parcels_0
-set row_num = NULL 
-from #sfu_parcels_0
-where developable_acres = 0 ;
+UPDATE sfup
+	SET row_num = NULL 
+FROM #sfu_parcels_0 AS sfup
+WHERE developable_acres = 0
+;
 
---select * from #sfu_parcels_0 order by site_id
 
 /*count the number of parcel_id's by site_id, if the count of parcels = the number of SFU then you can allocate one to one*/
 /*if there is only one parcel, all the units go to that parcel*/
 
-drop table if exists #sfu_parcel_count 
-
-select 
-site_id
-,min(sfu) as sfu 
-,count(parcel_id) as parcel_count
-,CAST(NULL as numeric(36,18)) as units_per_dev_acre
+DROP TABLE IF EXISTS #sfu_parcel_count 
+;
+SELECT 
+	ogr_fid
+	,site_id
+	,MIN(sfu) AS sfu 
+	,COUNT(parcel_id) AS parcel_count
+	,CAST(NULL AS numeric(36,18)) AS units_per_dev_acre
 INTO #sfu_parcel_count
-from #sfu_parcels_0
-where sfu >0 and mfu = 0 
+FROM #sfu_parcels_0
+WHERE sfu > 0 AND mfu = 0 
 --and developable_acres <>0
-group by site_id
-order by site_id  ;
+GROUP BY
+	ogr_fid
+	,site_id
+ORDER BY
+	ogr_fid
+	,site_id
+;
 
---select * from #sfu_parcel_count order by site_id
 
 /*count the number of parcel_id's by site_id, if the count of parcels = the number of SFU then you can allocate one to one*/
 /*if there is only one parcel, all the units go to that parcel*/
 
-drop table if exists #sfu_sites;
-
-select 
-s.site_id
-,min(s.sfu) as sfu 
-,min(pc.parcel_count) as parcel_count 
-,CAST(NULL as numeric(36,18)) as sfu_per_dev_acre
-,CAST(NULL as int) as sfu_effective
-,CAST(NULL as int) as row_num
+DROP TABLE IF EXISTS #sfu_sites;
+;
+SELECT 
+	s.ogr_fid
+	,s.site_id
+	,MIN(s.sfu) AS sfu 
+	,MIN(pc.parcel_count) AS parcel_count 
+	,CAST(NULL AS numeric(36,18)) AS sfu_per_dev_acre
+	,CAST(NULL AS int) as sfu_effective
+	,CAST(NULL AS int) as row_num
 INTO #sfu_sites
-from #sfu_parcels_0 as s 
-join #sfu_parcel_count as pc on s.site_id = pc.site_id 
-where s.sfu >0 and s.mfu = 0 
+FROM #sfu_parcels_0 AS s 
+JOIN #sfu_parcel_count AS pc
+	ON s.ogr_fid = pc.ogr_fid
+WHERE s.sfu > 0 AND s.mfu = 0 
 --and developable_acres <>0
-group by s.site_id
-order by s.site_id ;
-
---select * from #sfu_parcels_0 order by site_id 
---select * from #sfu_sites order by site_id 
---select * from #sfu_parcel_count order by site_id
---select distinct site_id from #sfu_sites 
---select distinct site_id from #sfu_parcels_0 
---select distinct site_id from #sfu_parcel_count
+GROUP BY
+	s.ogr_fid
+	,s.site_id
+ORDER BY
+	s.ogr_fid
+	,s.site_id
+;
+SELECT * FROM #sfu_sites
  
 /*CASE 1: if there are the same number of parcels as SFUs then assign one to one*/
 /*CASE 2: if there are is only one parcel for the site_id then assign all units to one parcel*/
@@ -117,8 +144,8 @@ select
 ,parcel_id
 ,startdate
 ,compdate
-,civemp
-,milemp
+--,civemp
+--,milemp
 ,#sfu_parcels_0.sfu
 ,#sfu_sites.parcel_count
 ,mhu
@@ -141,12 +168,6 @@ INTO #sfu_parcels_2
 from #sfu_parcels_0 
 join #sfu_sites on #sfu_parcels_0.site_id = #sfu_sites.site_id ;
 
---select * from #sfu_parcels_2 
-
---select sfu  from #sfu_parcels_2 
---group by site_id 
---having sum(developable_acres) = 0 
---order by site_id 
 
 --Case 3: assign one unit to one parcel where there are more parcels than units, assigned based on the rank, where parcels are ranked by largest amount of developable acreage
 --some parcels will have zero units  
@@ -179,37 +200,6 @@ set sfu_per_dev_acre = (s.sfu)/(developable_acres)
 from  #sfu_sites as s
 join(select site_id, (sum(developable_acres)) as developable_acres, min(sfu) as sfu  from #sfu_parcels_2 group by site_id having sum(developable_acres)  >0)  as p on s.site_id = p.site_id;
 
---select * from #sfu_sites
---select * from #sfu_parcels_2 order by site_id
-
-----to see which rounding works better 
---select #parcels_4.*
---,units_per_dev_acre
---,ROUND (developable_acres * units_per_dev_acre,0) as calc_units
---,CEILING (developable_acres * units_per_dev_acre) as up_calc_units
---,FLOOR  (developable_acres * units_per_dev_acre) as down_calc_units
---from #parcels_5 
---join #parcels_4 on #parcels_4.site_id = #parcels_5.site_id 
---where sfu > parcel_count and parcel_count > 1
---order by site_id, developable_acres
-
-
---select site_id
---,min(sfu) as sfu 
---,sum(calc_units)      as sum_calc
---,sum(up_calc_units)   as sum_up_calc
---,sum(down_calc_units) as sum_down_calc
---from #parcels_6
---group by site_id
---order by site_id
-
-
---select #parcels_4.site_id, min(sfu) as sfu, sum(FLOOR  (developable_acres * units_per_dev_acre)) as down_calc_units, min(sfu) - sum(FLOOR  (developable_acres * units_per_dev_acre)) as diff_units 
---from #parcels_4 
---join #parcels_5 on #parcels_4.site_id = #parcels_5.site_id 
---group by #parcels_4.site_id, sfu
---having sfu != sum(FLOOR  (developable_acres * units_per_dev_acre)) 
---order by min(sfu) - sum(FLOOR  (developable_acres * units_per_dev_acre))
 
 
 --multiply units_per_dev_acre * developable_acres to get sfu effective where we have more units than we have parcels (Case 4) 
@@ -238,43 +228,61 @@ from #sfu_parcels_2 as p
 join x on p.site_id = x.site_id
 where case_id = 'case 4' and row_num < = x.sfu_assigned_diff; 
 
-select distinct site_id from #sfu_parcels_2 
-order by site_id 
 
-select distinct site_id from #sfu_sites -- this should be 364 
 
 --check to see if all sfus are assigned
---select 
---site_id
---,min(sfu) as sfu 
---,sum(sfu_effective)       as sfu_assigned
---,min(sfu) -  sum(sfu_effective) as sfu_diff 
---from #sfu_parcels_2 
---group by site_id 
---order by site_id;
+select 
+site_id
+,min(sfu) as sfu 
+,sum(sfu_effective)       as sfu_assigned
+,min(sfu) -  sum(sfu_effective) as sfu_diff 
+from #sfu_parcels_2 
+group by site_id 
+order by site_id;
 
 --**************************************************************************************MFU and MHU PROJECTS ONLY******************************************************************************************
-drop table if exists #mfu_parcels;
-
-select s.*, gp.gplu, p.proportion_undevelopable, p.parcel_acres 
-,(1 - p.proportion_undevelopable) as proportion_developable
+DROP TABLE IF EXISTS #mfu_parcels; 
+;
+SELECT 
+	sdp.ogr_fid
+	,sdp.site_id
+	,sdp.parcel_id
+	,sds.sfu
+	,sds.mfu
+	,sds.mhu
+	,sds.civemp
+	,sds.milemp
+	,sds.startdate
+	,sds.compdate
+	,sds.devtypeid
+	,gpp.gplu
+	,usp.proportion_undevelopable
+	,usp.parcel_acres 
+	,(1 - usp.proportion_undevelopable) AS proportion_developable
 ,CASE 
-	  WHEN p.proportion_undevelopable IS NULL THEN parcel_acres
-	  WHEN s.site_id IN(11003, 15035) THEN parcel_acres		--OVERWRITE EXCEPTIONS
-	  WHEN p.proportion_undevelopable IS NOT NULL THEN (parcel_acres - (parcel_acres*p.proportion_undevelopable))
+	  WHEN usp.proportion_undevelopable IS NULL THEN parcel_acres
+	  WHEN sdp.site_id IN(11003, 15035) THEN parcel_acres		--OVERWRITE EXCEPTIONS
+	  WHEN usp.proportion_undevelopable IS NOT NULL THEN (parcel_acres - (parcel_acres * usp.proportion_undevelopable))
 	  END AS developable_acres
 --insert variable to keep track of allocation case (how we determined how to allocate the units to a parcel) 
 	  ,NULL as case_id  
-into #mfu_parcels
-from urbansim.urbansim.scheduled_development_parcel as s 
-join urbansim.urbansim.general_plan_parcel as gp on s.parcel_id = gp.parcel_id 
-join spacecore.urbansim.parcels as p on s.parcel_id = p.parcel_id 
-where (mfu > 0 and sfu = 0) or (s.site_id = 3006) or (sfu = 0 and mhu > 0)  
-order by site_id ;
+INTO #mfu_parcels
+FROM spacecore.urbansim.scheduled_development_parcels as sdp
+JOIN spacecore.gis.scheduled_development_sites AS sds
+	ON sdp.ogr_fid = sds.ogr_fid
+JOIN spacecore.urbansim.general_plan_parcels as gpp
+	ON sdp.parcel_id = gpp.parcel_id 
+JOIN spacecore.urbansim.parcels AS usp
+	ON sdp.parcel_id = usp.parcel_id 
+WHERE (sds.mfu > 0 and sds.sfu = 0) or (sdp.site_id = 3006) or (sds.sfu = 0 and sds.mhu > 0)  
+ORDER BY
+	sdp.ogr_fid
+	,sdp.site_id
+;
 
---select * from #mfu_parcels order by site_id, parcel_id 
-select distinct site_id from #mfu_parcels 
---select * from #mfu_sites order by site_id 
+SELECT DISTINCT site_id FROM #mfu_parcels
+SELECT * FROM #mfu_parcels ORDER BY site_id, ogr_fid
+
 
 --change developable acreage for those parcels which do not have any residential land uses according to GPLU
 update #mfu_parcels
@@ -299,14 +307,14 @@ AND site_id NOT IN(							--OVERWRITE EXCEPTIONS
 ,17006
 );
 
---SELECT * FROM #mfu_parcels ORDER BY site_id
 
 drop table if exists #mfu_parcels_0;
 
 select *
-,row_number () over(partition by #mfu_parcels.site_id order by developable_acres DESC) as row_num 
+,row_number () over(partition by sfup.ogr_fid, sfup.site_id order by developable_acres DESC) as row_num 
 into #mfu_parcels_0
-from #mfu_parcels ;
+from #mfu_parcels AS sfup
+;
 
 --set row number variable to null when there is no developable acreage on the parcel, so that when we allocate residuals later, those parcels will not be assigned units
 update #mfu_parcels_0
@@ -315,39 +323,39 @@ from #mfu_parcels_0
 where developable_acres = 0 ;
 
 
---OVERWRITE EXCEPTION, FIX MULTI SITE ID
-UPDATE mfup
-SET mfu = sds.mfu
-FROM #mfu_parcels_0 AS mfup
-JOIN (SELECT siteid, SUM(mfu) AS mfu FROM [ref].[scheduled_development_site] GROUP BY siteid) AS sds	--OVERWRITE EXCEPTIONS
-	ON mfup.site_id = sds.siteid
-WHERE mfup.site_id = 15035
+------OVERWRITE EXCEPTION, FIX MULTI SITE ID
+----UPDATE mfup
+----SET mfu = sds.mfu
+----FROM #mfu_parcels_0 AS mfup
+----JOIN (SELECT siteid, SUM(mfu) AS mfu FROM [gis].[scheduled_development_sites] GROUP BY siteid) AS sds	--OVERWRITE EXCEPTIONS
+----	ON mfup.site_id = sds.siteid
+----WHERE mfup.site_id = 15035
 
-
---select * from #mfu_parcels_0 order by site_id
 
 /*count the number of parcel_id's by site_id, if the count of parcels = the number of mfU then you can allocate one to one*/
 /*if there is only one parcel, all the units go to that parcel*/
 drop table if exists #mfu_parcel_count;
 
 select 
-site_id
+	sds.ogr_fid
+	,site_id
 ,min(sds.mfu) as mfu																					--OVERWRITE EXCEPTIONS
 ,count(parcel_id) as parcel_count
 ,CAST(NULL as numeric(36,18)) as units_per_dev_acre
 INTO #mfu_parcel_count
 from #mfu_parcels_0 AS mfu
-JOIN (SELECT siteid, SUM(mfu) AS mfu FROM [ref].[scheduled_development_site] WHERE status <> 'completed' GROUP BY siteid) AS sds	--OVERWRITE EXCEPTIONS
-	ON mfu.site_id = sds.siteid
+JOIN (SELECT ogr_fid, siteid, SUM(mfu) AS mfu FROM [spacecore].[gis].[scheduled_development_sites] WHERE status <> 'completed' GROUP BY ogr_fid, siteid) AS sds	--OVERWRITE EXCEPTIONS
+	ON mfu.site_id = sds.siteid AND mfu.ogr_fid = sds.ogr_fid
 where (sds.mfu >0 and sfu = 0) or (site_id = 3006) or (sfu = 0 and mhu > 0)								--OVERWRITE EXCEPTIONS
 --and developable_acres <>0
-group by site_id
-order by site_id  ;
+GROUP BY
+	sds.ogr_fid
+	,site_id
+ORDER BY
+	sds.ogr_fid
+	,site_id
+;
 
---select * from #mfu_parcel_count order by site_id
---select distinct site_id from #mfu_parcel_count --these should be 249
---select distinct site_id from #mfu_parcels_0
---select distinct site_id from #mfu_sites 
 
 /*count the number of parcel_id's by site_id, if the count of parcels = the number of mfU then you can allocate one to one*/
 /*if there is only one parcel, all the units go to that parcel*/
@@ -355,7 +363,8 @@ order by site_id  ;
 drop table if exists #mfu_sites;
 
 select 
-s.site_id
+	s.ogr_fid
+	,s.site_id
 ,min(sds.mfu) as mfu																					--OVERWRITE EXCEPTIONS
 ,min(pc.parcel_count) as parcel_count 
 ,CAST(NULL as numeric(36,18)) as mfu_per_dev_acre
@@ -364,18 +373,22 @@ s.site_id
 ,CAST(NULL as int) as row_num
 INTO #mfu_sites
 from #mfu_parcels_0 as s 
-join #mfu_parcel_count as pc on s.site_id = pc.site_id 
-JOIN (SELECT siteid, SUM(mfu) AS mfu FROM [ref].[scheduled_development_site] GROUP BY siteid) AS sds	--OVERWRITE EXCEPTIONS
-	ON s.site_id = sds.siteid
+join #mfu_parcel_count as pc on s.site_id = pc.site_id AND s.ogr_fid = pc.ogr_fid
+JOIN (SELECT ogr_fid, siteid, SUM(mfu) AS mfu FROM [spacecore].[gis].[scheduled_development_sites] GROUP BY ogr_fid, siteid) AS sds	--OVERWRITE EXCEPTIONS
+	ON s.site_id = sds.siteid AND s.ogr_fid = sds.ogr_fid
 where (sds.mfu >0 and s.sfu = 0) or (s.site_id = 3006) or (sfu = 0 and mhu > 0)
 --and developable_acres <>0
-group by s.site_id
-order by s.site_id ;
+GROUP BY
+	s.ogr_fid
+	,s.site_id
+ORDER BY
+	s.ogr_fid
+	,s.site_id
+;
 
-SELECT * FROM #mfu_parcels_0 WHERE site_id = 15035
---select * from #mfu_parcels_0 order by site_id 
---select * from #mfu_sites order by site_id 
---select * from #mfu_parcel_count order by site_id
+SELECT * FROM #mfu_sites WHERE site_id = 15035
+
+----SELECT * FROM #mfu_parcels_0 WHERE site_id = 15035
 
  
 /*CASE 1: if there are the same number of parcels as mfUs then assign one to one*/
@@ -384,7 +397,8 @@ SELECT * FROM #mfu_parcels_0 WHERE site_id = 15035
 drop table if exists #mfu_parcels_2;
 
 select 
-#mfu_parcels_0.site_id 
+	#mfu_parcels_0.ogr_fid
+	,#mfu_parcels_0.site_id 
 ,parcel_id
 ,startdate
 ,compdate
@@ -415,9 +429,12 @@ WHEN parcel_count = 1 THEN 'case 2'
 END as case_id
 INTO #mfu_parcels_2 
 from #mfu_parcels_0 
-join #mfu_sites on #mfu_parcels_0.site_id = #mfu_sites.site_id ;
+join #mfu_sites on #mfu_parcels_0.site_id = #mfu_sites.site_id AND #mfu_parcels_0.ogr_fid = #mfu_sites.ogr_fid
+	AND #mfu_parcels_0.ogr_fid = #mfu_sites.ogr_fid
+;
 
---select * from #mfu_parcels_2 
+
+--select * from #mfu_parcels_2 ORDER BY site_id
 
 --Case 3: assign one unit to one parcel where there are more parcels than units, assigned based on the rank, where parcels are ranked by largest amount of developable acreage
 --some parcels will have zero units  
@@ -447,7 +464,7 @@ set mfu_per_dev_acre = (s.mfu)/(developable_acres)
 --,sum(developable_acres) as sum_dev_acres
 --,sum(developable_acres) * (mfu)/(developable_acres) mfu_test
 from  #mfu_sites as s
-join(select site_id, (sum(developable_acres)) as developable_acres, min(mfu) as mfu  from #mfu_parcels_2 group by site_id having sum(developable_acres)  >0)  as p on s.site_id = p.site_id;
+join(select ogr_fid, site_id, (sum(developable_acres)) as developable_acres, min(mfu) as mfu  from #mfu_parcels_2 group by ogr_fid, site_id having sum(developable_acres)  >0)  as p on s.site_id = p.site_id AND s.ogr_fid = p.ogr_fid;
 
 --select * from #mfu_sites
 --select * from #mfu_parcels_2 order by site_id
@@ -457,7 +474,7 @@ join(select site_id, (sum(developable_acres)) as developable_acres, min(mfu) as 
 update p 
 set mfu_effective = floor(s.mfu_per_dev_acre * p.developable_acres) 
 from #mfu_parcels_2 as p  
-join #mfu_sites as s on s.site_id = p.site_id 
+join #mfu_sites as s on s.site_id = p.site_id AND s.ogr_fid = p.ogr_fid
 where case_id = 'case 4' and p.row_num IS NOT NULL; 
 
 --select * from #mfu_parcels_2 order by site_id
@@ -465,42 +482,46 @@ where case_id = 'case 4' and p.row_num IS NOT NULL;
 --assign the number of units that were not assigned by multiplying units_per_dev_acre * developable_acres, assign that difference to parcels by site_id based row_number 
 with x as (
 select 
-site_id
+ogr_fid
+,site_id
 ,min(mfu) as mfu 
 ,sum(mfu_effective)       as mfu_assigned 
 ,min(mfu) - sum(mfu_effective) as mfu_assigned_diff
 from #mfu_parcels_2
 where case_id = 'case 4' 
-group by site_id 
+group by ogr_fid, site_id 
 ) 
 update p  
 set mfu_effective = mfu_effective + 1 
 from #mfu_parcels_2 as p 
-join x on p.site_id = x.site_id
+join x on p.site_id = x.site_id AND p.ogr_fid = x.ogr_fid
 where case_id = 'case 4' and row_num < = x.mfu_assigned_diff ;
 
-----check to see if all mfus are assigned
---select 
---site_id
---,min(mfu) as mfu 
---,sum(mfu_effective)       as mfu_assigned
---,min(mfu) -  sum(mfu_effective) as mfu_diff 
---from #mfu_parcels_2 
---group by site_id 
---order by site_id;
+--check to see if all mfus are assigned
+SELECT
+	ogr_fid
+	,site_id
+	,MIN(mfu) as mfu 
+	,SUM(mfu_effective) AS mfu_assigned
+	,MIN(mfu) - SUM(mfu_effective) AS mfu_diff 
+FROM #mfu_parcels_2 
+GROUP BY ogr_fid, site_id 
+ORDER BY ogr_fid, site_id
+;
+
 select distinct site_id from #mfu_parcels_2
 
 --**********************************************************************************SFU and MFU projects****************************************************************************************
 --select distinct gplu 
---from urbansim.urbansim.scheduled_development_parcel as p 
---join urbansim.urbansim.general_plan_parcel as gp on p.parcel_id = gp.parcel_id
+--from spacecore.urbansim.scheduled_development_parcels as p 
+--join spacecore.urbansim.general_plan_parcels as gp on p.parcel_id = gp.parcel_id
 --where sfu > 0 and mfu = 0 
 ----where sfu > 0 and mfu > 0 
 ----where sfu = 0 and mfu > 0 
 --order by gplu
 
 --select distinct site_id 
---from urbansim.urbansim.scheduled_development_parcel as p 
+--from spacecore.urbansim.scheduled_development_parcels as p 
 --where sfu > 0 and mfu > 0 
 
 --1100 SF residential 
@@ -524,7 +545,9 @@ site_id
 ,count(parcel_id) as parcel_count
 ,CAST(NULL as numeric(36,18)) as units_per_dev_acre
 INTO #parcel_count
-from urbansim.urbansim.scheduled_development_parcel
+from spacecore.urbansim.scheduled_development_parcels AS sdp
+JOIN spacecore.gis.scheduled_development_sites AS sds
+	ON sdp.ogr_fid = sds.ogr_fid
 where sfu >0 and mfu >0
 group by site_id
 order by site_id  ;
@@ -543,8 +566,10 @@ select s.*, gp.gplu, p.proportion_undevelopable, p.parcel_acres
 --insert variable to keep track of allocation case (how we determined how to allocate the units to a parcel) 
 	  ,NULL as case_id  
 into #sf_mf_parcels
-from urbansim.urbansim.scheduled_development_parcel as s 
-join urbansim.urbansim.general_plan_parcel as gp on s.parcel_id = gp.parcel_id 
+from spacecore.urbansim.scheduled_development_parcels as s
+JOIN spacecore.gis.scheduled_development_sites AS sds
+	ON s.ogr_fid = sds.ogr_fid
+join spacecore.urbansim.general_plan_parcels as gp on s.parcel_id = gp.parcel_id 
 join spacecore.urbansim.parcels as p on s.parcel_id = p.parcel_id 
 where sfu > 0 and mfu > 0 
 order by site_id ;
@@ -559,8 +584,12 @@ drop table if exists #sf_mf_sites;
 
 select 
 s.site_id
-,min(s.sfu) as sfu 
-,min(s.mfu) as mfu
+,min(sds.sfu) as sfu 
+,min(sds.mfu) as mfu
+,min(startdate) AS startdate
+,min(compdate) AS  compdate
+,min(civemp) AS civemp
+,min(milemp) AS milemp
 ,min(pc.parcel_count) as parcel_count 
 ,CAST(NULL as numeric(36,18)) as mfu_per_dev_acre
 ,CAST(NULL as numeric(36,18)) as sfu_per_dev_acre
@@ -568,9 +597,11 @@ s.site_id
 ,CAST(NULL as int) as sfu_effective
 ,CAST(NULL as int) as row_num
 INTO #sf_mf_sites
-from urbansim.urbansim.scheduled_development_parcel as s 
+from spacecore.urbansim.scheduled_development_parcels as s 
+JOIN spacecore.gis.scheduled_development_sites AS sds
+	ON s.ogr_fid = sds.ogr_fid
 join #parcel_count as pc on s.site_id = pc.site_id 
-where s.sfu >0 and s.mfu >0
+where sds.sfu >0 and sds.mfu >0
 group by s.site_id
 order by s.site_id ;
 
@@ -609,25 +640,25 @@ select
 ,compdate
 ,civemp
 ,milemp
-,#sf_mf_parcels_0.sfu
+,sfu
 ,#sf_mf_sites.parcel_count
-,#sf_mf_parcels_0.mfu
-,mhu
+,mfu
+--,mhu
 ,gplu
 ,parcel_acres
 ,proportion_developable
 ,proportion_undevelopable
 ,developable_acres
-,(#sf_mf_parcels_0.sfu - parcel_count) as sfu_difference
-,(#sf_mf_parcels_0.mfu - parcel_count) as mfu_difference
+,(sfu - parcel_count) as sfu_difference
+,(mfu - parcel_count) as mfu_difference
 ,#sf_mf_parcels_0.row_num 
-,CASE WHEN (#sf_mf_parcels_0.sfu - parcel_count) = 0   THEN 1                                --Case 1: when the number of parcels in a site_id = the number of units in the site_id 
-WHEN parcel_count = 1 and #sf_mf_parcels_0.row_num = 1 THEN #sf_mf_parcels_0.sfu             --Case 2: when there is only one parcel for the site_id, assign all units to the one parcel 
+,CASE WHEN (sfu - parcel_count) = 0   THEN 1                                --Case 1: when the number of parcels in a site_id = the number of units in the site_id 
+WHEN parcel_count = 1 and #sf_mf_parcels_0.row_num = 1 THEN sfu             --Case 2: when there is only one parcel for the site_id, assign all units to the one parcel 
 END as sfu_effective 
-,CASE WHEN (#sf_mf_parcels_0.mfu - parcel_count) = 0   THEN 1                                --Case 1: when the number of parcels in a site_id = the number of units in the site_id 
+,CASE WHEN (mfu - parcel_count) = 0   THEN 1                                --Case 1: when the number of parcels in a site_id = the number of units in the site_id 
 WHEN parcel_count = 1 
 --and #sf_mf_parcels_0.row_num = 1 
-THEN #sf_mf_parcels_0.mfu             --Case 2: when there is only one parcel for the site_id, assign all units to the one parcel 
+THEN mfu             --Case 2: when there is only one parcel for the site_id, assign all units to the one parcel 
 END as mfu_effective 
 ,CASE WHEN parcel_count = 1 THEN 'case 2'             
 END as case_id
@@ -800,52 +831,32 @@ select distinct site_id from #sf_mf_parcels_2
 --drop table #sched_dev_all
 --select * into #sched_dev_all from (
 
+
 use urbansim;
 
-drop table if exists urbansim.urbansim.sched_dev_all;
+drop table if exists spacecore.urbansim.sched_dev_all;
 
-select * into urbansim.urbansim.sched_dev_all
+select * into spacecore.urbansim.sched_dev_all
 
 from (
-select NULL as scenario, site_id, parcel_id, startdate, compdate, civemp, milemp, sfu, mfu, mhu, ISNULL(sfu_effective,0) as sfu_effective, ISNULL(mfu_effective,0) as mfu_effective, case_id
-from #sf_mf_parcels_2
+select NULL as scenario, site_id, parcel_id, startdate, compdate, civemp, milemp, sfu, mfu, 0 AS mhu, ISNULL(sfu_effective,0) as sfu_effective, ISNULL(mfu_effective,0) as mfu_effective, case_id
+from #sf_mf_parcels_2			--CHECK '0 AS mhu' OVERRIDE
 
 union all
 
-select NULL as scenario, site_id, parcel_id, startdate, compdate, civemp, milemp, sfu, 0 as mfu, mhu, ISNULL(sfu_effective,0) as sfu_effective, 0 as mfu_effective, case_id
-from #sfu_parcels_2
+select NULL as scenario, site_id, parcel_id, startdate, compdate, 0 AS civemp, 0 AS milemp, sfu, 0 as mfu, mhu, ISNULL(sfu_effective,0) as sfu_effective, 0 as mfu_effective, case_id
+from #sfu_parcels_2				--CHECK '0 AS civemp, 0 AS milemp' OVERRIDE
 
 union all
 
 select NULL as scenario, site_id, parcel_id, startdate, compdate, civemp, milemp, 0 as sfu, mfu, mhu, 0 as sfu_effective, ISNULL(mfu_effective,0) as sfu_effective, case_id
-from #mfu_parcels_2)
+from #mfu_parcels_2)			--CHECK '0 as sfu' OVERRIDE
 as temp;
 
-select distinct site_id from urbansim.urbansim.sched_dev_all
---select * from [urbansim].[scheduled_development_parcel]
---where site_id in(3006,3089,3311,3324,15037,16028)
-
-----select * from #sched_dev_all
---select * from urbansim.urbansim.sched_dev_all
---where site_id = 1727
-----where sfu_effective > 250 or mfu_effective > 250
-
---update #sched_dev_all
---set compdate = '2024-12-31'
---where (sfu_effective <= 250 and sfu_effective >0) or (mfu_effective <= 250 and mfu_effective >0)
-
---select * 
---from #sched_dev_all as a 
---join #sched_dev_all as b on  a.site_id = b.site_id 
-
---update urbansim.urbansim.sched_dev_all
---set scenario = 1 
---CASE WHEN compdate IS NULL THEN startdate = 2017 
---set compdate 
-
+select distinct site_id from spacecore.urbansim.sched_dev_all
 
 /*#################### INSERT ADDITIONAL CAPACITY DATA FROM PARCELS ####################*/
-ALTER TABLE urbansim.urbansim.sched_dev_all
+ALTER TABLE spacecore.urbansim.sched_dev_all
 ADD du_2015 int
 	,du_2017 int
 	,capacity_1 int
@@ -859,10 +870,31 @@ SET sda.du_2015 = usp.du_2015
 	,sda.max_res_units = usp.max_res_units
 	,sda.capacity_1 = usp.capacity_1
 	,sda.capacity_2 = usp.capacity_2
-FROM urbansim.urbansim.sched_dev_all AS sda
-JOIN urbansim.urbansim.parcel AS usp ON sda.parcel_id = usp.parcel_id
+FROM spacecore.urbansim.sched_dev_all AS sda
+JOIN spacecore.urbansim.parcels AS usp ON sda.parcel_id = usp.parcel_id
 ;
 
+/*
+/*#################### INSERT TO SCHEDULED DEVELOPMENT PARCELS ####################*/
+ALTER TABLE spacecore.urbansim.scheduled_development_parcels
+ADD du_2015 int
+	,du_2017 int
+	,capacity_1 int
+	,capacity_2 int
+	,max_res_units int
+;
+
+UPDATE sdp
+SET sda.du_2015 = usp.du_2015
+	,sda.du_2017 = usp.du_2017
+	,sda.capacity_1 = usp.capacity_1
+	,sda.capacity_2 = usp.capacity_2
+	,sda.max_res_units = usp.max_res_units
+FROM spacecore.urbansim.scheduled_development_parcels AS sdp
+JOIN #sched_dev_all AS sda
+JOIN spacecore.urbansim.parcels AS usp ON sda.parcel_id = usp.parcel_id
+;
+*/
 
 --*********************************************************************************************************
 
@@ -875,15 +907,15 @@ SELECT
 	,SUM([mfu_effective]) AS mfu_effective
 	,SUM([du_2015]) AS du_2015
 	,SUM([du_2017]) AS du_2017
-FROM [urbansim].[urbansim].[sched_dev_all]
+FROM [spacecore].[urbansim].[sched_dev_all]
 
 SELECT
 	SUM([sfu]) AS sfu
 	,SUM([mfu]) AS mfu
 	,SUM([mhu]) AS mhu
-FROM [urbansim].[ref].[scheduled_development_site]
+FROM [spacecore].[gis].[scheduled_development_sites]
 WHERE status <> 'completed'
---AND EXISTS (SELECT siteid FROM [urbansim].[urbansim].[sched_dev_all])
+--AND EXISTS (SELECT siteid FROM [spacecore].[urbansim].[sched_dev_all])
 
 
 --**SITE
@@ -897,7 +929,7 @@ SELECT site_id,
 	,SUM([du_2015]) AS du_2015
 	,SUM([du_2017]) AS du_2017
 INTO #sda
-FROM [urbansim].[urbansim].[sched_dev_all]
+FROM [spacecore].[urbansim].[sched_dev_all]
 --WHERE site_id = 1062
 GROUP BY site_id
 ORDER BY site_id
@@ -908,7 +940,7 @@ SELECT siteid,
 	,SUM([mfu]) AS mfu
 	,SUM([mhu]) AS mhu
 INTO #sds
-FROM [urbansim].[ref].[scheduled_development_site]
+FROM [spacecore].[gis].[scheduled_development_sites]
 --WHERE siteid = 1062
 WHERE status <> 'completed'
 GROUP BY siteid
@@ -931,6 +963,9 @@ ORDER BY COALESCE(siteid, site_id)
 
 
 SELECT *
-FROM [urbansim].[urbansim].[sched_dev_all]
+FROM [spacecore].[urbansim].[sched_dev_all]
 WHERE parcel_id = 5200983 
 
+SELECT *
+FROM [spacecore].[urbansim].[sched_dev_all]
+WHERE site_id = 15035
