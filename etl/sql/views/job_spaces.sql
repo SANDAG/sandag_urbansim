@@ -67,7 +67,7 @@ INSERT INTO @sector_vacancy VALUES
 	,(15, 0.03)
 	,(16, 0.07)
 	,(17, 0.12)
-	,(18, .09)
+	,(18, 0.09)
 	,(19, 0.11)
 	,(20, 0.43)
 ;
@@ -168,7 +168,9 @@ LEFT JOIN (
 		,own
 		,shape
 	FROM (SELECT ISNULL(emp1,0) AS emp1, ISNULL(emp2,0) AS emp2, ISNULL(emp3,0) AS emp3, sandag_industry_id, shape, own
-			FROM ws.dbo.CA_EDD_EMP_2015_v1) x			--USE EDD EMP2015 GEOCODE VERSION 1
+			FROM ws.dbo.CA_EDD_EMP_2015_v1							--USE EDD EMP2015 GEOCODE VERSION 1
+			WHERE naics NOT IN (561320, 561330, 487210, 812930)		--EMPLOYMENT CORRECTIONS
+	) x
 	WHERE sandag_industry_id IS NOT NULL
 	--WHERE own = 5										--PRIVATE SECTOR
 	--AND sandag_industry_id BETWEEN 1 AND 20			--PRIVATE SECTOR
@@ -242,6 +244,18 @@ AND emp13.sector_id = emp15.sector_id
 
 
 /* ############################## START MICRO ############################## */
+--FILTER OUT EMPLOYMENT CORRECTIONS
+DROP TABLE IF EXISTS #emp_corrections;
+SELECT
+	emp_id
+	,naics
+	,emp1
+	,emp2
+	,emp3
+INTO #emp_corrections
+FROM ws.dbo.CA_EDD_EMP_2015_v1
+WHERE naics IN(561320, 561330, 487210, 812930)
+ORDER BY emp_id
 
 --REMOVE JOBS FROM PARCELS THAT ARE NON-PRIVATE, ACCORDING TO MICRO
 DELETE e
@@ -313,6 +327,7 @@ WITH emp_p AS (
 			) AS emp
 		FROM [spacecore].[input].[edd_micro_2015]
 		WHERE [priv_pub] = 'Private'					--USE PRIVATE
+		AND emp_id NOT IN (SELECT emp_id FROM #emp_corrections)			--EMPLOYMENT CORRECTIONS
 	) x
 	GROUP BY
 		parcel_id
